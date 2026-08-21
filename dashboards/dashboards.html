@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ferriq - Dashboards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --gold-800:#463B33;--gold-700:#763D16;--gold-600:#BB6E3D;--gold-500:#E29C57;
+  --gold-400:#F9A471;--gold-300:#FCEEE5;--gold-200:#E9E3DE;--gold-100:#F7F6F2;
+  --text-primary:#32302F;--text-secondary:#615E5C;
+  --status-normal:#3A7D52;--status-normal-bg:#E5F0E8;
+  --status-advisory:#C4890E;--status-advisory-bg:#FAF0E0;
+  --status-critical:#D4432A;--status-critical-bg:#FCEBEB;
+  --surface-page:#F7F6F2;--surface-card:#FFFFFF;--surface-sidebar:#463B33;
+  --border-card:#E9E3DE;
+  --shadow-card:0 1px 7px rgba(0,0,0,0.05),0 0 16px rgba(0,0,0,0.05);
+  --shadow-sidebar:2px 0 8px rgba(0,0,0,0.06);
+  --shadow-topbar:0 2px 6px rgba(0,0,0,0.04);
+  --radius-card:16px;--radius-pill:32px;--radius-status:12px;--radius-alert:10px;--radius-nav:8px;
+  --sidebar-width:200px;--topbar-height:56px;--content-margin:24px;--tile-gap:16px;
+  --font-ui:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  --font-data:'IBM Plex Mono','SF Mono','Consolas',monospace;
+}
+body{font-family:var(--font-ui);background:var(--surface-page);color:var(--text-primary);overflow:hidden;height:100vh}
+.shell{display:grid;grid-template-columns:var(--sidebar-width) 1fr;grid-template-rows:var(--topbar-height) 1fr;height:100vh}
+.sidebar{grid-row:1/-1;background:var(--surface-sidebar);box-shadow:var(--shadow-sidebar);display:flex;flex-direction:column;padding-top:16px;z-index:10}
+.sidebar-header{display:flex;align-items:center;gap:10px;padding:0 16px;margin-bottom:24px}
+.sidebar-logo{width:36px;height:36px;flex-shrink:0;text-decoration:none;display:flex;align-items:center}
+.sidebar-title{font-size:15px;font-weight:600;color:#FFF;letter-spacing:0.3px}
+.nav-section-label{font-size:10px;font-weight:500;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1.2px;padding:0 16px;margin-bottom:4px;margin-top:12px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;border-radius:var(--radius-nav);margin:1px 8px;cursor:pointer;transition:background 0.15s;text-decoration:none;color:rgba(255,255,255,0.55);font-size:13px;font-weight:500}
+.nav-item:hover{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85)}
+.nav-item.active{background:rgba(255,255,255,0.12);color:#FFF}
+.nav-icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.nav-icon svg{width:18px;height:18px}
+.sidebar-spacer{flex:1}
+
+.sidebar-divider{height:1px;background:rgba(255,255,255,0.08);margin:8px 16px}
+.nav-badge{margin-left:auto;font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.6)}
+.sidebar-user{display:flex;align-items:center;gap:10px;padding:12px 16px;margin:8px 8px 12px 8px;border-radius:var(--radius-nav);background:rgba(255,255,255,0.06)}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--gold-600);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#FFF;flex-shrink:0}
+.user-info{overflow:hidden}
+.user-name{font-size:12px;font-weight:500;color:rgba(255,255,255,0.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-role{font-size:10px;color:rgba(255,255,255,0.4)}
+/* Keyboard shortcut modal */
+.kbd-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center}
+.kbd-overlay.open{display:flex}
+.kbd-modal{background:var(--surface-card);border-radius:var(--radius-card);box-shadow:0 8px 40px rgba(0,0,0,0.15);width:480px;max-height:80vh;overflow:auto;padding:24px}
+.kbd-modal h3{font-size:16px;font-weight:600;margin:0 0 16px 0;display:flex;align-items:center;justify-content:space-between}
+.kbd-modal .kbd-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-secondary);padding:4px}
+.kbd-group{margin-bottom:16px}
+.kbd-group h4{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-secondary);margin:0 0 8px 0}
+.kbd-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;color:var(--text-primary)}
+.kbd-keys{display:flex;gap:4px}
+kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius:4px;padding:2px 8px;font-family:var(--font-data);font-size:11px;color:var(--text-secondary)}
+
+.topbar{background:var(--surface-card);box-shadow:var(--shadow-topbar);display:flex;align-items:center;padding:0 var(--content-margin);justify-content:space-between;z-index:5}
+.breadcrumb{font-size:13px;color:var(--text-secondary)}
+.breadcrumb a{color:var(--text-secondary);text-decoration:none}
+.breadcrumb a:hover{color:var(--gold-600)}
+.breadcrumb span{margin:0 6px;opacity:0.4}
+.brand-name{font-size:16px;font-weight:600;color:var(--text-primary)}
+.brand-env{font-size:13px;color:var(--text-secondary)}
+
+.topbar-left{display:flex;align-items:baseline;gap:10px}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.topbar-btn{background:none;border:1px solid var(--border-card);border-radius:6px;padding:6px;cursor:pointer;display:flex;align-items:center;color:var(--text-secondary);transition:border-color 0.15s,color 0.15s}
+.topbar-btn:hover{border-color:var(--gold-500);color:var(--gold-600)}
+.time-range-bar{display:flex;gap:2px;background:var(--gold-100);border-radius:8px;padding:2px}
+.time-pill{background:none;border:none;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;border-radius:6px;color:var(--text-secondary);font-family:var(--font-ui);transition:all 0.15s}
+.time-pill:hover{color:var(--text-primary)}
+.time-pill.active{background:var(--surface-card);box-shadow:0 1px 3px rgba(0,0,0,0.08);color:var(--text-primary)}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--gold-600);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#FFF}
+
+.content{padding:var(--content-margin);overflow-y:auto}
+
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.dash-card{background:var(--surface-card);border:1px solid var(--border-card);border-radius:16px;box-shadow:0 1px 7px rgba(0,0,0,0.05),0 0 16px rgba(0,0,0,0.05);padding:24px;display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:border-color 0.15s,transform 0.2s,box-shadow 0.2s;min-height:180px}
+.dash-card:hover{border-color:#E29C57;transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,0.08)}
+.dash-icon{width:44px;height:44px;border-radius:12px;background:#FCEEE5;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#763D16;margin-bottom:14px}
+.dash-name{font-size:15px;font-weight:600;margin-bottom:4px}
+.dash-unit{font-size:12px;color:#615E5C;margin-bottom:8px}
+.dash-desc{font-size:12px;color:#615E5C;line-height:1.5;flex:1}
+.dash-footer{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid #E9E3DE}
+.dash-std{font-size:10px;color:#615E5C}
+.dash-arrow{font-size:14px;color:#E9E3DE;transition:color 0.15s,transform 0.15s}
+.dash-card:hover .dash-arrow{color:#BB6E3D;transform:translateX(3px)}
+
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="welcome-home.html" title="Home"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 290 290" width="36" height="36"><g transform="rotate(3.5,145,145)"><path d="M 231.6,95.0 L 231.6,195.0 L 145.0,245.0 L 58.4,195.0 L 58.4,95.0 L 145.0,45.0 Z" fill="none" stroke="#C8906A" stroke-width="3.5" stroke-linejoin="miter"/><path d="M 32.4,145.0 L 39.1,131.2 L 45.5,119.5 L 51.3,110.9 L 56.1,105.8 L 59.6,104.0 L 62.7,104.6 L 67.0,108.0 L 71.9,114.2 L 77.0,122.6 L 82.3,132.3 L 87.6,142.5 L 93.0,152.4 L 98.5,161.3 L 104.1,168.7 L 110.1,174.1 L 116.6,177.4 L 123.5,177.8 L 130.1,175.6 L 136.1,171.4 L 141.7,166.0 L 147.2,159.6 L 152.6,153.0 L 157.8,146.5 L 163.0,140.7 L 168.0,135.9 L 172.8,132.5 L 177.3,130.5 L 181.6,129.8 L 186.0,130.3 L 190.6,131.9 L 195.5,134.7 L 200.6,138.3 L 205.8,142.4 L 211.1,146.8 L 216.6,151.0 L 222.2,154.7 L 228.0,157.5 L 234.1,158.9 L 240.0,158.7 L 245.5,157.3 L 245.5,157.3 L 240.3,155.8 L 235.5,153.7 L 230.9,151.1 L 226.1,148.2 L 221.1,144.8 L 215.9,140.8 L 210.6,136.5 L 205.2,132.2 L 199.6,128.3 L 193.8,125.1 L 187.8,122.9 L 181.5,122.2 L 175.1,123.2 L 169.0,125.9 L 163.1,130.1 L 157.5,135.5 L 152.0,141.6 L 146.6,148.3 L 141.3,154.8 L 136.2,160.8 L 131.2,165.6 L 126.5,168.9 L 122.4,170.3 L 118.7,170.0 L 114.5,168.0 L 109.8,163.6 L 104.8,157.0 L 99.6,148.6 L 94.4,138.9 L 89.0,128.8 L 83.7,118.8 L 78.2,109.9 L 72.4,102.7 L 66.0,97.8 L 58.5,96.5 L 51.3,99.9 L 45.5,106.9 L 40.7,117.2 L 36.4,130.1 L 32.4,145.0 Z" fill="#C8906A" stroke="none"/></g></svg></a>
+      <span class="sidebar-title"><span style="color:#C8906A;font-weight:600">Fe</span>rriq</span>
+    </div>
+
+    <div class="nav-section-label">Core</div>
+    <a class="nav-item" href="welcome-home.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7.5L9 2l7 5.5V15a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 012 15V7.5z"/><path d="M6.5 16.5V10h5v6.5"/></svg></span>
+      Home
+    </a>
+    <a class="nav-item active" href="dashboards.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5.5" height="5.5" rx="1"/><rect x="10.5" y="2" width="5.5" height="5.5" rx="1"/><rect x="2" y="10.5" width="5.5" height="5.5" rx="1"/><rect x="10.5" y="10.5" width="5.5" height="5.5" rx="1"/></svg></span>
+      Dashboards
+    </a>
+
+    <div class="nav-section-label">Monitor</div>
+    <a class="nav-item" href="alerts.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2a5 5 0 00-5 5v2.5L2.5 12.5h13L14 9.5V7a5 5 0 00-5-5z"/><path d="M7 13a2 2 0 004 0"/><line x1="9" y1="1" x2="9" y2="2"/></svg></span>
+      Alerts
+    </a>
+    <a class="nav-item" href="activity-log.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 4.5 10 10.5 7 7.5 2 12.5"/><polyline points="12 4.5 16 4.5 16 8.5"/></svg></span>
+      Activity Log
+    </a>
+
+    <div class="nav-section-label">Tools</div>
+    <a class="nav-item" href="data-export.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 11.5v3a1 1 0 01-1 1h-11a1 1 0 01-1-1v-3"/><polyline points="5 7.5 9 3.5 13 7.5"/><line x1="9" y1="3.5" x2="9" y2="12.5"/></svg></span>
+      Data Export
+    </a>
+    <a class="nav-item" href="reports.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.5h7l3 3v10a1 1 0 01-1 1H4a1 1 0 01-1-1v-12a1 1 0 011-1z"/><polyline points="11 2.5 11 5.5 14 5.5"/><line x1="5.5" y1="9" x2="12.5" y2="9"/><line x1="5.5" y1="12" x2="10" y2="12"/></svg></span>
+      Reports
+    </a>
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-divider"></div>
+
+    <a class="nav-item" href="help.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><path d="M7 7a2 2 0 013.5 1.5c0 1.5-2 1.5-2 3"/><circle cx="9" cy="13.5" r="0.5" fill="currentColor" stroke="none"/></svg></span>
+      Help & Docs
+    </a>
+    <a class="nav-item" href="changelog.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><polyline points="9 5 9 9 12 10.5"/></svg></span>
+      Changelog
+    </a>
+
+    <div class="sidebar-divider"></div>
+
+    <a class="nav-item" href="settings.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="3"/><path d="M14.7 11.1a1.2 1.2 0 00.2 1.3l.04.04a1.44 1.44 0 11-2.04 2.04l-.04-.04a1.2 1.2 0 00-1.3-.2 1.2 1.2 0 00-.72 1.1v.12a1.44 1.44 0 11-2.88 0v-.06a1.2 1.2 0 00-.78-1.1 1.2 1.2 0 00-1.3.2l-.04.04a1.44 1.44 0 11-2.04-2.04l.04-.04a1.2 1.2 0 00.2-1.3 1.2 1.2 0 00-1.1-.72H3.44a1.44 1.44 0 110-2.88h.06a1.2 1.2 0 001.1-.78 1.2 1.2 0 00-.2-1.3l-.04-.04a1.44 1.44 0 112.04-2.04l.04.04a1.2 1.2 0 001.3.2h.06a1.2 1.2 0 00.72-1.1V3.44a1.44 1.44 0 112.88 0v.06a1.2 1.2 0 00.72 1.1 1.2 1.2 0 001.3-.2l.04-.04a1.44 1.44 0 112.04 2.04l-.04.04a1.2 1.2 0 00-.2 1.3v.06a1.2 1.2 0 001.1.72h.12a1.44 1.44 0 110 2.88h-.06a1.2 1.2 0 00-1.1.72z"/></svg></span>
+      Settings
+    </a>
+
+    <div class="sidebar-user">
+      <div class="user-avatar">VP</div>
+      <div class="user-info">
+        <div class="user-name">Vedant Patel</div>
+        <div class="user-role">Engineer</div>
+      </div>
+    </div>
+  </nav>
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="breadcrumb"><a href="welcome-home.html">Home</a><span>/</span>Dashboards</div>
+    </div>
+    <div class="topbar-right">
+      
+      <button class="topbar-btn" onclick="toggleKbd()" title="Keyboard shortcuts (?)">
+        <svg viewBox="0 0 18 18" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="14" height="9" rx="1.5"/><line x1="5" y1="8" x2="5" y2="8.01"/><line x1="9" y1="8" x2="9" y2="8.01"/><line x1="13" y1="8" x2="13" y2="8.01"/><line x1="6" y1="11" x2="12" y2="11"/></svg>
+      </button>
+      <div class="avatar">VP</div>
+    </div>
+  </header>
+  <main class="content">
+    <h1 style="font-size:22px;font-weight:700;margin-bottom:4px">Equipment Dashboards</h1>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:24px">Select an equipment model to view its detailed monitoring dashboard</p>
+    <div class="dash-grid" id="dashGrid"></div>
+  </main>
+</div>
+
+<script>
+const equipment = [
+  {name:'Air Blower',unit:'Dual-Train Centrifugal Blower',desc:'ASME PTC 10 polytropic efficiency, ISO 10816 vibration analysis, bearing temperature monitoring, power consumption tracking.',icon:'AB',href:'air-blower.html',std:'ASME PTC 10 · ISO 10816'},
+  {name:'Fired Heater Efficiency',unit:'Gas-Fired Process Heater · L3/L4',desc:'Direct & indirect efficiency (Siegert), stack loss, excess air monitoring, bridgewall temperature, radiation losses.',icon:'FH',href:'fired-heater.html',std:'API 560 · ASME PTC 4'},
+  {name:'Shell & Tube Exchanger',unit:'TEMA RCB Crude Preheater',desc:'LMTD effectiveness, fouling resistance tracking, overall heat transfer coefficient, shell and tube ΔP monitoring.',icon:'HX',href:'shell-tube-exchanger.html',std:'TEMA · ASME PTC 12.5'},
+  {name:'Membrane Analyzer',unit:'H₂ Recovery Module M-301',desc:'H₂ permeance tracking, recovery and purity calculations, selectivity monitoring, differential pressure analysis.',icon:'MA',href:'membrane-analyzer.html',std:'Custom model'},
+  {name:'Furnace Skin Temp',unit:'Radiant Section F-201',desc:'Tube metal temperature prediction, residual drift detection, decoking trigger classification, TMT limit monitoring.',icon:'FT',href:'furnace-skin-temp.html',std:'API 560 · ASME PTC 4'},
+  {name:'Crude to Profit',unit:'Five-Crude Refinery Margin Model',desc:'Crude blend, primary distillation, LC-Fining and SimDist split, hydrocracker/hydrotreater, and gross margin at a low and high price case, with live Alberta and EIA pricing.',icon:'CP',href:'crude-to-profit.html',std:'Margin screening tool'},
+];
+const grid=document.getElementById('dashGrid');
+equipment.forEach(eq=>{grid.innerHTML+=`<a class="dash-card" href="${eq.href}"><div class="dash-icon">${eq.icon}</div><div class="dash-name">${eq.name}</div><div class="dash-unit">${eq.unit}</div><div class="dash-desc">${eq.desc}</div><div class="dash-footer"><span class="dash-std">${eq.std}</span><span class="dash-arrow">→</span></div></a>`;});
+</script>
+
+<div class="kbd-overlay" id="kbdOverlay">
+  <div class="kbd-modal">
+    <h3>Keyboard Shortcuts <button class="kbd-close" onclick="toggleKbd()">&times;</button></h3>
+    <div class="kbd-group">
+      <h4>Navigation</h4>
+      <div class="kbd-row"><span>Go to Home</span><div class="kbd-keys"><kbd>G</kbd><kbd>H</kbd></div></div>
+      <div class="kbd-row"><span>Go to Settings</span><div class="kbd-keys"><kbd>G</kbd><kbd>S</kbd></div></div>
+      <div class="kbd-row"><span>Go to Alerts</span><div class="kbd-keys"><kbd>G</kbd><kbd>A</kbd></div></div>
+      <div class="kbd-row"><span>Go to Help</span><div class="kbd-keys"><kbd>G</kbd><kbd>?</kbd></div></div>
+    </div>
+    <div class="kbd-group">
+      <h4>Actions</h4>
+      <div class="kbd-row"><span>Show shortcuts</span><div class="kbd-keys"><kbd>?</kbd></div></div>
+      <div class="kbd-row"><span>Close modal / panel</span><div class="kbd-keys"><kbd>Esc</kbd></div></div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+function toggleKbd(){document.getElementById('kbdOverlay').classList.toggle('open')}
+(function(){
+  let gPressed=false,gTimer=null;
+  document.addEventListener('keydown',function(e){
+    if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA')return;
+    const k=e.key.toLowerCase();
+    if(k==='?'&&!gPressed){e.preventDefault();toggleKbd();return}
+    if(k==='escape'){
+      document.getElementById('kbdOverlay').classList.remove('open');
+      var mp=document.querySelector('.manual-panel');if(mp)mp.classList.remove('open');
+      var mo=document.querySelector('.manual-overlay');if(mo)mo.style.display='none';
+      return;
+    }
+    if(k==='g'&&!gPressed){gPressed=true;gTimer=setTimeout(()=>{gPressed=false},800);return}
+    if(gPressed){
+      gPressed=false;clearTimeout(gTimer);
+      if(k==='h')location.href='welcome-home.html';
+      else if(k==='s')location.href='settings.html';
+      else if(k==='a')location.href='alerts.html';
+      else if(k==='?')location.href='help.html';
+    }
+  });
+})();
+</script>
+
+
+</body>
+</html>

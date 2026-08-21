@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ferriq - Crude to Profit</title>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+/* Page-specific: KPI grid columns (6 tiles) */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:var(--tile-gap)}
+@media(max-width:1400px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi-tile{min-height:92px}
+
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap}
+.page-head h1{font-size:22px;font-weight:700}
+.page-head p{font-size:13px;color:var(--text-secondary);margin-top:4px}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:var(--tile-gap)}
+@media(max-width:1100px){.two-col{grid-template-columns:1fr}}
+
+table.edit td input{width:66px;font-family:var(--font-data);font-size:12px;background:var(--surface-page);border:1px solid var(--border-card);border-radius:4px;padding:3px 5px;text-align:right}
+table.edit td input:focus{outline:none;border-color:var(--neutral-600)}
+table.edit td input[readonly]{background:#F1F0EE;color:var(--text-secondary)}
+table.edit th{white-space:nowrap;font-size:10px}
+table.edit td,table.edit th{padding:6px 8px}
+
+.note-box{background:var(--gold-100);border:1px solid var(--border-card);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text-secondary);line-height:1.55;margin-bottom:var(--tile-gap)}
+.note-box strong{color:var(--text-primary)}
+
+.price-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--tile-gap)}
+@media(max-width:1100px){.price-grid{grid-template-columns:1fr}}
+.price-col h4{font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-secondary);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border-card)}
+.price-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--border-card);font-size:12.5px;gap:8px}
+.price-row:last-child{border-bottom:none}
+.price-row .native{font-family:var(--font-data);color:var(--text-secondary);font-size:11px;white-space:nowrap}
+.price-row .cad{font-family:var(--font-data);font-weight:600;white-space:nowrap}
+.fx-row{display:flex;align-items:center;gap:8px;margin:10px 0;font-size:12px}
+.fx-row input{width:90px;font-family:var(--font-data);font-size:12px;background:var(--surface-page);border:1px solid var(--border-card);border-radius:5px;padding:4px 6px;text-align:right}
+.fx-row input:focus{outline:none;border-color:var(--neutral-600)}
+.cutpoint-note{font-size:11px;color:var(--text-secondary);margin:6px 0 0 0}
+.card-body h4.sub{font-size:12px;font-weight:600;color:var(--text-primary);margin:14px 0 6px 0}
+.card-body h4.sub:first-child{margin-top:0}
+.flow-upload{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.about-p{font-size:13px;line-height:1.65;color:var(--text-primary);margin-bottom:12px}
+.about-h{font-size:15px;font-weight:600;color:var(--neutral-700);margin:18px 0 8px 0}
+.about-h:first-child{margin-top:0}
+.table-scroll{overflow-x:auto}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="welcome-home.html" title="Home"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 290 290" width="36" height="36"><g transform="rotate(3.5,145,145)"><path d="M 231.6,95.0 L 231.6,195.0 L 145.0,245.0 L 58.4,195.0 L 58.4,95.0 L 145.0,45.0 Z" fill="none" stroke="#C8906A" stroke-width="3.5" stroke-linejoin="miter"/><path d="M 32.4,145.0 L 39.1,131.2 L 45.5,119.5 L 51.3,110.9 L 56.1,105.8 L 59.6,104.0 L 62.7,104.6 L 67.0,108.0 L 71.9,114.2 L 77.0,122.6 L 82.3,132.3 L 87.6,142.5 L 93.0,152.4 L 98.5,161.3 L 104.1,168.7 L 110.1,174.1 L 116.6,177.4 L 123.5,177.8 L 130.1,175.6 L 136.1,171.4 L 141.7,166.0 L 147.2,159.6 L 152.6,153.0 L 157.8,146.5 L 163.0,140.7 L 168.0,135.9 L 172.8,132.5 L 177.3,130.5 L 181.6,129.8 L 186.0,130.3 L 190.6,131.9 L 195.5,134.7 L 200.6,138.3 L 205.8,142.4 L 211.1,146.8 L 216.6,151.0 L 222.2,154.7 L 228.0,157.5 L 234.1,158.9 L 240.0,158.7 L 245.5,157.3 L 245.5,157.3 L 240.3,155.8 L 235.5,153.7 L 230.9,151.1 L 226.1,148.2 L 221.1,144.8 L 215.9,140.8 L 210.6,136.5 L 205.2,132.2 L 199.6,128.3 L 193.8,125.1 L 187.8,122.9 L 181.5,122.2 L 175.1,123.2 L 169.0,125.9 L 163.1,130.1 L 157.5,135.5 L 152.0,141.6 L 146.6,148.3 L 141.3,154.8 L 136.2,160.8 L 131.2,165.6 L 126.5,168.9 L 122.4,170.3 L 118.7,170.0 L 114.5,168.0 L 109.8,163.6 L 104.8,157.0 L 99.6,148.6 L 94.4,138.9 L 89.0,128.8 L 83.7,118.8 L 78.2,109.9 L 72.4,102.7 L 66.0,97.8 L 58.5,96.5 L 51.3,99.9 L 45.5,106.9 L 40.7,117.2 L 36.4,130.1 L 32.4,145.0 Z" fill="#C8906A" stroke="none"/></g></svg></a>
+      <span class="sidebar-title"><span style="color:#C8906A;font-weight:600">Fe</span>rriq</span>
+    </div>
+
+    <div class="nav-section-label">Core</div>
+    <a class="nav-item" href="welcome-home.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7.5L9 2l7 5.5V15a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 012 15V7.5z"/><path d="M6.5 16.5V10h5v6.5"/></svg></span>
+      Home
+    </a>
+    <a class="nav-item" href="dashboards.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5.5" height="5.5" rx="1"/><rect x="10.5" y="2" width="5.5" height="5.5" rx="1"/><rect x="2" y="10.5" width="5.5" height="5.5" rx="1"/><rect x="10.5" y="10.5" width="5.5" height="5.5" rx="1"/></svg></span>
+      Dashboards
+    </a>
+
+    <a class="nav-item" href="predictors.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 13 6 9 9 11 14 5"/><polyline points="11 5 14 5 14 8"/></svg></span>
+      Predictors
+    </a>
+    <div class="nav-section-label">Monitor</div>
+    <a class="nav-item" href="alerts.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2a5 5 0 00-5 5v2.5L2.5 12.5h13L14 9.5V7a5 5 0 00-5-5z"/><path d="M7 13a2 2 0 004 0"/><line x1="9" y1="1" x2="9" y2="2"/></svg></span>
+      Alerts
+    </a>
+    <a class="nav-item" href="activity-log.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 4.5 10 10.5 7 7.5 2 12.5"/><polyline points="12 4.5 16 4.5 16 8.5"/></svg></span>
+      Activity Log
+    </a>
+
+    <div class="nav-section-label">Tools</div>
+    <a class="nav-item" href="data-export.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 11.5v3a1 1 0 01-1 1h-11a1 1 0 01-1-1v-3"/><polyline points="5 7.5 9 3.5 13 7.5"/><line x1="9" y1="3.5" x2="9" y2="12.5"/></svg></span>
+      Data Export
+    </a>
+    <a class="nav-item" href="reports.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.5h7l3 3v10a1 1 0 01-1 1H4a1 1 0 01-1-1v-12a1 1 0 011-1z"/><polyline points="11 2.5 11 5.5 14 5.5"/><line x1="5.5" y1="9" x2="12.5" y2="9"/><line x1="5.5" y1="12" x2="10" y2="12"/></svg></span>
+      Reports
+    </a>
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-divider"></div>
+
+    <a class="nav-item" href="help.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><path d="M7 7a2 2 0 013.5 1.5c0 1.5-2 1.5-2 3"/><circle cx="9" cy="13.5" r="0.5" fill="currentColor" stroke="none"/></svg></span>
+      Help &amp; Docs
+    </a>
+    <a class="nav-item" href="changelog.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><polyline points="9 5 9 9 12 10.5"/></svg></span>
+      Changelog
+    </a>
+
+    <div class="sidebar-divider"></div>
+
+    <a class="nav-item" href="settings.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="3"/><path d="M14.7 11.1a1.2 1.2 0 00.2 1.3l.04.04a1.44 1.44 0 11-2.04 2.04l-.04-.04a1.2 1.2 0 00-1.3-.2 1.2 1.2 0 00-.72 1.1v.12a1.44 1.44 0 11-2.88 0v-.06a1.2 1.2 0 00-.78-1.1 1.2 1.2 0 00-1.3.2l-.04.04a1.44 1.44 0 11-2.04-2.04l.04-.04a1.2 1.2 0 00.2-1.3 1.2 1.2 0 00-1.1-.72H3.44a1.44 1.44 0 110-2.88h.06a1.2 1.2 0 001.1-.78 1.2 1.2 0 00-.2-1.3l-.04-.04a1.44 1.44 0 112.04-2.04l.04.04a1.2 1.2 0 001.3.2h.06a1.2 1.2 0 00.72-1.1V3.44a1.44 1.44 0 112.88 0v.06a1.2 1.2 0 00.72 1.1 1.2 1.2 0 001.3-.2l.04-.04a1.44 1.44 0 112.04 2.04l-.04.04a1.2 1.2 0 00-.2 1.3v.06a1.2 1.2 0 001.1.72h.12a1.44 1.44 0 110 2.88h-.06a1.2 1.2 0 00-1.1.72z"/></svg></span>
+      Settings
+    </a>
+
+    <div class="planned-modules"><strong>Planned modules</strong>Alerts &middot; Activity Log &middot; Data Export &middot; Reports &middot; Help &middot; Changelog &middot; Settings</div>
+    <div class="sidebar-user">
+      <div class="user-avatar">VP</div>
+      <div class="user-info">
+        <div class="user-name">Vedant Patel</div>
+        <div class="user-role">Engineer</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="breadcrumb"><a href="welcome-home.html">Home</a><span>/</span><a href="dashboards.html">Dashboards</a><span>/</span>Crude to Profit</div>
+    </div>
+    <div class="topbar-right">
+      <div class="avatar">VP</div>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="content">
+    <div class="page-head">
+      <div>
+        <h1>Crude to Profit - Refinery Blend Margin</h1>
+        <p>Five-crude blend &middot; primary distillation, LC-Fining, SimDist split, hydrocracker/hydrotreater, and gross margin. Margin screening tool, not a blend optimizer.</p>
+      </div>
+      <button class="btn btn-sm btn-outline" id="restoreDefaultsBtn">Restore Defaults</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="data">Data &amp; Log</button>
+      <button class="tab" data-tab="about">About</button>
+    </div>
+
+    <!-- ============================================================= -->
+    <!-- DASHBOARD TAB                                                  -->
+    <!-- ============================================================= -->
+    <section class="tab-panel active" id="panel-dashboard">
+
+      <div class="kpi-grid">
+        <div class="kpi-tile">
+          <div class="kpi-label">Gross Margin, Low Case</div>
+          <div class="kpi-value" id="kMarginLowHr">&mdash;</div>
+          <div class="kpi-sub">C$/hr</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-label">Gross Margin, High Case</div>
+          <div class="kpi-value" id="kMarginHighHr">&mdash;</div>
+          <div class="kpi-sub">C$/hr</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-label">Annualised Margin, Low Case</div>
+          <div class="kpi-value" id="kMarginLowYr">&mdash;</div>
+          <div class="kpi-sub">million C$/yr</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-label">Annualised Margin, High Case</div>
+          <div class="kpi-value" id="kMarginHighYr">&mdash;</div>
+          <div class="kpi-sub">million C$/yr</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-label">Total Blend Rate</div>
+          <div class="kpi-value" id="kBlendRate">&mdash;</div>
+          <div class="kpi-sub">m&sup3;/hr crude feed</div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-label">Total Product Volume</div>
+          <div class="kpi-value" id="kProductVolume">&mdash;</div>
+          <div class="kpi-sub">m&sup3;/hr finished slate</div>
+        </div>
+      </div>
+
+      <!-- LIVE PRICE PANEL -->
+      <div class="card">
+        <div class="card-header">Live Price Panel<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">Alberta and EIA both fetched live, directly from this browser</span></div>
+        <div class="card-body">
+          <div class="note-box">
+            <strong>This page calls the EIA API directly using a key embedded in its source.</strong> That key is publicly visible to anyone who views this page's source, by explicit choice for this build (2026-08-21) rather than the usual server-side-only pattern. If the embedded key is later revoked or rate-limited, EIA prices fall back to a locally generated snapshot file, then to the fixed reference prices. See the About tab.
+          </div>
+          <div class="note-box">
+            Differentials for every crude and product default to zero below. At zero differential, live benchmark prices sit well off the fixed reference prices: LPG runs at roughly a third of the reference price, naphtha roughly half again above it. Calibrate the differential fields in the Data &amp; Log tab before treating a live price as more than indicative.
+          </div>
+          <div class="price-grid">
+            <div class="price-col">
+              <h4>Alberta Economic Data (no key, live)</h4>
+              <div id="albertaStatus">Fetching...</div>
+              <div class="price-row"><span>Derived WCS estimate</span><span class="cad" id="wcsStatus">&mdash;</span></div>
+            </div>
+            <div class="price-col">
+              <h4>EIA Open Data (live, embedded key)</h4>
+              <div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px" id="eiaGenerated">Fetching...</div>
+              <div id="eiaStatus"></div>
+            </div>
+          </div>
+          <div class="fx-row">
+            <label for="fxRate">USD/CAD (enter current rate, not assumed)</label>
+            <input type="number" step="0.01" class="config-input" id="fxRate" placeholder="e.g. 1.37">
+          </div>
+          <div class="price-grid">
+            <div class="price-col">
+              <h4>Derived Crude Prices (C$/m&sup3;)</h4>
+              <div id="liveCrudePrices"></div>
+            </div>
+            <div class="price-col">
+              <h4>Derived Product Prices (C$/m&sup3;)</h4>
+              <div id="livePricesProducts"></div>
+            </div>
+          </div>
+          <div style="margin-top:12px">
+            <button class="btn btn-sm" id="applyLiveBtn">Apply live prices to low case</button>
+            <span style="font-size:11px;color:var(--text-secondary);margin-left:8px">Overwrites the low-case price cells in Data &amp; Log with the derived values above where available. High case is left as the fixed reference. Fixed reference prices are always used unless you apply live prices.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="card">
+          <div class="card-header">Finished Product Slate<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">seven cuts, m&sup3;/hr</span></div>
+          <div class="card-body">
+            <p class="cutpoint-note">Cut point (diagnostic, read-only): 367&deg;C. Reported only; it does not drive this slate. See the About tab.</p>
+            <div class="chart-canvas-wrap" style="height:220px;margin-bottom:14px"><canvas id="chart-slate"></canvas></div>
+            <div class="table-scroll">
+              <table class="data">
+                <thead><tr><th>Product</th><th>m&sup3;/hr</th><th>bbl/hr</th></tr></thead>
+                <tbody id="slateBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Crude Blend<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">five feeds, m&sup3;/hr and share</span></div>
+          <div class="card-body">
+            <div class="chart-canvas-wrap" style="height:220px;margin-bottom:14px"><canvas id="chart-blend"></canvas></div>
+            <div class="table-scroll">
+              <table class="data">
+                <thead><tr><th>Crude</th><th>m&sup3;/hr</th><th>Blend %</th><th>Sulfur kg/hr</th></tr></thead>
+                <tbody id="blendBody"></tbody>
+              </table>
+            </div>
+            <p style="font-size:11px;color:var(--text-secondary);margin-top:8px">Total <span id="blendTotalFlow">&mdash;</span> m&sup3;/hr (<span id="blendTotalBbl">&mdash;</span> bbl/hr), sulfur <span id="blendTotalSulfur">&mdash;</span> kg/hr.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Crude Cost Against Product Revenue<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">C$/hr, low and high price case</span></div>
+        <div class="card-body">
+          <div class="chart-canvas-wrap" style="height:260px"><canvas id="chart-econ"></canvas></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================= -->
+    <!-- DATA & LOG TAB                                                 -->
+    <!-- ============================================================= -->
+    <section class="tab-panel" id="panel-data">
+
+      <div class="card">
+        <div class="card-header">Crude Flow Rates<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">m&sup3;/hr per crude, editable</span></div>
+        <div class="card-body">
+          <div class="flow-upload">
+            <label class="upload-inline" for="csvInput" style="max-width:220px">
+              <input type="file" id="csvInput" accept=".csv"/>
+              <span class="up-title">Upload CSV</span>
+              <span class="up-sub" id="flowUpStatus">Workbook defaults</span>
+            </label>
+            <button class="btn btn-sm btn-outline" id="btnExport">Export Results CSV</button>
+          </div>
+          <div class="table-scroll">
+            <table class="data edit">
+              <thead><tr><th>Crude</th><th>Name</th><th>Benchmark</th><th>Flow (m&sup3;/hr)</th><th>Blend %</th><th>Density (kg/m&sup3;)</th><th>Sulfur (wt%)</th></tr></thead>
+              <tbody id="tblCrudeFlowsBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Primary Distillation Yield<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">vol % of each crude &middot; VGO is computed as LVGO + MVGO + HVGO</span></div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table class="data edit">
+              <thead><tr><th>Crude</th><th>Naphtha</th><th>AGO</th><th>VR</th><th>LVGO</th><th>MVGO</th><th>HVGO</th><th>VGO (computed)</th></tr></thead>
+              <tbody id="tblPrimaryYieldBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">LC-Fining Yield<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">wt % of vacuum residue feed</span></div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table class="data edit">
+              <thead><tr><th>LCF Naphtha</th><th>Diesel</th><th>LCF LVGO</th><th>LCF MVGO</th><th>LCF HVGO</th><th>CRVR + BC</th></tr></thead>
+              <tbody id="tblLcfBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Hydrocracker / Hydrotreater Yield<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">vol % drives the calculation &middot; wt % is reference only</span></div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table class="data edit">
+              <thead><tr><th>Cut</th><th>vol %</th><th>wt % (reference)</th></tr></thead>
+              <tbody id="tblHchtBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">SimDist Per-Stream Split<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">vol % of each intermediate stream into the seven finished cuts</span></div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table class="data edit">
+              <thead><tr><th>Stream</th><th>LPG</th><th>Naphtha</th><th>Swing Naphtha</th><th>Kerosene</th><th>Diesel</th><th>Swing Diesel</th><th>UCO</th></tr></thead>
+              <tbody id="tblSimdistBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Price Inputs<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">fixed reference prices, plus differentials used by the live price panel</span></div>
+        <div class="card-body">
+          <h4 class="sub">Crude prices (C$/m&sup3;)</h4>
+          <div class="table-scroll">
+            <table class="data edit">
+              <thead><tr><th>Crude</th><th>Low case</th><th>High case</th><th>Live differential</th></tr></thead>
+              <tbody id="tblPriceCrudeBody"></tbody>
+            </table>
+          </div>
+          <h4 class="sub">Product prices (C$/m&sup3;)</h4>
+          <div class="table-scroll">
+            <table class="data edit">
+              <thead><tr><th>Product</th><th>Low case</th><th>High case</th><th>Live differential</th></tr></thead>
+              <tbody id="tblPriceProductBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================= -->
+    <!-- ABOUT TAB                                                      -->
+    <!-- ============================================================= -->
+    <section class="tab-panel" id="panel-about">
+      <div class="card"><div class="card-body">
+
+        <h3 class="about-h">What this model computes</h3>
+        <p class="about-p">Crude to Profit prices a five-crude refinery blend from feedstock to finished product. Five Canadian crude streams blend into one feed, split on a per-crude assay yield into primary distillation cuts, and the two heavy cuts convert further: vacuum residue through an LC-Fining resid hydrocracker, and the leftover unconverted oil through a hydrocracker/hydrotreater. The resulting seven-product slate is priced against the crude feed cost at a low and a high price case, in C$/hr and million C$/yr.</p>
+        <p class="about-p">This is a margin screening tool. It does not optimize the blend, respect unit capacity limits, or check that a product meets specification. It answers what this blend earns at these prices for a fixed configuration, not what blend to buy.</p>
+
+        <h3 class="about-h">Calculation chain</h3>
+        <p class="about-p">Six stages run in order. Crude blend combines the five feeds and reports each crude's share, sulfur load, and flow in barrels. Primary distillation applies each crude's assay yield table to split it into naphtha, AGO, VGO, vacuum residue, and the three VGO sub-cuts (LVGO, MVGO, HVGO). LC-Fining converts the vacuum residue into naphtha, a diesel cut, three VGO grades, and an unconverted bottoms stream, on a mass balance basis at a fixed feed and product density. Each intermediate stream then splits into the seven finished cuts on its own per-stream split table. The unconverted oil left over from that split becomes the hydrocracker/hydrotreater feed and splits again on its own yield table, where LPG is the C3 plus iC4 plus nC4 roll-up. Economics sums crude cost and product revenue at a low and a high price case and reports the difference as gross margin, annualised at 24 hours a day and 330 operating days a year.</p>
+
+        <h3 class="about-h">Cut point: a diagnostic, not a driver</h3>
+        <p class="about-p">The dashboard reports a cut point of 367&deg;C as a fixed, read-only figure. In the source model this number only feeds a display column. It does not change the product slate; the finished-product volumes come entirely from the per-stream split tables in the Data &amp; Log tab. Treat the cut point as a reference for how well the split assumption matches a real distillation curve, not as a control that shifts output.</p>
+
+        <h3 class="about-h">Why these numbers run about 39% above the source spreadsheet</h3>
+        <p class="about-p">The workbook this model was ported from has a cell reference error in its naphtha split: it reads the naphtha stream's LPG share instead of its naphtha share, which drops 88.59 m&sup3;/hr of naphtha from the output, 16.5% of everything fed to that step. That gap matches the workbook's own unexplained volume balance exactly. This dashboard fixes the reference and computes the naphtha split correctly, so margin runs about 39% above the original spreadsheet. Anyone comparing this dashboard's output against the source file should expect that gap and treat it as a correction, not a porting error.</p>
+
+        <h3 class="about-h">Live prices and data sources</h3>
+        <p class="about-p">Alberta's economic data service publishes WCS, WTI, and the WCS-WTI differential monthly, with no key required, and this page calls it directly from the browser. The EIA publishes daily crude and product spot prices but requires a registered key. The usual pattern for a page that ships in a public repository is to keep that key server-side only, since anything in client-side JS is visible to any visitor and gets scraped within minutes once published. This build embeds the EIA key directly in the page instead, by explicit request, so the key should be treated as public and disposable rather than a real secret. If the embedded key stops working (revoked, rotated, or rate-limited), EIA prices fall back to a JSON snapshot file generated by a separate script (<code>fetch_prices.py</code>), which keeps its own key server-side in the usual way, and finally to the fixed reference prices if neither source answers.</p>
+        <p class="about-p">Daily WCS is estimated as EIA's daily WTI minus Alberta's monthly WCS-WTI differential, since the differential moves slowly (pipeline capacity and crude quality) while the outright price tracks WTI day to day. Four of the seven products (LPG, naphtha, kerosene, diesel) have a public benchmark; the other three (swing naphtha, swing diesel, UCO) do not and stay on the fixed reference price. Naphtha prices off finished gasoline, a defensible proxy because naphtha is a gasoline blendstock, but not the same product, so the naphtha differential needs calibrating before the live number means much. Diesel prices off US Gulf Coast ULSD, not the Chicago or NRCan benchmark an Alberta refinery actually sees.</p>
+        <p class="about-p">All differentials, for both crudes and products, default to zero. At zero differential, live benchmark prices sit well off the fixed reference: LPG runs at roughly a third of the reference price and naphtha roughly half again above it. Calibrate the differential fields in the Data &amp; Log tab before treating a live price as more than indicative.</p>
+
+        <h3 class="about-h">Scope and limitations</h3>
+        <p class="about-p">This engine prices one blend at one set of yields. It is volumetrically additive with no shrinkage correction on blending, and the LC-Fining step converts every product on a single generic density (862 kg/m&sup3;) rather than a per-product one, matching the source workbook's own simplification. Utilities, hydrogen, catalyst, labour, and capital charges sit outside the boundary; the reported figure is a gross crude-to-product margin, not a net cash margin. The 330 operating days a year is an availability assumption, not a measurement. Crude density and sulfur are fixed reference values from assay data, not live feeds.</p>
+
+      </div></div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+// =====================================================================
+// CRUDE TO PROFIT - refinery blend margin model
+// Mirrors models/crude-to-profit/engine.py v2.0 exactly. Do not change
+// any calculation logic, yield value, or constant here without also
+// updating engine.py - engine.py is the specification.
+// =====================================================================
+
+// ---- Engine constants (mirrors engine.py section 1-2) ----------------
+const CRUDES = ["OSH", "SHD", "AWB", "SCO", "FRB"];
+const PRIMARY_CUTS = ["naphtha", "ago", "vgo", "vr", "lvgo", "mvgo", "hvgo"];
+const LCF_PRODUCTS = ["lcf_naphtha", "diesel", "lcf_lvgo", "lcf_mvgo", "lcf_hvgo", "crvr_bc"];
+const PRODUCTS = ["lpg", "naphtha", "swing_naphtha", "kerosene", "diesel", "swing_diesel", "uco"];
+const PRODUCT_LABELS = {
+  lpg: "LPG",
+  naphtha: "Naphtha (C5 to 128 C)",
+  swing_naphtha: "Swing Naphtha (128 to 145 C)",
+  kerosene: "Kerosene (145 to 277 C)",
+  diesel: "Diesel (277 to 340 C)",
+  swing_diesel: "Swing Diesel (340 to 385 C)",
+  uco: "UCO (above 385 C)",
+};
+const SIMDIST_STREAMS = ["srvr", "diesel", "naphtha", "lvgo", "mvgo", "hvgo", "crvr"];
+const CRUDE_NAMES = {
+  OSH: "Suncor Synthetic H", SHD: "Surmont Heavy Dilbit", AWB: "Access Western Blend",
+  SCO: "Suncor Synthetic A", FRB: "Fort Hills Dilbit",
+};
+
+const DEFAULT_CONFIG = {
+  primary_yield_volpct: {
+    OSH: { naphtha: 9.8, ago: 18.70, vgo: 63.40, vr: 8.30, lvgo: 11.00, mvgo: 30.90, hvgo: 21.50 },
+    SHD: { naphtha: 25.8, ago: 12.00, vgo: 22.40, vr: 39.10, lvgo: 4.00, mvgo: 9.50, hvgo: 8.90 },
+    AWB: { naphtha: 24.0, ago: 10.10, vgo: 22.90, vr: 42.00, lvgo: 3.60, mvgo: 9.50, hvgo: 9.80 },
+    SCO: { naphtha: 16.2, ago: 35.11, vgo: 40.54, vr: 5.29, lvgo: 10.18, mvgo: 18.31, hvgo: 12.05 },
+    FRB: { naphtha: 22.0, ago: 12.20, vgo: 25.10, vr: 40.40, lvgo: 4.10, mvgo: 10.60, hvgo: 10.40 },
+  },
+  lcf_yield_wtpct: {
+    lcf_naphtha: 14.13, diesel: 23.95, lcf_lvgo: 12.32, lcf_mvgo: 9.78, lcf_hvgo: 2.44, crvr_bc: 25.39,
+  },
+  hcht_yield_volpct: {
+    c3: 1.55, ic4: 2.96, nc4: 1.49, naphtha: 18.94, swing_naphtha: 5.41,
+    kerosene: 43.85, diesel: 20.36, swing_diesel: 9.29, uco: 7.58,
+  },
+  hcht_yield_wtpct: {
+    c3: 0.87, ic4: 1.84, nc4: 0.96, naphtha: 14.89, swing_naphtha: 4.55,
+    kerosene: 40.16, diesel: 19.67, swing_diesel: 9.01, uco: 7.53,
+  },
+  simdist_split_volpct: {
+    srvr:    { lpg: 0, naphtha: 0, swing_naphtha: 0, kerosene: 0, diesel: 0, swing_diesel: 0, uco: 100 },
+    diesel:  { lpg: 0, naphtha: 0, swing_naphtha: 0, kerosene: 45, diesel: 40, swing_diesel: 14, uco: 1 },
+    naphtha: { lpg: 0, naphtha: 37, swing_naphtha: 15, kerosene: 0, diesel: 48, swing_diesel: 0, uco: 0 },
+    lvgo:    { lpg: 0, naphtha: 0, swing_naphtha: 0, kerosene: 2, diesel: 23, swing_diesel: 30, uco: 45 },
+    mvgo:    { lpg: 0, naphtha: 0, swing_naphtha: 0, kerosene: 0, diesel: 3, swing_diesel: 15, uco: 82 },
+    hvgo:    { lpg: 0, naphtha: 0, swing_naphtha: 0, kerosene: 0, diesel: 0, swing_diesel: 0, uco: 100 },
+    crvr:    { lpg: 0, naphtha: 0, swing_naphtha: 0, kerosene: 0, diesel: 0, swing_diesel: 0, uco: 100 },
+  },
+  cut_point_c: 367.0,
+  crude_price_low_cad_m3:  { OSH: 580, SHD: 500, AWB: 500, SCO: 610, FRB: 500 },
+  crude_price_high_cad_m3: { OSH: 640, SHD: 570, AWB: 580, SCO: 680, FRB: 570 },
+  product_price_low_cad_m3:  { lpg: 650, naphtha: 720, swing_naphtha: 760, kerosene: 1150, diesel: 1100, swing_diesel: 1000, uco: 520 },
+  product_price_high_cad_m3: { lpg: 780, naphtha: 810, swing_naphtha: 850, kerosene: 1300, diesel: 1280, swing_diesel: 1150, uco: 650 },
+  crude_benchmark: { OSH: "WTI", SCO: "WTI", SHD: "WCS", AWB: "WCS", FRB: "WCS" },
+  crude_differential_cad_m3: { OSH: 0.0, SHD: 0.0, AWB: 0.0, SCO: 0.0, FRB: 0.0 },
+  product_benchmark: {
+    lpg: "propane_usd_gal", naphtha: "gasoline_usd_gal", swing_naphtha: null,
+    kerosene: "jetfuel_usd_gal", diesel: "ulsd_gc_usd_gal", swing_diesel: null, uco: null,
+  },
+  product_differential_cad_m3: Object.fromEntries(PRODUCTS.map(p => [p, 0.0])),
+};
+
+const CRUDE_PROPERTIES = {
+  OSH: { density_kg_m3: 935.7, sulfur_wtpct: 2.88 },
+  SHD: { density_kg_m3: 919.1, sulfur_wtpct: 3.87 },
+  AWB: { density_kg_m3: 925.6, sulfur_wtpct: 4.09 },
+  SCO: { density_kg_m3: 867.3, sulfur_wtpct: 0.13 },
+  FRB: { density_kg_m3: 922.4, sulfur_wtpct: 3.75 },
+};
+
+const M3_TO_BBL = 6.290123456790123;
+const OPERATING_DAYS_PER_YEAR = 330;
+const HOURS_PER_DAY = 24;
+const LCF_FEED_DENSITY_KG_M3 = 996.8;
+const LCF_PRODUCT_DENSITY_KG_M3 = 862.0;
+const DEFAULT_CRUDE_FLOWS_M3HR = { OSH: 100.0, SHD: 87.0, AWB: 150.0, SCO: 15.0, FRB: 249.66666666666666 };
+
+function zeroSlate() { const z = {}; for (const p of PRODUCTS) z[p] = 0.0; return z; }
+
+// -- 5.1 Crude blend ----------------------------------------------------
+function blendCrudes(crudeFlows) {
+  let total = 0;
+  for (const c of CRUDES) total += crudeFlows[c] || 0.0;
+  const perCrude = {};
+  for (const c of CRUDES) {
+    const flow = crudeFlows[c] || 0.0;
+    const props = CRUDE_PROPERTIES[c];
+    perCrude[c] = {
+      flow_m3hr: flow,
+      blend_pct: total ? (flow / total * 100.0) : 0.0,
+      flow_bblhr: flow * M3_TO_BBL,
+      sulfur_kghr: props.density_kg_m3 * flow * props.sulfur_wtpct / 100.0,
+      density_kg_m3: props.density_kg_m3,
+      sulfur_wtpct: props.sulfur_wtpct,
+    };
+  }
+  let totalSulfur = 0;
+  for (const c of CRUDES) totalSulfur += perCrude[c].sulfur_kghr;
+  return { per_crude: perCrude, total_flow_m3hr: total, total_flow_bblhr: total * M3_TO_BBL, total_sulfur_kghr: totalSulfur };
+}
+
+// -- 5.2 Primary distillation split --------------------------------------
+function primarySplit(crudeFlows, cfg) {
+  const table = cfg.primary_yield_volpct;
+  const perCrude = {};
+  const totals = {};
+  for (const cut of PRIMARY_CUTS) totals[cut] = 0.0;
+  for (const c of CRUDES) {
+    const flow = crudeFlows[c] || 0.0;
+    const yields = table[c];
+    const cuts = {};
+    for (const cut of PRIMARY_CUTS) cuts[cut] = flow * yields[cut] / 100.0;
+    cuts.vgo = cuts.lvgo + cuts.mvgo + cuts.hvgo; // rebuilt from sub-cuts, mirrors workbook row 21
+    perCrude[c] = cuts;
+    for (const cut of PRIMARY_CUTS) totals[cut] += cuts[cut];
+  }
+  return {
+    per_crude: perCrude, totals_m3hr: totals,
+    hydrotreater_feed_m3hr: totals.naphtha + totals.ago,
+    hydrocracker_feed_m3hr: totals.lvgo + totals.mvgo + totals.hvgo,
+  };
+}
+
+// -- 5.3 LC-Fining --------------------------------------------------------
+function lcfSplit(vrM3hr, cfg) {
+  const table = cfg.lcf_yield_wtpct;
+  const factor = vrM3hr * LCF_FEED_DENSITY_KG_M3 / LCF_PRODUCT_DENSITY_KG_M3;
+  const out = {};
+  for (const p of LCF_PRODUCTS) out[p] = factor * table[p] / 100.0;
+  return out;
+}
+
+function simdistStreamFeeds(primaryTotals, lcfProducts) {
+  return {
+    srvr: 0.0,
+    diesel: lcfProducts.diesel,
+    naphtha: primaryTotals.naphtha + primaryTotals.ago + lcfProducts.lcf_naphtha,
+    lvgo: primaryTotals.lvgo + lcfProducts.lcf_lvgo,
+    mvgo: primaryTotals.mvgo + lcfProducts.lcf_mvgo,
+    hvgo: primaryTotals.hvgo,
+    crvr: 0.0,
+  };
+}
+
+// -- 5.4 SimDist per-stream split into the seven finished cuts -----------
+function simdistDirectProducts(streamFeeds, cfg) {
+  const splits = cfg.simdist_split_volpct;
+  const perStream = {};
+  const totals = zeroSlate();
+  for (const stream of SIMDIST_STREAMS) {
+    const feed = streamFeeds[stream] || 0.0;
+    const table = splits[stream];
+    const cuts = {};
+    for (const p of PRODUCTS) cuts[p] = feed * (table[p] || 0) / 100.0;
+    perStream[stream] = cuts;
+    for (const p of PRODUCTS) totals[p] += cuts[p];
+  }
+  return { per_stream: perStream, totals_m3hr: totals };
+}
+
+// -- 5.5 Hydrocracker / hydrotreater on UCO ------------------------------
+function hchtSplit(ucoM3hr, cfg) {
+  const y = cfg.hcht_yield_volpct;
+  const lpgPct = y.c3 + y.ic4 + y.nc4;
+  const pct = { lpg: lpgPct, naphtha: y.naphtha, swing_naphtha: y.swing_naphtha, kerosene: y.kerosene, diesel: y.diesel, swing_diesel: y.swing_diesel, uco: y.uco };
+  const out = {};
+  for (const p of PRODUCTS) out[p] = ucoM3hr * pct[p] / 100.0;
+  return out;
+}
+
+function finalProductSlate(directTotals, hcProducts) {
+  const slate = {};
+  for (const p of PRODUCTS) slate[p] = directTotals[p] + hcProducts[p];
+  slate.uco = hcProducts.uco; // direct UCO was consumed as HC feed
+  return slate;
+}
+
+// -- 5.6 Economics --------------------------------------------------------
+function economics(crudeFlows, productSlate, cfg) {
+  function crudeCost(prices) { let s = 0; for (const c of CRUDES) s += (crudeFlows[c] || 0.0) * prices[c]; return s; }
+  function revenue(prices) { let s = 0; for (const p of PRODUCTS) s += (productSlate[p] || 0.0) * prices[p]; return s; }
+  const costLow = crudeCost(cfg.crude_price_low_cad_m3);
+  const costHigh = crudeCost(cfg.crude_price_high_cad_m3);
+  const revLow = revenue(cfg.product_price_low_cad_m3);
+  const revHigh = revenue(cfg.product_price_high_cad_m3);
+  const marginLow = revLow - costLow;
+  const marginHigh = revHigh - costHigh;
+  const annual = HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR / 1e6;
+  return {
+    crude_cost_low_cad_hr: costLow, crude_cost_high_cad_hr: costHigh,
+    revenue_low_cad_hr: revLow, revenue_high_cad_hr: revHigh,
+    margin_low_cad_hr: marginLow, margin_high_cad_hr: marginHigh,
+    margin_low_mcad_yr: marginLow * annual, margin_high_mcad_yr: marginHigh * annual,
+  };
+}
+
+function runModel(crudeFlows, cfg) {
+  const blend = blendCrudes(crudeFlows);
+  const primary = primarySplit(crudeFlows, cfg);
+  const lcf = lcfSplit(primary.totals_m3hr.vr, cfg);
+  const feeds = simdistStreamFeeds(primary.totals_m3hr, lcf);
+  const direct = simdistDirectProducts(feeds, cfg);
+  const hc = hchtSplit(direct.totals_m3hr.uco, cfg);
+  const slate = finalProductSlate(direct.totals_m3hr, hc);
+  const econ = economics(crudeFlows, slate, cfg);
+  return { blend, primary, lcf_products_m3hr: lcf, simdist_stream_feeds_m3hr: feeds, direct_products: direct, hc_reactor_products_m3hr: hc, product_slate_m3hr: slate, economics: econ };
+}
+
+// ---- DOM helpers --------------------------------------------------------
+function num(id, fallback) {
+  const el = document.getElementById(id);
+  if (!el) return fallback;
+  const v = parseFloat(el.value);
+  return isNaN(v) ? fallback : v;
+}
+function setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v; }
+function fmtNum(v, d) { d = d == null ? 1 : d; return (v == null || isNaN(v)) ? "—" : v.toLocaleString("en-CA", { minimumFractionDigits: d, maximumFractionDigits: d }); }
+
+// ---- Read the live config from the DOM (source of truth is the inputs) --
+function readCrudeFlows() {
+  const flows = {};
+  for (const c of CRUDES) flows[c] = num("flow_" + c, DEFAULT_CRUDE_FLOWS_M3HR[c]);
+  return flows;
+}
+
+const HCHT_KEYS = ["c3", "ic4", "nc4", "naphtha", "swing_naphtha", "kerosene", "diesel", "swing_diesel", "uco"];
+const PRICED_PRODUCTS = ["lpg", "naphtha", "kerosene", "diesel"]; // the four with a public benchmark
+
+function readConfig() {
+  const cfg = { cut_point_c: DEFAULT_CONFIG.cut_point_c, crude_benchmark: DEFAULT_CONFIG.crude_benchmark, product_benchmark: DEFAULT_CONFIG.product_benchmark, hcht_yield_wtpct: DEFAULT_CONFIG.hcht_yield_wtpct };
+
+  cfg.primary_yield_volpct = {};
+  for (const c of CRUDES) {
+    const row = {};
+    for (const cut of ["naphtha", "ago", "vr", "lvgo", "mvgo", "hvgo"]) row[cut] = num("py_" + c + "_" + cut, DEFAULT_CONFIG.primary_yield_volpct[c][cut]);
+    row.vgo = row.lvgo + row.mvgo + row.hvgo;
+    cfg.primary_yield_volpct[c] = row;
+  }
+
+  cfg.lcf_yield_wtpct = {};
+  for (const p of LCF_PRODUCTS) cfg.lcf_yield_wtpct[p] = num("lcf_" + p, DEFAULT_CONFIG.lcf_yield_wtpct[p]);
+
+  cfg.hcht_yield_volpct = {};
+  for (const k of HCHT_KEYS) cfg.hcht_yield_volpct[k] = num("hcht_" + k, DEFAULT_CONFIG.hcht_yield_volpct[k]);
+
+  cfg.simdist_split_volpct = {};
+  for (const s of SIMDIST_STREAMS) {
+    const row = {};
+    for (const p of PRODUCTS) row[p] = num("sd_" + s + "_" + p, DEFAULT_CONFIG.simdist_split_volpct[s][p]);
+    cfg.simdist_split_volpct[s] = row;
+  }
+
+  cfg.crude_price_low_cad_m3 = {}; cfg.crude_price_high_cad_m3 = {};
+  for (const c of CRUDES) {
+    cfg.crude_price_low_cad_m3[c] = num("cpl_" + c, DEFAULT_CONFIG.crude_price_low_cad_m3[c]);
+    cfg.crude_price_high_cad_m3[c] = num("cph_" + c, DEFAULT_CONFIG.crude_price_high_cad_m3[c]);
+  }
+  cfg.product_price_low_cad_m3 = {}; cfg.product_price_high_cad_m3 = {};
+  for (const p of PRODUCTS) {
+    cfg.product_price_low_cad_m3[p] = num("ppl_" + p, DEFAULT_CONFIG.product_price_low_cad_m3[p]);
+    cfg.product_price_high_cad_m3[p] = num("pph_" + p, DEFAULT_CONFIG.product_price_high_cad_m3[p]);
+  }
+  return cfg;
+}
+
+// ---- Build the editable tables (once, at load) --------------------------
+function buildTables() {
+  document.getElementById("tblCrudeFlowsBody").innerHTML = CRUDES.map(c => `
+    <tr>
+      <td><strong>${c}</strong></td>
+      <td>${CRUDE_NAMES[c]}</td>
+      <td>${DEFAULT_CONFIG.crude_benchmark[c]}</td>
+      <td><input type="number" step="0.1" class="config-input" id="flow_${c}" value="${DEFAULT_CRUDE_FLOWS_M3HR[c]}"></td>
+      <td class="num" id="blendpct_${c}">&mdash;</td>
+      <td class="num">${CRUDE_PROPERTIES[c].density_kg_m3}</td>
+      <td class="num">${CRUDE_PROPERTIES[c].sulfur_wtpct}</td>
+    </tr>`).join("");
+
+  document.getElementById("tblPrimaryYieldBody").innerHTML = CRUDES.map(c => {
+    const y = DEFAULT_CONFIG.primary_yield_volpct[c];
+    return `<tr><td><strong>${c}</strong></td>
+      <td><input type="number" step="0.01" class="config-input" id="py_${c}_naphtha" value="${y.naphtha}"></td>
+      <td><input type="number" step="0.01" class="config-input" id="py_${c}_ago" value="${y.ago}"></td>
+      <td><input type="number" step="0.01" class="config-input" id="py_${c}_vr" value="${y.vr}"></td>
+      <td><input type="number" step="0.01" class="config-input" id="py_${c}_lvgo" value="${y.lvgo}"></td>
+      <td><input type="number" step="0.01" class="config-input" id="py_${c}_mvgo" value="${y.mvgo}"></td>
+      <td><input type="number" step="0.01" class="config-input" id="py_${c}_hvgo" value="${y.hvgo}"></td>
+      <td><input type="number" readonly tabindex="-1" id="py_${c}_vgo" value="${y.vgo}"></td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("tblLcfBody").innerHTML = "<tr>" + LCF_PRODUCTS.map(p =>
+    `<td><input type="number" step="0.01" class="config-input" id="lcf_${p}" value="${DEFAULT_CONFIG.lcf_yield_wtpct[p]}"></td>`
+  ).join("") + "</tr>";
+
+  document.getElementById("tblHchtBody").innerHTML = HCHT_KEYS.map(k => `
+    <tr><td>${k}</td>
+    <td><input type="number" step="0.01" class="config-input" id="hcht_${k}" value="${DEFAULT_CONFIG.hcht_yield_volpct[k]}"></td>
+    <td class="num">${DEFAULT_CONFIG.hcht_yield_wtpct[k]}</td></tr>`).join("");
+
+  document.getElementById("tblSimdistBody").innerHTML = SIMDIST_STREAMS.map(s => {
+    const row = DEFAULT_CONFIG.simdist_split_volpct[s];
+    return `<tr><td><strong>${s}</strong></td>` + PRODUCTS.map(p =>
+      `<td><input type="number" step="1" class="config-input" id="sd_${s}_${p}" value="${row[p]}"></td>`
+    ).join("") + "</tr>";
+  }).join("");
+
+  document.getElementById("tblPriceCrudeBody").innerHTML = CRUDES.map(c => `
+    <tr><td><strong>${c}</strong></td>
+    <td><input type="number" step="1" class="config-input" id="cpl_${c}" value="${DEFAULT_CONFIG.crude_price_low_cad_m3[c]}"></td>
+    <td><input type="number" step="1" class="config-input" id="cph_${c}" value="${DEFAULT_CONFIG.crude_price_high_cad_m3[c]}"></td>
+    <td><input type="number" step="1" class="config-input" id="cd_${c}" value="0"></td>
+    </tr>`).join("");
+
+  document.getElementById("tblPriceProductBody").innerHTML = PRODUCTS.map(p => {
+    const hasBench = PRICED_PRODUCTS.includes(p);
+    return `<tr><td>${PRODUCT_LABELS[p]}</td>
+    <td><input type="number" step="1" class="config-input" id="ppl_${p}" value="${DEFAULT_CONFIG.product_price_low_cad_m3[p]}"></td>
+    <td><input type="number" step="1" class="config-input" id="pph_${p}" value="${DEFAULT_CONFIG.product_price_high_cad_m3[p]}"></td>
+    <td>${hasBench ? `<input type="number" step="1" class="config-input" id="pd_${p}" value="0">` : '<span style="color:var(--text-secondary);font-size:11px">no public benchmark</span>'}</td>
+    </tr>`;
+  }).join("");
+}
+
+function restoreDefaults() {
+  for (const c of CRUDES) setVal("flow_" + c, DEFAULT_CRUDE_FLOWS_M3HR[c]);
+  for (const c of CRUDES) {
+    const y = DEFAULT_CONFIG.primary_yield_volpct[c];
+    for (const cut of ["naphtha", "ago", "vr", "lvgo", "mvgo", "hvgo"]) setVal("py_" + c + "_" + cut, y[cut]);
+  }
+  for (const p of LCF_PRODUCTS) setVal("lcf_" + p, DEFAULT_CONFIG.lcf_yield_wtpct[p]);
+  for (const k of HCHT_KEYS) setVal("hcht_" + k, DEFAULT_CONFIG.hcht_yield_volpct[k]);
+  for (const s of SIMDIST_STREAMS) for (const p of PRODUCTS) setVal("sd_" + s + "_" + p, DEFAULT_CONFIG.simdist_split_volpct[s][p]);
+  for (const c of CRUDES) { setVal("cpl_" + c, DEFAULT_CONFIG.crude_price_low_cad_m3[c]); setVal("cph_" + c, DEFAULT_CONFIG.crude_price_high_cad_m3[c]); setVal("cd_" + c, 0); }
+  for (const p of PRODUCTS) { setVal("ppl_" + p, DEFAULT_CONFIG.product_price_low_cad_m3[p]); setVal("pph_" + p, DEFAULT_CONFIG.product_price_high_cad_m3[p]); }
+  for (const p of PRICED_PRODUCTS) setVal("pd_" + p, 0);
+  setVal("fxRate", "");
+  document.getElementById("flowUpStatus").textContent = "Workbook defaults";
+  runProcess();
+}
+
+// ---- Charts ---------------------------------------------------------------
+let charts = {};
+function initCharts() {
+  if (typeof Chart === "undefined") return; // Chart.js CDN not reachable; tables/KPIs still work.
+  charts.slate = new Chart(document.getElementById("chart-slate").getContext("2d"), {
+    type: "bar",
+    data: { labels: PRODUCTS.map(p => PRODUCT_LABELS[p]), datasets: [{ label: "m3/hr", data: PRODUCTS.map(() => 0), backgroundColor: "#2F6F9F", borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 9 } } }, y: { beginAtZero: true } } },
+  });
+  charts.blend = new Chart(document.getElementById("chart-blend").getContext("2d"), {
+    type: "bar",
+    data: { labels: CRUDES.slice(), datasets: [{ label: "m3/hr", data: CRUDES.map(() => 0), backgroundColor: "#667085", borderRadius: 4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+  });
+  charts.econ = new Chart(document.getElementById("chart-econ").getContext("2d"), {
+    type: "bar",
+    data: {
+      labels: ["Low case", "High case"],
+      datasets: [
+        { label: "Crude cost (C$/hr)", data: [0, 0], backgroundColor: "#667085", borderRadius: 4 },
+        { label: "Product revenue (C$/hr)", data: [0, 0], backgroundColor: "#2F7F7A", borderRadius: 4 },
+      ],
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } }, scales: { y: { beginAtZero: true } } },
+  });
+}
+
+function updateCharts(res) {
+  if (!charts.slate) return; // Chart.js unavailable; skip silently
+  charts.slate.data.datasets[0].data = PRODUCTS.map(p => res.product_slate_m3hr[p]);
+  charts.slate.update();
+  charts.blend.data.datasets[0].data = CRUDES.map(c => res.blend.per_crude[c].flow_m3hr);
+  charts.blend.update();
+  charts.econ.data.datasets[0].data = [res.economics.crude_cost_low_cad_hr, res.economics.crude_cost_high_cad_hr];
+  charts.econ.data.datasets[1].data = [res.economics.revenue_low_cad_hr, res.economics.revenue_high_cad_hr];
+  charts.econ.update();
+}
+
+// ---- Render outputs ---------------------------------------------------------
+function updateKPIs(res) {
+  const econ = res.economics;
+  document.getElementById("kMarginLowHr").textContent = fmtNum(econ.margin_low_cad_hr, 0);
+  document.getElementById("kMarginHighHr").textContent = fmtNum(econ.margin_high_cad_hr, 0);
+  document.getElementById("kMarginLowYr").textContent = fmtNum(econ.margin_low_mcad_yr, 1);
+  document.getElementById("kMarginHighYr").textContent = fmtNum(econ.margin_high_mcad_yr, 1);
+  document.getElementById("kBlendRate").textContent = fmtNum(res.blend.total_flow_m3hr, 1);
+  let totalProduct = 0; for (const p of PRODUCTS) totalProduct += res.product_slate_m3hr[p];
+  document.getElementById("kProductVolume").textContent = fmtNum(totalProduct, 1);
+}
+
+function updateDerivedDisplays(res) {
+  for (const c of CRUDES) {
+    // VGO is a vol % display, computed from the LVGO/MVGO/HVGO % inputs
+    // (not from res.primary, which holds m3/hr flows, not percentages).
+    const vgoEl = document.getElementById("py_" + c + "_vgo");
+    if (vgoEl) {
+      const lvgo = num("py_" + c + "_lvgo", 0), mvgo = num("py_" + c + "_mvgo", 0), hvgo = num("py_" + c + "_hvgo", 0);
+      vgoEl.value = (lvgo + mvgo + hvgo).toFixed(2);
+    }
+    const pctEl = document.getElementById("blendpct_" + c);
+    if (pctEl) pctEl.textContent = fmtNum(res.blend.per_crude[c].blend_pct, 1) + "%";
+  }
+}
+
+function updateBlendTable(res) {
+  document.getElementById("blendBody").innerHTML = CRUDES.map(c => {
+    const row = res.blend.per_crude[c];
+    return `<tr><td><strong>${c}</strong></td><td class="num">${fmtNum(row.flow_m3hr, 2)}</td><td class="num">${fmtNum(row.blend_pct, 1)}%</td><td class="num">${fmtNum(row.sulfur_kghr, 0)}</td></tr>`;
+  }).join("");
+  document.getElementById("blendTotalFlow").textContent = fmtNum(res.blend.total_flow_m3hr, 1);
+  document.getElementById("blendTotalBbl").textContent = fmtNum(res.blend.total_flow_bblhr, 0);
+  document.getElementById("blendTotalSulfur").textContent = fmtNum(res.blend.total_sulfur_kghr, 0);
+}
+
+function updateSlateTable(res) {
+  let total = 0;
+  let rows = PRODUCTS.map(p => {
+    const v = res.product_slate_m3hr[p];
+    total += v;
+    return `<tr><td>${PRODUCT_LABELS[p]}</td><td class="num">${fmtNum(v, 2)}</td><td class="num">${fmtNum(v * M3_TO_BBL, 1)}</td></tr>`;
+  }).join("");
+  rows += `<tr><td><strong>Total</strong></td><td class="num"><strong>${fmtNum(total, 2)}</strong></td><td class="num"><strong>${fmtNum(total * M3_TO_BBL, 1)}</strong></td></tr>`;
+  document.getElementById("slateBody").innerHTML = rows;
+}
+
+// ---- Live price panel ---------------------------------------------------
+let albertaResult = null;
+let eiaSnapshot = null;
+let liveCrudePrices = {};
+let liveProductPrices = {};
+const EIA_LABELS = { wti_usd_bbl: "WTI (Cushing)", ulsd_gc_usd_gal: "ULSD (Gulf Coast)", propane_usd_gal: "Propane (Mont Belvieu)", gasoline_usd_gal: "Gasoline (Gulf Coast)", jetfuel_usd_gal: "Jet fuel (Gulf Coast)" };
+
+// EIA series IDs, mirrors engine.py's EIA_SERIES / EIA_UNITS exactly.
+const EIA_SERIES_IDS = {
+  wti_usd_bbl: "RWTC",
+  ulsd_gc_usd_gal: "EER_EPD2DXL0_PF4_RGC_DPG",
+  propane_usd_gal: "EER_EPLLPA_PF4_Y44MB_DPG",
+  gasoline_usd_gal: "EER_EPMRU_PF4_RGC_DPG",
+  jetfuel_usd_gal: "EER_EPJK_PF4_RGC_DPG",
+};
+const EIA_UNITS = { wti_usd_bbl: "usd_bbl", ulsd_gc_usd_gal: "usd_gal", propane_usd_gal: "usd_gal", gasoline_usd_gal: "usd_gal", jetfuel_usd_gal: "usd_gal" };
+
+// Hardcoded at explicit user request (2026-08-21), overriding the project's
+// usual gitignored-secrets pattern (see models/crude-to-profit/secrets.local.py
+// and manual.md section 5). This key is now public: it ships in this page's
+// source to every visitor and should be treated as disposable, not secret.
+const EIA_API_KEY = "5JB493y1YVWDLxy44r2PpE28mAUidPxKC39QFAEe";
+
+async function fetchEiaSeriesLive(key) {
+  const seriesId = EIA_SERIES_IDS[key];
+  const params = new URLSearchParams({
+    api_key: EIA_API_KEY, frequency: "daily", "data[0]": "value",
+    "facets[series][]": seriesId, "sort[0][column]": "period",
+    "sort[0][direction]": "desc", length: "1",
+  });
+  try {
+    const resp = await fetch("https://api.eia.gov/v2/petroleum/pri/spt/data/?" + params.toString());
+    if (!resp.ok) throw new Error("bad status");
+    const data = await resp.json();
+    const row = data && data.response && data.response.data && data.response.data[0];
+    if (!row) throw new Error("no row");
+    return { ok: true, value: parseFloat(row.value), date: row.period, unit: EIA_UNITS[key] };
+  } catch (e) {
+    return { ok: false, value: null, date: null, unit: EIA_UNITS[key] };
+  }
+}
+
+async function fetchEiaLive() {
+  const keys = Object.keys(EIA_SERIES_IDS);
+  const results = await Promise.all(keys.map(fetchEiaSeriesLive));
+  const anyOk = results.some(r => r.ok);
+  if (anyOk) {
+    const prices = {};
+    keys.forEach((k, i) => { prices[k] = results[i]; });
+    eiaSnapshot = { generated_at: new Date().toISOString(), prices, source: "live" };
+  }
+  // If every live call failed, leave eiaSnapshot as whatever fetchEiaSnapshot()
+  // already found (the fallback JSON file), or null - never clobber a good
+  // fallback with an all-failed live attempt.
+  renderPricePanel();
+}
+
+async function fetchAlberta() {
+  try {
+    const resp = await fetch("https://api.economicdata.alberta.ca/data?table=OilPrices");
+    if (!resp.ok) throw new Error("bad status");
+    const data = await resp.json();
+    const latest = {};
+    if (Array.isArray(data)) {
+      data.forEach(rec => {
+        const kind = (rec["Type "] || rec["Type"] || "").trim();
+        const value = rec["Value"];
+        const date = (rec["Date"] || "").slice(0, 10);
+        if (kind && value != null) {
+          if (!latest[kind] || date > latest[kind].date) latest[kind] = { value: parseFloat(value), date };
+        }
+      });
+    }
+    albertaResult = Object.keys(latest).length ? { ok: true, value: latest } : { ok: false, value: null };
+  } catch (e) {
+    albertaResult = { ok: false, value: null };
+  }
+  renderPricePanel();
+}
+
+async function fetchEiaSnapshot() {
+  try {
+    const resp = await fetch("crude-to-profit-prices.json", { cache: "no-store" });
+    if (!resp.ok) throw new Error("bad status");
+    eiaSnapshot = await resp.json();
+  } catch (e) {
+    eiaSnapshot = null;
+  }
+  renderPricePanel();
+}
+
+function eiaSeries(key) {
+  if (!key || !eiaSnapshot || !eiaSnapshot.prices || !eiaSnapshot.prices[key]) return null;
+  const r = eiaSnapshot.prices[key];
+  return r && r.ok ? r : null;
+}
+
+function getFx() { const v = num("fxRate", null); return v; }
+
+function toCadPerM3(value, unit, fx) {
+  if (value == null || fx == null) return null;
+  if (unit === "usd_bbl") return value * M3_TO_BBL * fx;
+  if (unit === "usd_gal") return value * 264.172052 * fx;
+  return null;
+}
+
+function computeWcs() {
+  const wtiRow = eiaSeries("wti_usd_bbl");
+  const wtiVal = wtiRow ? wtiRow.value : null;
+  if (albertaResult && albertaResult.ok && albertaResult.value.Differential) {
+    const diff = albertaResult.value.Differential.value;
+    const diffDate = albertaResult.value.Differential.date;
+    if (wtiVal != null) return { value: wtiVal - diff, detail: `WTI ${wtiVal.toFixed(2)} minus differential ${diff.toFixed(2)} (${diffDate})` };
+    if (albertaResult.value.WCS) return { value: albertaResult.value.WCS.value, detail: `Alberta monthly WCS (${albertaResult.value.WCS.date})` };
+  }
+  return { value: null, detail: null };
+}
+
+function renderPricePanel() {
+  const fx = getFx();
+
+  const albEl = document.getElementById("albertaStatus");
+  if (albertaResult === null) {
+    albEl.innerHTML = "Fetching...";
+  } else if (albertaResult.ok) {
+    albEl.innerHTML = Object.keys(albertaResult.value).sort().map(k => {
+      const r = albertaResult.value[k];
+      return `<div class="price-row"><span>${k}</span><span class="native">${r.value.toFixed(2)} US$/bbl (${r.date})</span></div>`;
+    }).join("");
+  } else {
+    albEl.innerHTML = '<div class="price-row"><span>Alberta feed unavailable right now.</span></div>';
+  }
+
+  const eiaEl = document.getElementById("eiaStatus");
+  const genEl = document.getElementById("eiaGenerated");
+  if (!eiaSnapshot) {
+    genEl.textContent = "Live call failed and no fallback snapshot found. Run: python models/crude-to-profit/fetch_prices.py";
+    eiaEl.innerHTML = '<div class="price-row"><span>EIA prices unavailable.</span></div>';
+  } else {
+    genEl.textContent = eiaSnapshot.source === "live"
+      ? "Fetched live just now, directly from this page (embedded key)."
+      : "Live call failed - falling back to snapshot generated " + (eiaSnapshot.generated_at || "unknown time") + ".";
+    eiaEl.innerHTML = Object.keys(EIA_LABELS).map(k => {
+      const r = eiaSnapshot.prices ? eiaSnapshot.prices[k] : null;
+      if (!r || !r.ok) return `<div class="price-row"><span>${EIA_LABELS[k]}</span><span class="native">unavailable</span></div>`;
+      const unitLabel = r.unit === "usd_bbl" ? "US$/bbl" : "US$/gal";
+      return `<div class="price-row"><span>${EIA_LABELS[k]}</span><span class="native">${r.value.toFixed(3)} ${unitLabel} (${r.date || "-"})</span></div>`;
+    }).join("");
+  }
+
+  const wcs = computeWcs();
+  document.getElementById("wcsStatus").textContent = wcs.value != null ? `${wcs.value.toFixed(2)} US$/bbl - ${wcs.detail}` : "unavailable";
+
+  const wtiRow = eiaSeries("wti_usd_bbl");
+  const wtiVal = wtiRow ? wtiRow.value : null;
+  document.getElementById("liveCrudePrices").innerHTML = CRUDES.map(c => {
+    const bench = DEFAULT_CONFIG.crude_benchmark[c];
+    const anchorUsd = bench === "WTI" ? wtiVal : wcs.value;
+    const cad = toCadPerM3(anchorUsd, "usd_bbl", fx);
+    const diff = num("cd_" + c, 0);
+    const total = cad != null ? cad + diff : null;
+    liveCrudePrices[c] = total;
+    return `<div class="price-row"><span>${c} (${bench})</span><span class="cad">${total != null ? fmtNum(total, 0) + " C$/m3" : "—"}</span></div>`;
+  }).join("");
+
+  document.getElementById("livePricesProducts").innerHTML = PRICED_PRODUCTS.map(p => {
+    const seriesKey = DEFAULT_CONFIG.product_benchmark[p];
+    const row = eiaSeries(seriesKey);
+    const cad = row ? toCadPerM3(row.value, row.unit, fx) : null;
+    const diff = num("pd_" + p, 0);
+    const total = cad != null ? cad + diff : null;
+    liveProductPrices[p] = total;
+    return `<div class="price-row"><span>${PRODUCT_LABELS[p]}</span><span class="cad">${total != null ? fmtNum(total, 0) + " C$/m3" : "—"}</span></div>`;
+  }).join("");
+}
+
+function applyLivePrices() {
+  for (const c of CRUDES) if (liveCrudePrices[c] != null) setVal("cpl_" + c, liveCrudePrices[c].toFixed(2));
+  for (const p of PRICED_PRODUCTS) if (liveProductPrices[p] != null) setVal("ppl_" + p, liveProductPrices[p].toFixed(2));
+  runProcess();
+}
+
+// ---- Export ---------------------------------------------------------------
+let lastResult = null;
+function exportResults() {
+  if (!lastResult) return;
+  const res = lastResult;
+  let csv = "Section,Item,Value,Unit\n";
+  for (const c of CRUDES) csv += `Crude flow,${c},${res.blend.per_crude[c].flow_m3hr.toFixed(3)},m3/hr\n`;
+  for (const p of PRODUCTS) csv += `Product slate,"${PRODUCT_LABELS[p]}",${res.product_slate_m3hr[p].toFixed(4)},m3/hr\n`;
+  const e = res.economics;
+  csv += `Economics,Crude cost low,${e.crude_cost_low_cad_hr.toFixed(2)},C$/hr\n`;
+  csv += `Economics,Crude cost high,${e.crude_cost_high_cad_hr.toFixed(2)},C$/hr\n`;
+  csv += `Economics,Revenue low,${e.revenue_low_cad_hr.toFixed(2)},C$/hr\n`;
+  csv += `Economics,Revenue high,${e.revenue_high_cad_hr.toFixed(2)},C$/hr\n`;
+  csv += `Economics,Margin low,${e.margin_low_cad_hr.toFixed(2)},C$/hr\n`;
+  csv += `Economics,Margin high,${e.margin_high_cad_hr.toFixed(2)},C$/hr\n`;
+  csv += `Economics,Margin low annualised,${e.margin_low_mcad_yr.toFixed(2)},million C$/yr\n`;
+  csv += `Economics,Margin high annualised,${e.margin_high_mcad_yr.toFixed(2)},million C$/yr\n`;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "crude_to_profit_results.csv";
+  link.click();
+}
+
+// ---- Main process ----------------------------------------------------------
+function runProcess() {
+  const flows = readCrudeFlows();
+  const cfg = readConfig();
+  const res = runModel(flows, cfg);
+  lastResult = res;
+  updateKPIs(res);
+  updateDerivedDisplays(res);
+  updateBlendTable(res);
+  updateSlateTable(res);
+  updateCharts(res);
+  renderPricePanel();
+}
+
+// ---- CSV upload for crude flows ---------------------------------------------
+const CRUDE_FLOW_ALIASES = {
+  OSH: ["osh", "osh flow", "suncor synthetic h"],
+  SHD: ["shd", "shd flow", "surmont heavy dilbit"],
+  AWB: ["awb", "awb flow", "access western blend"],
+  SCO: ["sco", "sco flow", "suncor synthetic a"],
+  FRB: ["frb", "frb flow", "fort hills dilbit"],
+};
+
+function handleFlowCsv(file) {
+  if (typeof Papa === "undefined") { document.getElementById("flowUpStatus").textContent = "CSV parser unavailable (Papa Parse did not load)"; return; }
+  Papa.parse(file, {
+    header: true, skipEmptyLines: true,
+    complete: r => {
+      if (!r.data.length) return;
+      const row = r.data[0];
+      const norm = {};
+      Object.keys(row).forEach(k => { norm[k.trim().toLowerCase()] = row[k]; });
+      for (const c of CRUDES) {
+        for (const alias of CRUDE_FLOW_ALIASES[c]) {
+          if (norm[alias] !== undefined && norm[alias] !== "") { setVal("flow_" + c, parseFloat(norm[alias])); break; }
+        }
+      }
+      document.getElementById("flowUpStatus").textContent = file.name + " loaded";
+      runProcess();
+    },
+  });
+}
+
+// ---- Event wiring -----------------------------------------------------------
+document.addEventListener("DOMContentLoaded", () => {
+  buildTables();
+  initCharts();
+  runProcess();
+
+  document.querySelectorAll(".tab").forEach(t => {
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      t.classList.add("active");
+      document.getElementById("panel-" + t.dataset.tab).classList.add("active");
+    });
+  });
+
+  document.getElementById("restoreDefaultsBtn").addEventListener("click", restoreDefaults);
+  document.getElementById("btnExport").addEventListener("click", exportResults);
+  document.getElementById("applyLiveBtn").addEventListener("click", applyLivePrices);
+
+  document.getElementById("csvInput").addEventListener("change", e => {
+    const f = e.target.files[0]; if (!f) return;
+    document.getElementById("flowUpStatus").textContent = "Parsing...";
+    handleFlowCsv(f);
+  });
+
+  // Auto-recalculate on any config-input change, wherever it lives in the DOM
+  // (tables are built dynamically, so this uses delegation rather than a
+  // one-time querySelectorAll).
+  document.addEventListener("change", e => {
+    if (e.target && e.target.classList && e.target.classList.contains("config-input")) runProcess();
+  });
+
+  fetchAlberta();
+  // Try the fallback JSON snapshot first so something shows immediately,
+  // then the live embedded-key call, which overwrites it on success.
+  fetchEiaSnapshot().then(fetchEiaLive);
+});
+</script>
+</body>
+</html>
