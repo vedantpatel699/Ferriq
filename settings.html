@@ -6,25 +6,12 @@
 <title>Ferriq - Settings</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
 <style>
+/* Box reset stays here; :root tokens come from theme.css (Sprint 1 Batch B, 2026-05-03). */
+/* This page uses --status-normal/critical naming; theme.css aliases those to --status-ok/alarm. */
+/* settings.html is a non-functional stub; treated as Batch B per PORTFOLIO-001 (hidden from public nav). */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --gold-800:#463B33;--gold-700:#763D16;--gold-600:#BB6E3D;--gold-500:#E29C57;
-  --gold-400:#F9A471;--gold-300:#FCEEE5;--gold-200:#E9E3DE;--gold-100:#F7F6F2;
-  --text-primary:#32302F;--text-secondary:#615E5C;
-  --status-normal:#3A7D52;--status-normal-bg:#E5F0E8;
-  --status-advisory:#C4890E;--status-advisory-bg:#FAF0E0;
-  --status-critical:#D4432A;--status-critical-bg:#FCEBEB;
-  --surface-page:#F7F6F2;--surface-card:#FFFFFF;--surface-sidebar:#463B33;
-  --border-card:#E9E3DE;
-  --shadow-card:0 1px 7px rgba(0,0,0,0.05),0 0 16px rgba(0,0,0,0.05);
-  --shadow-sidebar:2px 0 8px rgba(0,0,0,0.06);
-  --shadow-topbar:0 2px 6px rgba(0,0,0,0.04);
-  --radius-card:16px;--radius-pill:32px;--radius-status:12px;--radius-alert:10px;--radius-nav:8px;
-  --sidebar-width:200px;--topbar-height:56px;--content-margin:24px;--tile-gap:16px;
-  --font-ui:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,sans-serif;
-  --font-data:'IBM Plex Mono','SF Mono','Consolas',monospace;
-}
 body{font-family:var(--font-ui);background:var(--surface-page);color:var(--text-primary);overflow:hidden;height:100vh}
 .shell{display:grid;grid-template-columns:var(--sidebar-width) 1fr;grid-template-rows:var(--topbar-height) 1fr;height:100vh}
 .sidebar{grid-row:1/-1;background:var(--surface-sidebar);box-shadow:var(--shadow-sidebar);display:flex;flex-direction:column;padding-top:16px;z-index:10}
@@ -114,6 +101,10 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
       Dashboards
     </a>
 
+    <a class="nav-item" href="predictors.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 13 6 9 9 11 14 5"/><polyline points="11 5 14 5 14 8"/></svg></span>
+      Predictors
+    </a>
     <div class="nav-section-label">Monitor</div>
     <a class="nav-item" href="alerts.html">
       <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2a5 5 0 00-5 5v2.5L2.5 12.5h13L14 9.5V7a5 5 0 00-5-5z"/><path d="M7 13a2 2 0 004 0"/><line x1="9" y1="1" x2="9" y2="2"/></svg></span>

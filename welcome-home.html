@@ -6,51 +6,17 @@
 <title>Ferriq - Home</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
 <style>
 /* Ferriq Design System v1.1 - Welcome / Home */
+/* :root tokens come from theme.css (Sprint 1, 2026-05-03). */
+/* welcome-home.html uses --status-normal/critical naming; theme.css aliases those to --status-ok/alarm. */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --gold-800:#463B33;--gold-700:#763D16;--gold-600:#BB6E3D;--gold-500:#E29C57;
-  --gold-400:#F9A471;--gold-300:#FCEEE5;--gold-200:#E9E3DE;--gold-100:#F7F6F2;
-  --text-primary:#32302F;--text-secondary:#615E5C;
-  --status-normal:#3A7D52;--status-normal-bg:#E5F0E8;
-  --status-advisory:#C4890E;--status-advisory-bg:#FAF0E0;
-  --status-critical:#D4432A;--status-critical-bg:#FCEBEB;
-  --surface-page:#F7F6F2;--surface-card:#FFFFFF;--surface-sidebar:#463B33;
-  --border-card:#E9E3DE;
-  --shadow-card:0 1px 7px rgba(0,0,0,0.05),0 0 16px rgba(0,0,0,0.05);
-  --shadow-sidebar:2px 0 8px rgba(0,0,0,0.06);
-  --shadow-topbar:0 2px 6px rgba(0,0,0,0.04);
-  --radius-card:16px;--radius-pill:32px;--radius-status:12px;--radius-alert:10px;--radius-nav:8px;
-  --sidebar-width:200px;--topbar-height:56px;--content-margin:24px;--tile-gap:16px;
-  --font-ui:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,sans-serif;
-  --font-data:'IBM Plex Mono','SF Mono','Consolas',monospace;
-}
-body{font-family:var(--font-ui);background:var(--surface-page);color:var(--text-primary);overflow:hidden;height:100vh}
+/* Sprint 1 cleanup: shared rules removed; theme.css now provides shell, sidebar, topbar (incl. topbar-btn), time-pill bar, content (base), brand-name, brand-env, avatar. Below: welcome-home-specific only. The --status-normal/--status-advisory/--status-critical token references resolve via theme.css alias chain. */
 
-/* SHELL */
-.shell{display:grid;grid-template-columns:var(--sidebar-width) 1fr;grid-template-rows:var(--topbar-height) 1fr;height:100vh}
-
-/* SIDEBAR */
-.sidebar{grid-row:1/-1;background:var(--surface-sidebar);box-shadow:var(--shadow-sidebar);display:flex;flex-direction:column;padding-top:16px;z-index:10}
-.sidebar-header{display:flex;align-items:center;gap:10px;padding:0 16px;margin-bottom:24px}
-.sidebar-logo{width:36px;height:36px;flex-shrink:0;text-decoration:none;display:flex;align-items:center}
-.sidebar-title{font-size:15px;font-weight:600;color:#FFF;letter-spacing:0.3px}
-.nav-section-label{font-size:10px;font-weight:500;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1.2px;padding:0 16px;margin-bottom:4px;margin-top:12px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;border-radius:var(--radius-nav);margin:1px 8px;cursor:pointer;transition:background 0.15s;text-decoration:none;color:rgba(255,255,255,0.55);font-size:13px;font-weight:500}
-.nav-item:hover{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85)}
-.nav-item.active{background:rgba(255,255,255,0.12);color:#FFF}
-.nav-icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.nav-icon svg{width:18px;height:18px}
-.sidebar-spacer{flex:1}
-
-.sidebar-divider{height:1px;background:rgba(255,255,255,0.08);margin:8px 16px}
+/* Welcome-home/dashboards-specific sidebar nav-badge (NEW marker on Predictors entry) */
 .nav-badge{margin-left:auto;font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.6)}
-.sidebar-user{display:flex;align-items:center;gap:10px;padding:12px 16px;margin:8px 8px 12px 8px;border-radius:var(--radius-nav);background:rgba(255,255,255,0.06)}
-.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--gold-600);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#FFF;flex-shrink:0}
-.user-info{overflow:hidden}
-.user-name{font-size:12px;font-weight:500;color:rgba(255,255,255,0.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.user-role{font-size:10px;color:rgba(255,255,255,0.4)}
+
 /* Keyboard shortcut modal */
 .kbd-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center}
 .kbd-overlay.open{display:flex}
@@ -63,31 +29,14 @@ body{font-family:var(--font-ui);background:var(--surface-page);color:var(--text-
 .kbd-keys{display:flex;gap:4px}
 kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius:4px;padding:2px 8px;font-family:var(--font-data);font-size:11px;color:var(--text-secondary)}
 
-
-/* TOPBAR */
-.topbar{background:var(--surface-card);box-shadow:var(--shadow-topbar);display:flex;align-items:center;padding:0 var(--content-margin);justify-content:space-between;z-index:5}
-.brand-name{font-size:16px;font-weight:600;color:var(--text-primary)}
-.brand-env{font-size:13px;color:var(--text-secondary)}
-
-.topbar-left{display:flex;align-items:baseline;gap:10px}
-.topbar-right{display:flex;align-items:center;gap:12px}
-.topbar-btn{background:none;border:1px solid var(--border-card);border-radius:6px;padding:6px;cursor:pointer;display:flex;align-items:center;color:var(--text-secondary);transition:border-color 0.15s,color 0.15s}
-.topbar-btn:hover{border-color:var(--gold-500);color:var(--gold-600)}
-.time-range-bar{display:flex;gap:2px;background:var(--gold-100);border-radius:8px;padding:2px}
-.time-pill{background:none;border:none;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;border-radius:6px;color:var(--text-secondary);font-family:var(--font-ui);transition:all 0.15s}
-.time-pill:hover{color:var(--text-primary)}
-.time-pill.active{background:var(--surface-card);box-shadow:0 1px 3px rgba(0,0,0,0.08);color:var(--text-primary)}
-.avatar{width:32px;height:32px;border-radius:50%;background:var(--gold-600);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#FFF}
-
-
-/* CONTENT */
-.content{padding:24px var(--content-margin) var(--content-margin);overflow-y:auto}
+/* Welcome-home content has extra top padding above the greeting */
+.content{padding:24px var(--content-margin) var(--content-margin)}
 
 /* GREETING */
 .greeting{font-size:26px;font-weight:700;margin-bottom:6px}
 .greeting-sub{font-size:14px;color:var(--text-secondary);margin-bottom:24px}
 
-/* KPI SUMMARY ROW */
+/* KPI SUMMARY ROW (welcome-home dashboard summary tiles) */
 .summary-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:28px}
 .summary-tile{background:var(--surface-card);border:1px solid var(--border-card);border-radius:var(--radius-card);padding:14px 16px;box-shadow:var(--shadow-card);transition:border-color 0.15s}
 .summary-tile:hover{border-color:var(--gold-500)}
@@ -95,7 +44,7 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
 .summary-tile .st-value{font-family:var(--font-data);font-size:22px;font-weight:500;margin-top:4px}
 .summary-tile .st-sub{font-size:11px;color:var(--text-secondary);margin-top:2px}
 
-/* EQUIPMENT GRID */
+/* EQUIPMENT GRID + cards (welcome-home directory) */
 .section-heading{font-size:16px;font-weight:600;margin-bottom:4px}
 .section-sub{font-size:13px;color:var(--text-secondary);margin-bottom:20px}
 .equipment-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:var(--tile-gap);margin-bottom:32px}
@@ -109,7 +58,7 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
 .eq-arrow{font-size:16px;color:var(--gold-200);transition:color 0.15s,transform 0.15s}
 .eq-card:hover .eq-arrow{color:var(--gold-600);transform:translateX(2px)}
 
-/* RECENT ACTIVITY */
+/* RECENT ACTIVITY (welcome-home: bottom-of-page activity feed; uses --status-normal/advisory aliases) */
 .activity-section{margin-top:8px}
 .activity-list{display:flex;flex-direction:column;gap:6px}
 .activity-row{display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface-card);border:1px solid var(--border-card);border-radius:12px;font-size:13px}
@@ -140,6 +89,10 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
       Dashboards
     </a>
 
+    <a class="nav-item" href="predictors.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 13 6 9 9 11 14 5"/><polyline points="11 5 14 5 14 8"/></svg></span>
+      Predictors
+    </a>
     <div class="nav-section-label">Monitor</div>
     <a class="nav-item" href="alerts.html">
       <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2a5 5 0 00-5 5v2.5L2.5 12.5h13L14 9.5V7a5 5 0 00-5-5z"/><path d="M7 13a2 2 0 004 0"/><line x1="9" y1="1" x2="9" y2="2"/></svg></span>
@@ -179,6 +132,7 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
       Settings
     </a>
 
+    <div class="planned-modules"><strong>Planned modules</strong>Alerts · Activity Log · Data Export · Reports · Help · Changelog · Settings</div>
     <div class="sidebar-user">
       <div class="user-avatar">VP</div>
       <div class="user-info">
@@ -272,7 +226,7 @@ const equipment = [
   {name:'Fired Heater Efficiency',unit:'Gas-Fired Process Heater',desc:'Direct & indirect efficiency, loss breakdown, excess air monitoring',icon:'FH',href:'fired-heater.html'},
   {name:'Shell & Tube Exchanger',unit:'TEMA RCB Crude Preheater',desc:'LMTD effectiveness, fouling tracking, \u0394P monitoring',icon:'HX',href:'shell-tube-exchanger.html'},
   {name:'Membrane Analyzer',unit:'H\u2082 Recovery Module M-301',desc:'Permeance tracking, H\u2082 recovery & purity, selectivity',icon:'MA',href:'membrane-analyzer.html'},
-  {name:'Furnace Skin Temp',unit:'Radiant Section F-201',desc:'Tube skin prediction, residual drift detection, TMT classification',icon:'FT',href:'furnace-skin-temp.html'},
+  {name:'Furnace Skin TI Predictor',unit:'Three multi-pass fired heaters',desc:'Forecasts hours-to-475 \u00b0C per pass using XGBoost on historical operating data',icon:'FT',href:'predictors/furnace-skin-temp.html'},
 ];
 
 const hour = new Date().getHours();
@@ -292,7 +246,7 @@ const activities = [
   {dot:'info',msg:'Fired Heater H-401 - demo data loaded successfully',time:'5 min ago'},
   {dot:'ok',msg:'Shell & Tube Exchanger E-201 - fouling factor Rf = 0.00018',time:'12 min ago'},
   {dot:'advisory',msg:'Membrane M-301 - H\u2082 recovery at 84.1% (design: 85%)',time:'18 min ago'},
-  {dot:'ok',msg:'Furnace F-201 - predicted skin temp 512\u00b0C (limit: 540\u00b0C)',time:'25 min ago'},
+  {dot:'ok',msg:'Heater 2 Pass 2 - skin TI predictor: 437\u00b0C, no projection to 475\u00b0C within 7 days',time:'25 min ago'},
 ];
 const al = document.getElementById('activityList');
 activities.forEach(a => {
@@ -322,9 +276,3 @@ function toggleKbd(){document.getElementById('kbdOverlay').classList.toggle('ope
       else if(k==='a')location.href='alerts.html';
       else if(k==='?')location.href='help.html';
     }
-  });
-})();
-</script>
-
-</body>
-</html>

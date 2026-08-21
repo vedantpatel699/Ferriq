@@ -3,228 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ferriq - Shell & Tube Exchanger</title>
+<title>Ferriq - Shell &amp; Tube Exchanger</title>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
 <style>
+/* Box reset stays here; :root tokens come from theme.css (Sprint 1, 2026-05-03). */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --gold-800:#463B33;--gold-700:#763D16;--gold-600:#BB6E3D;--gold-500:#E29C57;
-  --gold-400:#F9A471;--gold-300:#FCEEE5;--gold-200:#E9E3DE;--gold-100:#F7F6F2;
-  --text-primary:#32302F;--text-secondary:#615E5C;
-  --status-ok:#3A7D52;--status-ok-bg:#E5F0E8;
-  --status-advisory:#C4890E;--status-advisory-bg:#FAF0E0;
-  --status-alarm:#D4432A;--status-alarm-bg:#FCEBEB;
-  --surface-page:#F7F6F2;--surface-card:#FFFFFF;--surface-sidebar:#463B33;
-  --border-card:#E9E3DE;
-  --shadow-card:0 1px 7px rgba(0,0,0,0.05),0 0 16px rgba(0,0,0,0.05);
-  --shadow-sidebar:2px 0 8px rgba(0,0,0,0.06);
-  --shadow-topbar:0 2px 6px rgba(0,0,0,0.04);
-  --radius-card:16px;--radius-status:12px;--radius-alert:10px;--radius-nav:8px;
-  --sidebar-width:200px;--topbar-height:56px;--content-margin:24px;--tile-gap:16px;
-  --font-ui:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,sans-serif;
-  --font-data:'IBM Plex Mono','SF Mono','Consolas',monospace;
-}
-body{font-family:var(--font-ui);background:var(--surface-page);color:var(--text-primary);overflow:hidden;height:100vh}
+/* Sprint 1 cleanup: shared rules removed; theme.css provides shell, sidebar, topbar, time-pill bar, breadcrumb, content, tabs, card, kpi-section-title, banner, alert-item, chart scaffold, status-pill, table.data, upload-inline, btn family, action-bar, summary-row, config-bar (base), empty-state, manual overlay/panel (base). Below: shell-tube-exchanger-specific only. */
 
-/* SHELL */
-.shell{display:grid;grid-template-columns:var(--sidebar-width) 1fr;grid-template-rows:var(--topbar-height) 1fr;height:100vh}
+/* KPI grid: 6-column for shell-tube */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:var(--tile-gap)}
+@media(max-width:1400px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:780px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
 
-/* SIDEBAR */
-.sidebar{grid-row:1/-1;background:var(--surface-sidebar);box-shadow:var(--shadow-sidebar);display:flex;flex-direction:column;padding-top:16px;z-index:10}
-.sidebar-header{display:flex;align-items:center;gap:10px;padding:0 16px;margin-bottom:32px}
-.sidebar-logo{width:36px;height:36px;flex-shrink:0;text-decoration:none;display:flex;align-items:center}
-.sidebar-title{font-size:15px;font-weight:600;color:#FFF;letter-spacing:0.3px}
-.nav-section-label{font-size:10px;font-weight:500;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1.2px;padding:0 16px;margin-bottom:8px;margin-top:8px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:8px 16px;border-radius:var(--radius-nav);margin:0 8px 2px 8px;cursor:pointer;transition:background 0.15s;text-decoration:none;color:rgba(255,255,255,0.6);font-size:13px;font-weight:500}
-.nav-item:hover{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85)}
-.nav-item.active{background:rgba(255,255,255,0.12);color:#FFF}
-.nav-icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.nav-icon svg{width:18px;height:18px}
-.sidebar-spacer{flex:1}
+/* KPI tile: page min-height + sub-tag + multi-row variants (page-specific KPI sub-components) */
+.kpi-tile{min-height:108px}
+.kpi-tile .kpi-label sub{text-transform:none;font-size:0.78em;vertical-align:sub}
+.kpi-row-online{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.kpi-row-online .kpi-sublabel{font-size:10px;color:var(--text-secondary)}
+.kpi-row-online .kpi-value{font-family:var(--font-data);font-size:18px;font-weight:500;color:var(--text-primary);line-height:1.1}
+.kpi-row-online .kpi-value.dim{color:var(--text-secondary);font-size:14px}
+.kpi-diff{font-size:10px;font-weight:500;color:var(--text-secondary)}
+.kpi-diff.up{color:var(--status-ok)}
+.kpi-diff.down{color:var(--status-alarm)}
+.kpi-diff.warn{color:var(--status-advisory)}
+.kpi-target-line{font-size:10px;color:var(--text-secondary);margin-top:auto;padding-top:2px;border-top:1px dashed var(--border-card)}
+.kpi-target-line strong{color:var(--text-primary);font-weight:500;font-family:var(--font-data)}
 
-/* TOPBAR */
-.topbar{background:var(--surface-card);box-shadow:var(--shadow-topbar);display:flex;align-items:center;padding:0 var(--content-margin);justify-content:space-between;z-index:5}
-.breadcrumb{font-size:13px;color:var(--text-secondary)}
-.breadcrumb a{color:var(--text-secondary);text-decoration:none}
-.breadcrumb a:hover{color:var(--gold-600)}
-.breadcrumb span{margin:0 6px;opacity:0.4}
-.topbar-right{display:flex;align-items:center;gap:12px}
-.avatar{width:32px;height:32px;border-radius:50%;background:var(--gold-600)}
-
-/* CONTENT */
-.content{padding:var(--content-margin);overflow-y:auto}
-
-/* TABS */
-.tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--border-card)}
-.tab{padding:10px 16px;font-size:13px;font-weight:500;color:var(--text-secondary);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;transition:color 0.15s}
-.tab:hover{color:var(--text-primary)}
-.tab.active{color:var(--gold-700);border-bottom-color:var(--gold-600)}
-.tab-panel{display:none}
-.tab-panel.active{display:block}
-
-/* CARDS */
-.card{background:var(--surface-card);border:1px solid var(--border-card);border-radius:var(--radius-card);box-shadow:var(--shadow-card);margin-bottom:var(--tile-gap)}
-.card-header{padding:16px 20px;border-bottom:1px solid var(--border-card);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:space-between}
-.card-body{padding:20px}
-
-/* KPI */
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:var(--tile-gap)}
-.kpi-tile{background:var(--surface-card);border:1px solid var(--border-card);border-radius:var(--radius-card);padding:12px 16px;transition:border-color 0.15s}
-.kpi-tile:hover{border-color:var(--gold-500)}
-.kpi-tile .kpi-label{font-size:11px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.03em}
-.kpi-tile .kpi-label sub{text-transform:none;font-size:0.75em;vertical-align:sub}
-.kpi-tile .kpi-value{font-family:var(--font-data);font-size:20px;font-weight:500;margin-top:4px}
-.kpi-tile .kpi-limit{font-size:10px;color:var(--text-secondary);margin-top:2px}
-.kpi-tile.headline{background:var(--gold-300);border-color:var(--gold-500)}
-
-/* STATUS BANNER */
-.banner{border-left:4px solid var(--status-ok);padding:16px 20px;border-radius:var(--radius-alert);background:var(--surface-card);margin-bottom:var(--tile-gap);box-shadow:var(--shadow-card)}
-.banner h2{margin:0 0 4px 0;font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-secondary)}
-.banner .banner-primary{font-size:18px;font-weight:700}
-.banner .banner-detail{margin-top:4px;font-size:13px;color:var(--text-secondary)}
-.banner.status-ok{border-left-color:var(--status-ok)}.banner.status-ok .banner-primary{color:var(--status-ok)}
-.banner.status-advisory{border-left-color:var(--status-advisory);background:var(--status-advisory-bg)}.banner.status-advisory .banner-primary{color:var(--status-advisory)}
-.banner.status-alarm{border-left-color:var(--status-alarm);background:var(--status-alarm-bg)}.banner.status-alarm .banner-primary{color:var(--status-alarm)}
-.alert-item{padding:8px 12px;border-radius:6px;margin-top:8px;font-size:13px}
-.alert-item.severity-advisory{background:var(--status-advisory-bg);color:var(--status-advisory);border-left:3px solid var(--status-advisory)}
-.alert-item.severity-alarm{background:var(--status-alarm-bg);color:var(--status-alarm);border-left:3px solid var(--status-alarm)}
-.alert-item .src{font-size:10px;color:var(--text-secondary);display:block;margin-top:2px}
-
-/* CHARTS */
-.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--tile-gap)}
-@media(max-width:1100px){.chart-grid{grid-template-columns:1fr}}
-.chart-box{background:var(--surface-card);border:1px solid var(--border-card);border-radius:var(--radius-card);padding:16px;box-shadow:var(--shadow-card)}
-.chart-box h4{margin:0 0 12px 0;font-size:12px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.03em}
-.chart-canvas-wrap{position:relative;height:220px}
-
-/* TABLES & COMPONENTS */
-table.data{width:100%;border-collapse:collapse;font-size:13px}
-table.data th,table.data td{padding:8px 12px;border-bottom:1px solid var(--border-card);text-align:left}
-table.data th{font-weight:600;color:var(--text-secondary);text-transform:uppercase;font-size:11px;letter-spacing:0.03em;background:var(--gold-100)}
-table.data td.num{font-family:var(--font-data);text-align:right}
-.status-pill{display:inline-block;padding:2px 8px;border-radius:var(--radius-status);font-size:11px;font-weight:500}
-.status-pill.ok{background:var(--status-ok-bg);color:var(--status-ok)}
-.status-pill.advisory{background:var(--status-advisory-bg);color:var(--status-advisory)}
-.status-pill.alarm{background:var(--status-alarm-bg);color:var(--status-alarm)}
-
-/* SIDEBAR CONFIG */
-.config-section{padding:0 16px;margin-bottom:16px}
-.config-section h3{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(255,255,255,0.4);margin:16px 0 8px 0;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1)}
-.config-section h3:first-child{margin-top:0}
-.form-row{display:flex;flex-direction:column;margin-bottom:8px}
-.form-row label{font-size:11px;font-weight:500;color:rgba(255,255,255,0.5);margin-bottom:3px}
-.config-input{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:6px 10px;font-size:12px;color:#FFF;width:100%;font-family:var(--font-ui)}
-.config-input:focus{outline:none;border-color:var(--gold-500);background:rgba(255,255,255,0.12)}
-.config-input option{background:var(--surface-sidebar);color:#FFF}
-
-/* UPLOAD */
-.upload-box{border:2px dashed rgba(255,255,255,0.2);border-radius:10px;padding:12px;text-align:center;cursor:pointer;transition:background 150ms;display:block;margin:0 16px}
-.upload-box:hover{background:rgba(255,255,255,0.06);border-color:var(--gold-500)}
-.upload-box input{display:none}
-.upload-box .up-title{font-weight:600;color:var(--gold-400);font-size:13px}
-.upload-box .up-sub{font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px}
-
-/* BUTTONS */
-.btn{background:var(--gold-600);color:#FFF;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font-ui);transition:background 0.15s}
-.btn:hover{background:var(--gold-700)}
-.btn-sm{padding:6px 12px;font-size:12px;border-radius:6px}
-.btn-outline{background:transparent;color:var(--gold-600);border:1px solid var(--gold-600)}
-.btn-outline:hover{background:var(--gold-300)}
-.btn-sidebar{background:rgba(255,255,255,0.1);color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.15);width:calc(100% - 32px);margin:4px 16px;border-radius:8px;padding:8px;font-size:12px;cursor:pointer;font-family:var(--font-ui)}
-.btn-sidebar:hover{background:rgba(255,255,255,0.15);color:#FFF}
-
-/* ACTION BAR */
-.action-bar{display:flex;gap:8px;margin-bottom:var(--tile-gap);flex-wrap:wrap}
-
-/* SUMMARY ROW */
-.summary-row{display:flex;gap:8px;flex-wrap:wrap}
-.summary-row .stat{background:var(--gold-100);padding:6px 12px;border-radius:8px;font-size:13px}
-.summary-row .stat strong{color:var(--gold-700);font-family:var(--font-data)}
-
-/* CONFIG BAR */
-.config-bar{background:var(--surface-card);border:1px solid var(--border-card);border-radius:12px;box-shadow:var(--shadow-card);margin-bottom:var(--tile-gap);overflow:hidden}
-.config-bar-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;cursor:pointer;user-select:none;transition:background 0.1s}
-.config-bar-header:hover{background:var(--gold-100)}
-.config-bar-title{font-size:11px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em}
-.config-toggle{font-size:14px;color:var(--text-secondary);transition:transform 0.2s}
-.config-bar-body{display:grid;grid-template-columns:180px 1fr 1fr;gap:0 24px;padding:12px 16px 16px 16px;border-top:1px solid var(--border-card)}
-.config-bar-body.collapsed{display:none}
-.config-col{min-width:0}
-.config-col h4{font-size:10px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-secondary);margin:0 0 6px 0;font-weight:600;padding-bottom:4px;border-bottom:1px solid var(--border-card)}
-.config-row{display:flex;align-items:center;justify-content:space-between;padding:2px 0;gap:8px}
-.config-row label{font-size:11px;font-weight:400;color:var(--text-secondary);white-space:nowrap;flex-shrink:0}
-.config-row input,.config-row select{background:var(--surface-page);border:1px solid var(--border-card);border-radius:5px;padding:3px 6px;font-size:12px;color:var(--text-primary);font-family:var(--font-data);width:80px;text-align:right}
-.config-row select{text-align:left;width:100px;font-family:var(--font-ui)}
-.config-row input:focus,.config-row select:focus{outline:none;border-color:var(--gold-500);box-shadow:0 0 0 2px rgba(226,156,87,0.12)}
-.upload-inline{display:flex;flex-direction:column;align-items:center;padding:10px 8px;border:1.5px dashed var(--border-card);border-radius:8px;cursor:pointer;text-align:center;transition:all 0.15s;background:var(--surface-page)}
-.upload-inline:hover{border-color:var(--gold-500)}
-.upload-inline input{display:none}
-.upload-inline .up-title{font-weight:600;color:var(--gold-600);font-size:12px}
-.upload-inline .up-sub{font-size:10px;color:var(--text-secondary);margin-top:3px}
-
-/* SCHEMATIC */
-.schematic-box{text-align:center;padding:20px;background:var(--surface-card);border:1px solid var(--border-card);border-radius:var(--radius-card);margin-bottom:var(--tile-gap);box-shadow:var(--shadow-card)}
-.schematic-box svg{max-width:100%;height:auto}
-
-/* TEMP PROFILE TABLE */
-.temp-table-wrap{overflow-x:auto}
-
-/* EMPTY STATE */
-.empty-state{text-align:center;padding:48px;color:var(--text-secondary)}
-.empty-state h3{margin:0 0 8px 0;color:var(--text-primary);font-weight:600}
-
-/* MANUAL PANEL */
-.manual-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);z-index:100}
-.manual-panel{position:fixed;top:0;right:0;width:560px;height:100vh;background:var(--surface-card);box-shadow:-4px 0 24px rgba(0,0,0,0.12);z-index:101;display:none;flex-direction:column}
-.manual-panel.open{display:flex}
-.manual-panel-header{padding:16px 20px;border-bottom:1px solid var(--border-card);display:flex;align-items:center;justify-content:space-between}
-.manual-panel-header h3{font-size:16px;font-weight:600}
-.manual-panel-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-secondary);padding:4px 8px}
-.manual-pdf-btn{background:var(--gold-500);color:#fff;border:none;border-radius:6px;padding:4px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:var(--font-ui);margin-right:8px}.manual-pdf-btn:hover{background:var(--gold-600)}
-
-.manual-panel-body{flex:1;overflow-y:auto;padding:20px;font-size:14px;line-height:1.6}
-.manual-panel-body h3{margin:20px 0 8px 0;font-size:15px;font-weight:600;color:var(--gold-700)}
-.manual-panel-body h3:first-child{margin-top:0}
-.manual-panel-body p{margin-bottom:12px}
-.manual-panel-body code{background:var(--gold-100);padding:2px 6px;border-radius:4px;font-family:var(--font-data);font-size:13px}
-
-.sidebar-divider{height:1px;background:rgba(255,255,255,0.08);margin:8px 16px}
-.nav-badge{margin-left:auto;font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.6)}
-.sidebar-user{display:flex;align-items:center;gap:10px;padding:12px 16px;margin:8px 8px 12px 8px;border-radius:var(--radius-nav);background:rgba(255,255,255,0.06)}
-.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--gold-600);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#FFF;flex-shrink:0}
-.user-info{overflow:hidden}
-.user-name{font-size:12px;font-weight:500;color:rgba(255,255,255,0.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.user-role{font-size:10px;color:rgba(255,255,255,0.4)}
-/* Keyboard shortcut modal */
-.kbd-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center}
-.kbd-overlay.open{display:flex}
-.kbd-modal{background:var(--surface-card);border-radius:var(--radius-card);box-shadow:0 8px 40px rgba(0,0,0,0.15);width:480px;max-height:80vh;overflow:auto;padding:24px}
-.kbd-modal h3{font-size:16px;font-weight:600;margin:0 0 16px 0;display:flex;align-items:center;justify-content:space-between}
-.kbd-modal .kbd-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-secondary);padding:4px}
-.kbd-group{margin-bottom:16px}
-.kbd-group h4{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-secondary);margin:0 0 8px 0}
-.kbd-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:13px;color:var(--text-primary)}
-.kbd-keys{display:flex;gap:4px}
-kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius:4px;padding:2px 8px;font-family:var(--font-data);font-size:11px;color:var(--text-secondary)}
-
-.topbar-left{display:flex;align-items:baseline;gap:10px}
-.topbar-right{display:flex;align-items:center;gap:12px}
-.topbar-btn{background:none;border:1px solid var(--border-card);border-radius:6px;padding:6px;cursor:pointer;display:flex;align-items:center;color:var(--text-secondary);transition:border-color 0.15s,color 0.15s}
-.topbar-btn:hover{border-color:var(--gold-500);color:var(--gold-600)}
-.time-range-bar{display:flex;gap:2px;background:var(--gold-100);border-radius:8px;padding:2px}
-.time-pill{background:none;border:none;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;border-radius:6px;color:var(--text-secondary);font-family:var(--font-ui);transition:all 0.15s}
-.time-pill:hover{color:var(--text-primary)}
-.time-pill.active{background:var(--surface-card);box-shadow:0 1px 3px rgba(0,0,0,0.08);color:var(--text-primary)}
-.avatar{width:32px;height:32px;border-radius:50%;background:var(--gold-600);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#FFF}
+/* Manual panel: shell-tube-specific list tweaks */
+.manual-panel-body ul{margin:8px 0 12px 18px}
+.manual-panel-body ul li{margin-bottom:4px}
 </style>
 </head>
 <body>
 
 <div class="shell">
-  <!-- SIDEBAR -->
   <nav class="sidebar">
     <div class="sidebar-header">
       <a class="sidebar-logo" href="welcome-home.html" title="Home"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 290 290" width="36" height="36"><g transform="rotate(3.5,145,145)"><path d="M 231.6,95.0 L 231.6,195.0 L 145.0,245.0 L 58.4,195.0 L 58.4,95.0 L 145.0,45.0 Z" fill="none" stroke="#C8906A" stroke-width="3.5" stroke-linejoin="miter"/><path d="M 32.4,145.0 L 39.1,131.2 L 45.5,119.5 L 51.3,110.9 L 56.1,105.8 L 59.6,104.0 L 62.7,104.6 L 67.0,108.0 L 71.9,114.2 L 77.0,122.6 L 82.3,132.3 L 87.6,142.5 L 93.0,152.4 L 98.5,161.3 L 104.1,168.7 L 110.1,174.1 L 116.6,177.4 L 123.5,177.8 L 130.1,175.6 L 136.1,171.4 L 141.7,166.0 L 147.2,159.6 L 152.6,153.0 L 157.8,146.5 L 163.0,140.7 L 168.0,135.9 L 172.8,132.5 L 177.3,130.5 L 181.6,129.8 L 186.0,130.3 L 190.6,131.9 L 195.5,134.7 L 200.6,138.3 L 205.8,142.4 L 211.1,146.8 L 216.6,151.0 L 222.2,154.7 L 228.0,157.5 L 234.1,158.9 L 240.0,158.7 L 245.5,157.3 L 245.5,157.3 L 240.3,155.8 L 235.5,153.7 L 230.9,151.1 L 226.1,148.2 L 221.1,144.8 L 215.9,140.8 L 210.6,136.5 L 205.2,132.2 L 199.6,128.3 L 193.8,125.1 L 187.8,122.9 L 181.5,122.2 L 175.1,123.2 L 169.0,125.9 L 163.1,130.1 L 157.5,135.5 L 152.0,141.6 L 146.6,148.3 L 141.3,154.8 L 136.2,160.8 L 131.2,165.6 L 126.5,168.9 L 122.4,170.3 L 118.7,170.0 L 114.5,168.0 L 109.8,163.6 L 104.8,157.0 L 99.6,148.6 L 94.4,138.9 L 89.0,128.8 L 83.7,118.8 L 78.2,109.9 L 72.4,102.7 L 66.0,97.8 L 58.5,96.5 L 51.3,99.9 L 45.5,106.9 L 40.7,117.2 L 36.4,130.1 L 32.4,145.0 Z" fill="#C8906A" stroke="none"/></g></svg></a>
@@ -241,6 +57,10 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
       Dashboards
     </a>
 
+    <a class="nav-item" href="predictors.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 13 6 9 9 11 14 5"/><polyline points="11 5 14 5 14 8"/></svg></span>
+      Predictors
+    </a>
     <div class="nav-section-label">Monitor</div>
     <a class="nav-item" href="alerts.html">
       <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2a5 5 0 00-5 5v2.5L2.5 12.5h13L14 9.5V7a5 5 0 00-5-5z"/><path d="M7 13a2 2 0 004 0"/><line x1="9" y1="1" x2="9" y2="2"/></svg></span>
@@ -266,7 +86,7 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
 
     <a class="nav-item" href="help.html">
       <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><path d="M7 7a2 2 0 013.5 1.5c0 1.5-2 1.5-2 3"/><circle cx="9" cy="13.5" r="0.5" fill="currentColor" stroke="none"/></svg></span>
-      Help & Docs
+      Help &amp; Docs
     </a>
     <a class="nav-item" href="changelog.html">
       <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><polyline points="9 5 9 9 12 10.5"/></svg></span>
@@ -280,6 +100,7 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
       Settings
     </a>
 
+    <div class="planned-modules"><strong>Planned modules</strong>Alerts · Activity Log · Data Export · Reports · Help · Changelog · Settings</div>
     <div class="sidebar-user">
       <div class="user-avatar">VP</div>
       <div class="user-info">
@@ -289,75 +110,82 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
     </div>
   </nav>
 
-  <!-- TOPBAR -->
   <header class="topbar">
     <div class="topbar-left">
-      <div class="breadcrumb"><a href="welcome-home.html">Home</a><span>/</span>Shell & Tube Exchanger</div>
+      <div class="breadcrumb"><a href="welcome-home.html">Home</a><span>/</span>Shell &amp; Tube Exchanger</div>
     </div>
     <div class="topbar-right">
-      <div class="time-range-bar">
+      <div class="time-range-bar" id="timeRangeBar">
         <button class="time-pill" data-range="1h">1H</button>
-        <button class="time-pill active" data-range="24h">24H</button>
+        <button class="time-pill" data-range="24h">24H</button>
         <button class="time-pill" data-range="7d">7D</button>
-        <button class="time-pill" data-range="30d">30D</button>
+        <button class="time-pill active" data-range="30d">30D</button>
+        <button class="time-pill" data-range="90d">90D</button>
+        <span class="time-divider"></span>
+        <div class="time-custom" title="Custom range - enter a number and unit">
+          <input type="number" id="customAmount" min="1" placeholder="N"/>
+          <select id="customUnit">
+            <option value="s">sec</option>
+            <option value="m">min</option>
+            <option value="h">hr</option>
+            <option value="d" selected>day</option>
+          </select>
+        </div>
       </div>
-      <button class="topbar-btn" onclick="toggleKbd()" title="Keyboard shortcuts (?)">
-        <svg viewBox="0 0 18 18" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="14" height="9" rx="1.5"/><line x1="5" y1="8" x2="5" y2="8.01"/><line x1="9" y1="8" x2="9" y2="8.01"/><line x1="13" y1="8" x2="13" y2="8.01"/><line x1="6" y1="11" x2="12" y2="11"/></svg>
-      </button>
       <div class="avatar">VP</div>
     </div>
   </header>
 
-  <!-- CONTENT -->
   <main class="content">
-    <!-- CONFIG BAR -->
     <div class="config-bar">
-      <div class="config-bar-header">
-        <span class="config-bar-title">Data & Configuration</span>
-        <span class="config-toggle" id="configToggle">▾</span>
+      <div class="config-bar-header" id="configHeader">
+        <span class="config-bar-title">Data &amp; Configuration</span>
+        <span class="config-toggle" id="configToggle">▴</span>
       </div>
-      <div class="config-bar-body collapsed" id="configBody">
+      <div class="config-bar-body" id="configBody">
         <div class="config-col">
           <h4>Data Source</h4>
           <label class="upload-inline" for="csvInput">
             <input type="file" id="csvInput" accept=".csv"/>
             <span class="up-title">Upload CSV</span>
-            <span class="up-sub" id="upStatus">No file loaded</span>
+            <span class="up-sub" id="upStatus">Demo auto-loaded</span>
           </label>
           <button class="btn btn-sm" id="loadDemoBtn" style="margin-top:6px;width:100%;background:var(--gold-600)">Load demo data</button>
           <button class="btn btn-sm" id="recalcBtn" style="margin-top:4px;width:100%">Recalculate</button>
           <button class="btn btn-sm" id="restoreDefaultsBtn" style="margin-top:4px;width:100%;background:var(--gold-200);color:var(--text-primary)">Restore Defaults</button>
         </div>
         <div class="config-col">
-          <h4>Settings</h4>
-          <div class="config-row"><label>Heat transfer area (m²)</label><input type="number" id="setArea" value="250.0" step="0.1" class="config-input"/></div>
-          <div class="config-row"><label>TEMA type</label><select id="setTEMA" class="config-input"><option value="1-2">1-2 (BEM)</option><option value="1-4">1-4 (TEMA E)</option><option value="2-4">2-4 (TEMA F)</option><option value="custom">Custom F</option></select></div>
-          <div class="config-row"><label>Correction factor F</label><input type="number" id="setF" value="0.90" step="0.01" class="config-input"/><span id="fHint" style="font-size:10px;color:var(--text-secondary);margin-top:2px;display:block">1-2 shell: F = 0.85 - 0.95</span></div>
-          <div class="config-row"><label>Overall U clean (W/m²K)</label><input type="number" id="setUClean" value="400.0" step="10" class="config-input"/></div>
+          <h4>Geometry &amp; Design</h4>
+          <div class="config-row"><label>Shell passes N (assumes 2N tube passes)</label><input type="number" class="config-input" id="setNshell" value="2" step="1" min="1"/></div>
+          <div class="config-row"><label>Heat transfer area (m²)</label><input type="number" class="config-input" id="setArea" value="124.8" step="0.1"/></div>
+          <div class="config-row"><label>U clean baseline (W/m²K)</label><input type="number" class="config-input" id="setUClean" value="500" step="10"/></div>
+          <div class="config-row"><label>Design heat duty (MW)</label><input type="number" class="config-input" id="setDesignQ" value="3.5" step="0.1"/></div>
         </div>
         <div class="config-col">
           <h4>Limits</h4>
-          <div class="config-row"><label>R<sub>f</sub> clean (E-4 m²K/W)</label><input type="number" id="limRfClean" value="1.0" step="0.1" class="config-input"/></div>
-          <div class="config-row"><label>Approach min (C)</label><input type="number" id="limApproach" value="5.0" step="0.5" class="config-input"/></div>
-          <div class="config-row"><label>Shell DP max (bar)</label><input type="number" id="limShellDP" value="0.55" step="0.01" class="config-input"/></div>
-          <div class="config-row"><label>Tube DP max (bar)</label><input type="number" id="limTubeDP" value="0.45" step="0.01" class="config-input"/></div>
+          <div class="config-row"><label>R<sub>f</sub> advisory (×10⁻⁴ m²K/W)</label><input type="number" class="config-input" id="limRfAdv" value="5" step="0.5"/></div>
+          <div class="config-row"><label>R<sub>f</sub> alarm (×10⁻⁴ m²K/W)</label><input type="number" class="config-input" id="limRfAlm" value="10" step="0.5"/></div>
+          <div class="config-row"><label>Effectiveness ε advisory (%)</label><input type="number" class="config-input" id="limEffAdv" value="50" step="1"/></div>
+          <div class="config-row"><label>Q imbalance advisory (%)</label><input type="number" class="config-input" id="limImbAdv" value="8" step="0.5"/></div>
+          <div class="config-row"><label>Approach min (°C)</label><input type="number" class="config-input" id="limAppMin" value="10" step="0.5"/></div>
+          <div class="config-row"><label>Duty deviation advisory (%)</label><input type="number" class="config-input" id="limDutyAdv" value="5" step="0.5"/></div>
+          <div class="config-row"><label>Duty deviation alarm (%)</label><input type="number" class="config-input" id="limDutyAlm" value="10" step="0.5"/></div>
         </div>
       </div>
     </div>
 
     <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
-      <h1 style="font-size:22px;font-weight:700">Shell & Tube Exchanger - Performance & Fouling</h1>
-      <span style="font-size:12px;color:var(--text-secondary)">TEMA · ASME PTC 12-5 · ISO 5167</span>
+      <h1 style="font-size:22px;font-weight:700">Shell &amp; Tube Exchanger</h1>
+      <span style="font-size:12px;color:var(--text-secondary)">TEMA · ASME PTC 12-5 · LMTD method</span>
     </div>
-    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">Counter-current heat exchange · E-105</p>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">Counter-current heat duty, fouling, and effectiveness tracking</p>
 
     <div class="tabs">
       <button class="tab active" data-tab="dashboard">Dashboard</button>
-      <button class="tab" data-tab="data">Data & Log</button>
+      <button class="tab" data-tab="data">Data &amp; Log</button>
       <button class="tab" data-tab="about">About</button>
     </div>
 
-    <!-- ═══ DASHBOARD TAB ═══ -->
     <section class="tab-panel active" id="panel-dashboard">
       <div class="action-bar">
         <button class="btn btn-sm" id="btnExport" title="Export processed data to CSV">Export CSV</button>
@@ -367,23 +195,86 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
       <div id="statusArea">
         <div class="empty-state">
           <h3>No data loaded</h3>
-          <p>Upload a CSV or click <em>Load demo data</em> in the sidebar.</p>
+          <p>Upload a CSV or click Load demo data in the Data &amp; Configuration panel.</p>
         </div>
       </div>
 
       <div id="kpiArea" style="display:none">
 
-        <div class="kpi-row">
-          <div class="kpi-tile headline"><div class="kpi-label">Overall U (W/m2/K)</div><div class="kpi-value" id="kpiU">—</div><div class="kpi-limit">Clean baseline</div></div>
-          <div class="kpi-tile"><div class="kpi-label">Fouling R<sub>f</sub> (1e-4)</div><div class="kpi-value" id="kpiRf">—</div><div class="kpi-limit" id="kpiRfLim">alarm >= 12.0</div></div>
-          <div class="kpi-tile"><div class="kpi-label">UA (kW/K)</div><div class="kpi-value" id="kpiUA">—</div><div class="kpi-limit">U × A × F</div></div>
-          <div class="kpi-tile"><div class="kpi-label">LMTD (C)</div><div class="kpi-value" id="kpiLMTD">—</div><div class="kpi-limit">log-mean</div></div>
+        <div class="kpi-section-title current">
+          <span class="pulse-dot"></span>
+          Current Values
+          <span class="meta" id="currentDateLabel">(latest reading)</span>
         </div>
-        <div class="kpi-row">
-          <div class="kpi-tile"><div class="kpi-label">Duty Q (kW)</div><div class="kpi-value" id="kpiQ">—</div><div class="kpi-limit">avg of streams</div></div>
-          <div class="kpi-tile"><div class="kpi-label">Q imbalance (%)</div><div class="kpi-value" id="kpiImb">—</div><div class="kpi-limit">|Qh - Qc| / avg</div></div>
-          <div class="kpi-tile"><div class="kpi-label">Hot approach (C)</div><div class="kpi-value" id="kpiHotApp">—</div><div class="kpi-limit" id="kpiHotAppLim">min 10 C</div></div>
-          <div class="kpi-tile"><div class="kpi-label">Cold approach (C)</div><div class="kpi-value" id="kpiColdApp">—</div><div class="kpi-limit" id="kpiColdAppLim">min 10 C</div></div>
+        <div class="kpi-grid">
+          <div class="kpi-tile accent-current">
+            <div class="kpi-label">Fouling R<sub>f</sub></div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">×10⁻⁴ m²K/W</span><span><span class="kpi-value" id="kCurRf">—</span></span></div>
+            <div class="kpi-target-line">advisory <strong id="kCurRfAdv">5.0</strong> · alarm <strong id="kCurRfAlm">10.0</strong></div>
+          </div>
+          <div class="kpi-tile accent-current">
+            <div class="kpi-label">U<sub>dirty</sub></div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">W/m²K</span><span><span class="kpi-value" id="kCurU">—</span> <span class="kpi-diff" id="kCurUDiff">—</span></span></div>
+            <div class="kpi-target-line">U<sub>clean</sub> <strong id="kCurUClean">500</strong></div>
+          </div>
+          <div class="kpi-tile accent-current">
+            <div class="kpi-label">LMTD × F</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">°C</span><span><span class="kpi-value" id="kCurLMTDeff">—</span></span></div>
+            <div class="kpi-target-line">F = <strong id="kCurF">—</strong></div>
+          </div>
+          <div class="kpi-tile accent-current">
+            <div class="kpi-label">Effectiveness ε</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">% of Q<sub>max</sub></span><span><span class="kpi-value" id="kCurEff">—</span></span></div>
+            <div class="kpi-target-line">advisory below <strong id="kCurEffAdv">50 %</strong></div>
+          </div>
+          <div class="kpi-tile accent-current">
+            <div class="kpi-label">Heat Duty Q</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">MW</span><span><span class="kpi-value" id="kCurQ">—</span> <span class="kpi-diff" id="kCurQDiff">—</span></span></div>
+            <div class="kpi-target-line">design <strong id="kCurQDesign">3.50 MW</strong></div>
+          </div>
+          <div class="kpi-tile accent-current">
+            <div class="kpi-label">Q Imbalance</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">%</span><span><span class="kpi-value" id="kCurImb">—</span></span></div>
+            <div class="kpi-target-line">advisory above <strong id="kCurImbAdv">8 %</strong></div>
+          </div>
+        </div>
+
+        <div class="kpi-section-title">
+          <span class="pulse-dot"></span>
+          Performance Averages
+          <span class="meta" id="avgPeriodLabel">(last 30 days)</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-tile accent-avg">
+            <div class="kpi-label">Avg Fouling R<sub>f</sub></div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">×10⁻⁴ m²K/W</span><span><span class="kpi-value" id="kAvgRf">—</span></span></div>
+            <div class="kpi-target-line">advisory <strong id="kAvgRfAdv">5.0</strong> · alarm <strong id="kAvgRfAlm">10.0</strong></div>
+          </div>
+          <div class="kpi-tile accent-avg">
+            <div class="kpi-label">Avg U<sub>dirty</sub></div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">W/m²K</span><span><span class="kpi-value" id="kAvgU">—</span> <span class="kpi-diff" id="kAvgUDiff">—</span></span></div>
+            <div class="kpi-target-line">U<sub>clean</sub> <strong id="kAvgUClean">500</strong></div>
+          </div>
+          <div class="kpi-tile accent-avg">
+            <div class="kpi-label">Avg LMTD × F</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">°C</span><span><span class="kpi-value" id="kAvgLMTDeff">—</span></span></div>
+            <div class="kpi-target-line">F = <strong id="kAvgF">—</strong></div>
+          </div>
+          <div class="kpi-tile accent-avg">
+            <div class="kpi-label">Avg Effectiveness ε</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">% of Q<sub>max</sub></span><span><span class="kpi-value" id="kAvgEff">—</span></span></div>
+            <div class="kpi-target-line">advisory below <strong id="kAvgEffAdv">50 %</strong></div>
+          </div>
+          <div class="kpi-tile accent-avg">
+            <div class="kpi-label">Avg Heat Duty Q</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">MW</span><span><span class="kpi-value" id="kAvgQ">—</span> <span class="kpi-diff" id="kAvgQDiff">—</span></span></div>
+            <div class="kpi-target-line">design <strong id="kAvgQDesign">3.50 MW</strong></div>
+          </div>
+          <div class="kpi-tile accent-avg">
+            <div class="kpi-label">Avg Q Imbalance</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">%</span><span><span class="kpi-value" id="kAvgImb">—</span></span></div>
+            <div class="kpi-target-line">advisory above <strong id="kAvgImbAdv">8 %</strong></div>
+          </div>
         </div>
 
         <div class="banner status-ok" id="statusBanner">
@@ -393,39 +284,90 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
           <div id="alertList"></div>
         </div>
 
-        <div class="card">
-          <div class="card-header">Temperature Profile</div>
-          <div class="card-body temp-table-wrap">
-            <table class="data" id="tempTable">
-              <thead><tr><th>Stream</th><th class="num">Inlet (C)</th><th class="num">Outlet (C)</th><th class="num">dT (C)</th><th class="num">Flow (kg/hr)</th><th class="num">Cp (kJ/kg/K)</th><th class="num">Q (kW)</th></tr></thead>
-              <tbody>
-                <tr><td>Hot (Shell)</td><td class="num" id="hIn">—</td><td class="num" id="hOut">—</td><td class="num" id="hDT">—</td><td class="num" id="hFlow">—</td><td class="num" id="hCp">—</td><td class="num" id="hQ">—</td></tr>
-                <tr><td>Cold (Tube)</td><td class="num" id="cIn">—</td><td class="num" id="cOut">—</td><td class="num" id="cDT">—</td><td class="num" id="cFlow">—</td><td class="num" id="cCp">—</td><td class="num" id="cQ">—</td></tr>
-                <tr><td colspan="7" style="text-align:center;font-size:12px;font-weight:600;padding:12px">Shell Exit - Cold Inlet Approach</td></tr>
-                <tr><td>Approach</td><td class="num" colspan="6" id="appRow">—</td></tr>
-                <tr><td colspan="7" style="text-align:center;font-size:12px;font-weight:600;padding:12px">Pressure Drops</td></tr>
-                <tr><td>Shell DP</td><td class="num" colspan="6" id="dpShellRow">— bar</td></tr>
-                <tr><td>Tube DP</td><td class="num" colspan="6" id="dpTubeRow">— bar</td></tr>
-              </tbody>
-            </table>
+        <div class="chart-grid">
+          <div class="chart-box">
+            <div class="chart-head">
+              <h4>Fouling R<sub>f</sub> Trend (×10⁻⁴ m²K/W)</h4>
+              <div class="axis-controls">
+                <span>Y min</span><input type="number" id="rfMin" placeholder="auto"/>
+                <span>max</span><input type="number" id="rfMax" placeholder="auto"/>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <label class="toggle-pill" style="--swatch-color:#2F6F9F"><input type="checkbox" data-chart="rf" data-idx="0" checked/><span class="swatch"></span><span class="toggle-label">R<sub>f</sub> measured</span></label>
+              <label class="toggle-pill" style="--swatch-color:#C4890E"><input type="checkbox" data-chart="rf" data-idx="1" checked/><span class="swatch"></span><span class="toggle-label">Advisory</span></label>
+              <label class="toggle-pill" style="--swatch-color:#D4432A"><input type="checkbox" data-chart="rf" data-idx="2" checked/><span class="swatch"></span><span class="toggle-label">Alarm</span></label>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="chartRf"></canvas></div>
+          </div>
+
+          <div class="chart-box">
+            <div class="chart-head">
+              <h4>Overall U Trend (W/m²K)</h4>
+              <div class="axis-controls">
+                <span>Y min</span><input type="number" id="uMin" placeholder="auto"/>
+                <span>max</span><input type="number" id="uMax" placeholder="auto"/>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <label class="toggle-pill" style="--swatch-color:#2F6F9F"><input type="checkbox" data-chart="u" data-idx="0" checked/><span class="swatch"></span><span class="toggle-label">U<sub>dirty</sub></span></label>
+              <label class="toggle-pill" style="--swatch-color:#888"><input type="checkbox" data-chart="u" data-idx="1" checked/><span class="swatch"></span><span class="toggle-label">U<sub>clean</sub> baseline</span></label>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="chartU"></canvas></div>
+          </div>
+
+          <div class="chart-box full-width">
+            <div class="chart-head">
+              <h4>Heat Duty Q Trend (kW)</h4>
+              <div class="axis-controls">
+                <span>Y min</span><input type="number" id="qMin" placeholder="auto"/>
+                <span>max</span><input type="number" id="qMax" placeholder="auto"/>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <label class="toggle-pill" style="--swatch-color:#2F6F9F"><input type="checkbox" data-chart="q" data-idx="0" checked/><span class="swatch"></span><span class="toggle-label">Q hot</span></label>
+              <label class="toggle-pill" style="--swatch-color:#2F7F7A"><input type="checkbox" data-chart="q" data-idx="1" checked/><span class="swatch"></span><span class="toggle-label">Q cold</span></label>
+              <label class="toggle-pill" style="--swatch-color:#667085"><input type="checkbox" data-chart="q" data-idx="2" checked/><span class="swatch"></span><span class="toggle-label">Q avg</span></label>
+              <label class="toggle-pill" style="--swatch-color:#888"><input type="checkbox" data-chart="q" data-idx="3" checked/><span class="swatch"></span><span class="toggle-label">Design Q</span></label>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="chartQ"></canvas></div>
+          </div>
+
+          <div class="chart-box">
+            <div class="chart-head">
+              <h4>Approach Temperatures (°C)</h4>
+              <div class="axis-controls">
+                <span>Y min</span><input type="number" id="appMin" placeholder="auto"/>
+                <span>max</span><input type="number" id="appMax" placeholder="auto"/>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <label class="toggle-pill" style="--swatch-color:#2F6F9F"><input type="checkbox" data-chart="app" data-idx="0" checked/><span class="swatch"></span><span class="toggle-label">Hot end</span></label>
+              <label class="toggle-pill" style="--swatch-color:#2F7F7A"><input type="checkbox" data-chart="app" data-idx="1" checked/><span class="swatch"></span><span class="toggle-label">Cold end</span></label>
+              <label class="toggle-pill" style="--swatch-color:#C4890E"><input type="checkbox" data-chart="app" data-idx="2" checked/><span class="swatch"></span><span class="toggle-label">Min approach</span></label>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="chartApp"></canvas></div>
+          </div>
+
+          <div class="chart-box">
+            <div class="chart-head">
+              <h4>Effectiveness ε &amp; F-factor</h4>
+              <div class="axis-controls">
+                <span>Y min</span><input type="number" id="effMin" placeholder="auto"/>
+                <span>max</span><input type="number" id="effMax" placeholder="auto"/>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <label class="toggle-pill" style="--swatch-color:#2F6F9F"><input type="checkbox" data-chart="eff" data-idx="0" checked/><span class="swatch"></span><span class="toggle-label">Effectiveness ε (%)</span></label>
+              <label class="toggle-pill" style="--swatch-color:#667085"><input type="checkbox" data-chart="eff" data-idx="1" checked/><span class="swatch"></span><span class="toggle-label">F-factor (×100)</span></label>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="chartEff"></canvas></div>
           </div>
         </div>
 
-        <div class="card">
-          <div class="card-header">Trends</div>
-          <div class="card-body">
-            <div class="chart-grid">
-              <div class="chart-box"><h4>Overall U Trend (W/m2/K)</h4><div class="chart-canvas-wrap"><canvas id="chart-u"></canvas></div></div>
-              <div class="chart-box"><h4>Fouling R<sub>f</sub> Trend (1e-4)</h4><div class="chart-canvas-wrap"><canvas id="chart-rf"></canvas></div></div>
-              <div class="chart-box"><h4>Duty Q Trend (kW)</h4><div class="chart-canvas-wrap"><canvas id="chart-q"></canvas></div></div>
-              <div class="chart-box"><h4>Approaches Trend (C)</h4><div class="chart-canvas-wrap"><canvas id="chart-app"></canvas></div></div>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
 
-    <!-- ═══ DATA TAB ═══ -->
     <section class="tab-panel" id="panel-data">
       <div class="card">
         <div class="card-header">Batch summary</div>
@@ -435,277 +377,1280 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
         <div class="card-header">Processed rows (most recent 50)</div>
         <div class="card-body" style="overflow-x:auto">
           <table class="data" id="resultTable">
-            <thead><tr><th>Timestamp</th><th class="num">U (W/m2/K)</th><th class="num">R<sub>f</sub> (1e-4)</th><th class="num">Q (kW)</th><th class="num">LMTD (C)</th><th class="num">Imb %</th><th class="num">H.App (C)</th><th class="num">C.App (C)</th><th class="num">Shell DP</th><th class="num">Tube DP</th><th>Status</th></tr></thead>
-            <tbody><tr><td colspan="11" style="text-align:center;color:var(--text-secondary)">No rows processed.</td></tr></tbody>
+            <thead><tr><th>Date</th><th>Q hot (kW)</th><th>Q cold (kW)</th><th>Q avg (kW)</th><th>LMTD</th><th>F</th><th>U (W/m²K)</th><th>R<sub>f</sub> (×10⁻⁴)</th><th>ε (%)</th><th>Imb %</th><th>P</th><th>R</th><th>Hot app</th><th>Cold app</th><th>Status</th></tr></thead>
+            <tbody><tr><td colspan="15" style="text-align:center;color:var(--text-secondary)">No rows processed.</td></tr></tbody>
           </table>
         </div>
       </div>
     </section>
 
-    <!-- ═══ ABOUT TAB ═══ -->
     <section class="tab-panel" id="panel-about">
       <div class="card"><div class="card-body">
-        <h3 style="margin-top:0;font-size:15px;font-weight:600;color:var(--gold-700)">Formulas (mirrors engine.py)</h3>
-        <p><strong>Duty</strong>: Q = m × Cp × ΔT / 3600 [kW]. Computed independently for hot & cold streams; reported as average.</p>
-        <p><strong>LMTD</strong>: Log-Mean Temperature Difference for counter-current flow: LMTD = (ΔT<sub>1</sub> − ΔT<sub>2</sub>) / ln(ΔT<sub>1</sub> / ΔT<sub>2</sub>).</p>
-        <p><strong>Overall U</strong>: U = Q × 1000 / (A × F × LMTD) [W/m²/K]. F is the LMTD correction factor, set automatically when a TEMA shell type is selected: 1-2 shell (F = 0.90), 1-4 shell (F = 0.85), 2-4 shell (F = 0.88). Select "Custom F" to enter any value manually.</p>
-        <p><strong>Fouling resistance</strong>: R<sub>f</sub> = 1/U − 1/U<sub>clean</sub> [m2K/W]. Reported as R<sub>f</sub> × 10⁴.</p>
-        <p><strong>Q imbalance</strong>: |Q_hot − Q_cold| / avg(Q_hot, Q_cold) × 100 [%]. Energy balance check.</p>
+        <h3 style="margin-top:0;font-size:15px;font-weight:600;color:var(--gold-700)">Calculations</h3>
+        <p><strong>Heat Duty</strong> Q = m · Cp · ΔT / 3600 [kW], computed independently for hot and cold streams. Q_avg = (Q_hot + Q_cold) / 2 is used for U and R_f calcs.</p>
+        <p><strong>LMTD</strong> for counter-current flow: (ΔT₁ − ΔT₂) / ln(ΔT₁ / ΔT₂), where ΔT₁ = T_h_in − T_c_out and ΔT₂ = T_h_out − T_c_in. When ΔT₁ ≈ ΔT₂ within 1×10⁻⁹ the dashboard falls back to ΔT₁ to avoid division by near-zero.</p>
+        <p><strong>F-factor</strong> calculated from the TEMA general N-shell-pass formula using the configured number of shell passes (assumes 2N tube passes). Handles the R = 1 special case (atanh form) and the general case with iterated P1 substitution. Returns null if a temperature crossover is detected (P ≥ 1 or PR ≥ 1).</p>
+        <p><strong>Overall U</strong> = Q_avg × 1000 / (A × F × LMTD) [W/m²K].</p>
+        <p><strong>Fouling R<sub>f</sub></strong> = 1/U_dirty − 1/U_clean [m²K/W]. Reported × 10⁴. Negative R_f means U_dirty exceeds U_clean (e.g. just after cleaning); shown as-is, not clamped.</p>
+        <p><strong>Effectiveness ε</strong> = Q_avg / (C_min × ΔT_max) × 100 [%], where C = m·Cp/3600 (kW/K) and ΔT_max = T_h_in − T_c_in.</p>
+        <p><strong>Q imbalance</strong> = |Q_hot − Q_cold| / Q_avg × 100 [%]. Energy balance check.</p>
+        <p><strong>Duty vs design</strong> = (Q_avg − Q_design) / Q_design × 100 [%], shown next to the Heat Duty KPI.</p>
+        <p><strong>P, R</strong> dimensionless: P = (T_c_out − T_c_in) / (T_h_in − T_c_in); R = (T_h_in − T_h_out) / (T_c_out − T_c_in). Used inside the F-factor calc and surfaced in the Data &amp; Log tab.</p>
+
         <h3 style="font-size:15px;font-weight:600;color:var(--gold-700);margin-top:16px">Alert tiers</h3>
-        <p><strong>Fouling alarm</strong>: R<sub>f</sub> >= 12.0 × 10⁻⁴ m2K/W (user-configurable). Signals fouling accumulation; consider cleaning schedule.</p>
-        <p><strong>Approach low</strong>: Either hot or cold stream approach < 10 C (user-configurable). Indicates thermal constraint or fouling.</p>
-        <p><strong>Pressure drop</strong>: Shell DP > 0.55 bar or Tube DP > 0.45 bar (user-configurable). Process or fouling-induced.</p>
-        <p><strong>Imbalance high</strong>: Q imbalance > 8%. Instrumentation error or unbalanced heat input/removal.</p>
+        <p><strong>Alarm</strong></p>
+        <ul>
+          <li>R<sub>f</sub> ≥ alarm threshold (default 10×10⁻⁴ m²K/W): clean schedule trigger.</li>
+          <li>Duty deviation ≥ alarm percent (default 10 %).</li>
+          <li>Temperature crossover detected (F-factor calc fails).</li>
+        </ul>
+        <p><strong>Advisory</strong></p>
+        <ul>
+          <li>R<sub>f</sub> ≥ advisory threshold (default 5×10⁻⁴).</li>
+          <li>Duty deviation ≥ advisory percent (default 5 %).</li>
+          <li>Effectiveness below advisory floor (default 50 %).</li>
+          <li>Q imbalance above advisory limit (default 8 %).</li>
+          <li>Either approach (hot end or cold end) below minimum (default 10 °C).</li>
+        </ul>
+
+        <h3 style="font-size:15px;font-weight:600;color:var(--gold-700);margin-top:16px">Series conventions</h3>
+        <p>All series are continuous lines. Reference, design, and alarm lines are dashed. Chart line breaks at any timestamp where the underlying sensor returns no value, so a gap is missing data, not zero.</p>
+
         <h3 style="font-size:15px;font-weight:600;color:var(--gold-700);margin-top:16px">Scope</h3>
-        <p>Reference-grade PoC. Not a control system, not instrumentation design guidance. Assumes inlet/outlet measurements are calibrated.</p>
-        <p style="font-size:12px;color:var(--text-secondary);margin-top:8px">U values are <strong>not clamped</strong>; negative or zero U signals data error.</p>
+        <p>Single counter-current shell-and-tube exchanger, daily aggregated readings. Tracks fouling, U, duty, effectiveness, and approach temperatures against design and alarm bounds. Not a control system.</p>
       </div></div>
     </section>
   </main>
 </div>
 
-<!-- MANUAL PANEL -->
 <div class="manual-overlay" id="manualOverlay"></div>
 <div class="manual-panel" id="manualPanel">
   <div class="manual-panel-header">
-    <h3>Engineering Manual - Shell & Tube Exchanger</h3>
-    <div style="display:flex;align-items:center;gap:4px"><button class="manual-pdf-btn" id="manualPdf">Download PDF</button><button class="manual-panel-close" id="manualClose">&times;</button></div>
+    <h3>Engineering Manual - Shell &amp; Tube Exchanger</h3>
+    <button class="manual-panel-close" id="manualClose">&times;</button>
   </div>
   <div class="manual-panel-body">
-    <h3>1. Purpose & Scope</h3>
-    <p>Shell-and-tube heat exchanger monitoring dashboard computing overall heat-transfer coefficient U and fouling resistance R<sub>f</sub>, with energy balance and pressure-drop trending per ASME PTC 12-5 and TEMA standards.</p>
-    <h3>2. Key Standards</h3>
-    <p><strong>ASME PTC 12-5</strong> - Single-Phase Heat Exchangers. Defines U measurement, LMTD correction F-factors, and fouling-resistance protocols.</p>
-    <p><strong>TEMA</strong> - Tubular Exchanger Manufacturers Association. Classifies shell & tube types by shell-pass/tube-pass count. Each configuration has a distinct LMTD correction factor F range: 1-2 shell (0.85-0.95, default 0.90), 1-4 shell (0.80-0.92, default 0.85), 2-4 shell (0.82-0.95, default 0.88). Selecting a TEMA type auto-sets F; select "Custom F" to override.</p>
-    <p><strong>ISO 5167</strong> - Flow measurement via orifice / venturi plate in ducts and pipes.</p>
-    <h3>3. Input Tags</h3>
-    <p>Timestamp, hot-stream inlet/outlet T and flow, cold-stream inlet/outlet T and flow, Cp values, shell DP, tube DP.</p>
-    <h3>4. Calculations</h3>
-    <p><code>Q_hot = m_hot × Cp_hot × (T_h_in − T_h_out) / 3600</code> [kW]</p>
-    <p><code>Q_cold = m_cold × Cp_cold × (T_c_out − T_c_in) / 3600</code> [kW]</p>
-    <p><code>Q_avg = (Q_hot + Q_cold) / 2</code></p>
-    <p><code>LMTD = (dT<sub>1</sub> − dT<sub>2</sub>) / ln(dT<sub>1</sub> / dT<sub>2</sub>)</code>, where dT<sub>1</sub> = T<sub>h,in</sub> − T<sub>c,out</sub>, dT<sub>2</sub> = T<sub>h,out</sub> − T<sub>c,in</sub></p>
-    <p><code>U = Q_avg × 1000 / (A × F × LMTD)</code> [W/m2/K]</p>
-    <p><code>R<sub>f</sub> = 1/U − 1/U<sub>clean</sub></code> [m2K/W]</p>
-    <h3>5. Alert Thresholds</h3>
-    <p>Fouling: alarm R<sub>f</sub> >= 12.0 × 10⁻⁴. Approach: advisory < 10 C either stream. Shell DP: advisory > 0.55 bar. Tube DP: advisory > 0.45 bar. Imbalance: advisory > 8%.</p>
-    <h3>6. Assumptions</h3>
-    <p>Steady-state operation. Cp constant per stream. LMTD applicable (true counter-current approximation). F-factor defaults are mid-range values for each TEMA shell type; actual F depends on P and R ratios for the specific exchanger.</p>
+
+    <h3>1. Purpose &amp; Scope</h3>
+    <p>This dashboard tracks fouling and thermal performance of a single counter-current shell-and-tube heat exchanger from daily process readings. It computes the overall heat-transfer coefficient U, the fouling resistance R<sub>f</sub>, and the LMTD-method correction factor F for the configured shell-pass count, and benchmarks delivered duty against the design value.</p>
+    <p>The dashboard does not perform mechanical design (tube count, baffle spacing, shell-side bypass) and is not a control system. It is a performance monitor for steady-state operation against a clean-condition baseline.</p>
+
+    <h3>2. Equipment Context</h3>
+    <p><strong>Geometry:</strong> N shell passes, 2N tube passes (TEMA E or F construction). N is configured in the Data &amp; Configuration panel; default N = 1 (one shell, two tube passes), which is the most common refinery service.</p>
+    <p><strong>Hot stream:</strong> shell side. Heavy hydrocarbon, refinery vacuum bottoms, or other high-temperature process fluid being cooled.</p>
+    <p><strong>Cold stream:</strong> tube side. Heat-transfer fluid (Dowtherm, hot oil, BFW) absorbing process heat for re-use upstream.</p>
+    <p><strong>Reference dataset:</strong> 71 daily samples of a vacuum-bottoms / Dowtherm Q exchanger spanning June 2020 - January 2021. Includes a startup transient and a mid-period clean.</p>
+
+    <h3>3. Operating Envelope</h3>
+    <p><strong>Hot inlet:</strong> 150 - 340 °C. Heavy-hydrocarbon service, vacuum bottoms or comparable.</p>
+    <p><strong>Hot outlet:</strong> 115 - 260 °C. Cooled by 50 - 110 °C across the bundle.</p>
+    <p><strong>Cold inlet:</strong> 100 - 190 °C. Heat-transfer fluid return from the user system.</p>
+    <p><strong>Cold outlet:</strong> 120 - 290 °C. Limited by hot-side outlet temperature and by cold-side flow.</p>
+    <p><strong>Hot mass flow:</strong> 4,000 - 55,000 kg/hr. Typical 35,000 - 50,000 kg/hr.</p>
+    <p><strong>Cold mass flow:</strong> 16,000 - 55,000 kg/hr. Typical 50,000 - 55,000 kg/hr.</p>
+    <p><strong>Cp values:</strong> hot Cp 2.1 - 2.7 kJ/(kg·K) (heavy hydrocarbon, T-dependent); cold Cp 1.9 - 2.2 kJ/(kg·K) (heat-transfer fluid).</p>
+
+    <h3>4. Tag Dictionary</h3>
+    <p>Generic engine variable names. Aliases map historian headers to these canonical names.</p>
+    <table class="data" style="margin-top:8px;font-size:12px">
+      <thead><tr><th>Variable</th><th>Unit</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>timestamp</code></td><td>ISO 8601</td><td>Sample time</td></tr>
+        <tr><td><code>t_hot_in_c</code></td><td>°C</td><td>Hot stream inlet temperature (shell side in)</td></tr>
+        <tr><td><code>t_hot_out_c</code></td><td>°C</td><td>Hot stream outlet temperature (shell side out)</td></tr>
+        <tr><td><code>m_hot_kghr</code></td><td>kg/hr</td><td>Hot stream mass flow</td></tr>
+        <tr><td><code>cp_hot</code></td><td>kJ/(kg·K)</td><td>Hot stream specific heat capacity</td></tr>
+        <tr><td><code>t_cold_in_c</code></td><td>°C</td><td>Cold stream inlet temperature (tube side in)</td></tr>
+        <tr><td><code>t_cold_out_c</code></td><td>°C</td><td>Cold stream outlet temperature (tube side out)</td></tr>
+        <tr><td><code>m_cold_kghr</code></td><td>kg/hr</td><td>Cold stream mass flow</td></tr>
+        <tr><td><code>cp_cold</code></td><td>kJ/(kg·K)</td><td>Cold stream specific heat capacity</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:10px"><strong>Configured constants:</strong> <code>area_m2</code> (heat-transfer area, default 124.8 m²), <code>u_clean</code> (clean baseline U, default 500 W/m²K), <code>n_shell</code> (shell pass count, default 1), <code>design_q_mw</code> (nameplate duty, default 3.5 MW). All four are exposed in the Data &amp; Configuration panel.</p>
+
+    <h3>5. Calculations</h3>
+
+    <p><strong>5.1 Heat duty.</strong> Independent first-law balance on each stream:</p>
+    <p style="margin-left:12px"><code>Q_hot  = m_hot  · cp_hot  · (T_h,in - T_h,out) / 3600</code></p>
+    <p style="margin-left:12px"><code>Q_cold = m_cold · cp_cold · (T_c,out - T_c,in) / 3600</code></p>
+    <p style="margin-left:12px"><code>Q_avg  = (Q_hot + Q_cold) / 2</code> (kW)</p>
+    <p>The /3600 converts the kg/hr × kJ/kg·K × °C product from kJ/hr to kW. Q_avg is used downstream for U and R<sub>f</sub>; Q_hot and Q_cold individually are kept for the imbalance check and the duty trend chart.</p>
+
+    <p><strong>5.2 Energy imbalance.</strong></p>
+    <p style="margin-left:12px"><code>Imbalance % = |Q_hot - Q_cold| / Q_avg × 100</code></p>
+    <p>Field instruments rarely close the heat balance to better than 2-3 %. Above 8 % an advisory fires - flow meter calibration, Cp assumption, or one-side measurement drift are the usual culprits.</p>
+
+    <p><strong>5.3 LMTD (counter-current).</strong></p>
+    <p style="margin-left:12px"><code>ΔT₁ = T_h,in - T_c,out</code></p>
+    <p style="margin-left:12px"><code>ΔT₂ = T_h,out - T_c,in</code></p>
+    <p style="margin-left:12px"><code>LMTD = (ΔT₁ - ΔT₂) / ln(ΔT₁ / ΔT₂)</code></p>
+    <p>If ΔT₁ ≈ ΔT₂ within 1×10⁻⁹ the calc returns ΔT₁ (the limit value), avoiding the log-of-one division by zero. If either ΔT is non-positive a temperature crossover has occurred and the row is marked alarm; F-factor and U are not computed for that row but the batch continues.</p>
+
+    <p><strong>5.4 P and R ratios.</strong></p>
+    <p style="margin-left:12px"><code>P = (T_c,out - T_c,in) / (T_h,in - T_c,in)</code></p>
+    <p style="margin-left:12px"><code>R = (T_h,in - T_h,out) / (T_c,out - T_c,in)</code></p>
+    <p>Both are dimensionless inputs to the F-factor formula. P is the cold-side temperature rise as a fraction of the maximum possible. R is the heat-capacity-rate ratio (cold over hot). Values surfaced in the Data &amp; Log table for diagnostic use.</p>
+
+    <p><strong>5.5 F-factor (TEMA general N-shell-pass formula).</strong> Implements the cheguide.com / Bowman-Mueller-Nagle correction for an exchanger with N shell passes and 2N tube passes.</p>
+    <p>Special case <code>R = 1</code> (balanced flow): solve for <code>P1 = P / (N - P·(N-1))</code>, then <code>S = P1·√2 / (2 - P1)</code>, then <code>F = P1·√2 / ((2 - P1) · atanh(S))</code> using the stable log form of atanh.</p>
+    <p>General case <code>R ≠ 1</code>: compute <code>X = ((1 - PR)/(1 - P))^(1/N)</code> and <code>P1 = (1 - X) / (R - X)</code>, then evaluate the standard 1-shell formula on (P1, R) using <code>A = √(R² + 1)</code> and the two log terms B and C.</p>
+    <p>Guard rails: returns null on temperature crossover (P ≥ 1 or PR ≥ 1), on root-of-negative or log-of-non-positive arguments, and on N ≤ 0. Numerically delicate near P = 1; the EPSILON checks at 1×10⁻⁹ trip when denominators collapse and the row is marked accordingly.</p>
+
+    <p><strong>5.6 Overall U.</strong></p>
+    <p style="margin-left:12px"><code>U_dirty = Q_avg × 1000 / (A · F · LMTD)</code> (W/m²K)</p>
+    <p>The ×1000 converts Q_avg from kW to W. U falls as the bundle fouls.</p>
+
+    <p><strong>5.7 Fouling resistance.</strong></p>
+    <p style="margin-left:12px"><code>R_f = 1/U_dirty - 1/U_clean</code> (m²K/W, displayed × 10⁴)</p>
+    <p>R<sub>f</sub> can go negative just after a clean if U_dirty briefly exceeds U_clean (the clean baseline is a long-term reference, not the post-clean peak). The dashboard does not clamp negative R<sub>f</sub>; the value is informative.</p>
+
+    <p><strong>5.8 Effectiveness.</strong></p>
+    <p style="margin-left:12px"><code>C_hot  = m_hot  · cp_hot  / 3600</code> (kW/K)</p>
+    <p style="margin-left:12px"><code>C_cold = m_cold · cp_cold / 3600</code> (kW/K)</p>
+    <p style="margin-left:12px"><code>Q_max  = min(C_hot, C_cold) · (T_h,in - T_c,in)</code> (kW)</p>
+    <p style="margin-left:12px"><code>ε = Q_avg / Q_max × 100</code> (%)</p>
+    <p>ε reads how close the exchanger is to its thermodynamic ceiling for the given inlet temperatures and capacity rates. A drop in ε with U and R<sub>f</sub> stable usually indicates a flow or temperature-driven envelope shift, not fouling.</p>
+
+    <p><strong>5.9 Duty vs design.</strong></p>
+    <p style="margin-left:12px"><code>Δ = (Q_avg - Q_design) / Q_design × 100</code> (%)</p>
+    <p>Surfaced as the green/red diff next to the Heat Duty KPI tile. Default thresholds: ±5 % advisory, ±10 % alarm. A persistent under-duty with R<sub>f</sub> climbing is the classic clean-schedule prompt.</p>
+
+    <h3>6. Status Logic</h3>
+    <p>Status is rolled up from individual checks. Order of escalation: alarm overrides advisory overrides OK.</p>
+    <p><strong>Alarm</strong></p>
+    <ul>
+      <li>R<sub>f</sub> at or above the alarm threshold (default 10×10⁻⁴ m²K/W).</li>
+      <li>Duty deviation at or above the alarm percent (default 10 %).</li>
+      <li>Temperature crossover detected on the row (F-factor calc returned null).</li>
+    </ul>
+    <p><strong>Advisory</strong></p>
+    <ul>
+      <li>R<sub>f</sub> at or above the advisory threshold (default 5×10⁻⁴ m²K/W).</li>
+      <li>Duty deviation at or above the advisory percent (default 5 %).</li>
+      <li>Effectiveness ε below the advisory floor (default 50 %).</li>
+      <li>Q imbalance above the advisory limit (default 8 %).</li>
+      <li>Either approach below the minimum (default 10 °C).</li>
+    </ul>
+
+    <h3>7. Pressure Convention</h3>
+    <p>This dashboard does not include pressure-based limits in the standard build. If the source data carries shell-side or tube-side pressure-drop tags (kPa or bar), the engine accepts them via the optional <code>shell_dp_kpa</code> and <code>tube_dp_kpa</code> aliases for export, but they are not evaluated by the alert logic. Pressure-drop trending is appropriate when fouling is being diagnosed against a known clean baseline DP, which is out of scope for this single-equipment view.</p>
+    <p>All temperatures are in °C. Internally the LMTD calculation works in temperature differences so the °C / K choice cancels.</p>
+
+    <h3>8. Series Conventions on Charts</h3>
+    <p>All measured series are continuous lines. Design, advisory, and alarm reference lines are dashed: design in neutral gray, advisory in amber (#C4890E), alarm in red (#D4432A). Chart series colors are restricted to the gold and supporting palette - red (#D4432A) is reserved for status semantics and never used as a normal data line.</p>
+
+    <h3>9. Time Range Behavior</h3>
+    <p>The topbar pill bar (1H, 24H, 7D, 30D, 90D) and the inline custom range (number + unit) drive both the trend chart x-axis and the Performance Averages KPI row. The Current Values row is unaffected by the range and always reflects the latest reading in the dataset.</p>
+    <p>The chart x-axis is padded to the full requested window. If the dataset is shorter than the window, the older portion shows as blank space (the line drops to nothing) rather than being compressed onto a shorter axis.</p>
+    <p>Window cutoff is computed off the latest dataset timestamp, not off wall-clock time. Demo data and historical CSV uploads behave the same way.</p>
+
+    <h3>10. Data Quality &amp; Limitations</h3>
+    <p>Per-row Cp values are taken at face value from the input feed. In real service Cp is temperature-dependent; the demo data uses spot-evaluated Cp at each row's temperature, which is the cleanest assumption for a shell-and-tube tracking tool.</p>
+    <p>Mass flow values can carry ±2 - 5 % uncertainty depending on meter type (orifice vs Coriolis vs ultrasonic). The Q imbalance check at 8 % is set to absorb typical instrumentation noise without firing on every row.</p>
+    <p>The engine assumes single-phase fluids on both sides. Phase change (vaporization, condensation) violates the m·Cp·ΔT formulation and will produce wildly biased Q values. Reboiler and condenser duty tracking needs a different model.</p>
+    <p>The F-factor calc assumes N shell passes with 2N tube passes (TEMA E with longitudinal baffle). For TEMA G, H, J, X or other non-standard geometries the formula does not apply; F should be entered manually or U computed without the F correction.</p>
+
+    <h3>11. Common Fault Modes</h3>
+    <p><strong>U falling, R<sub>f</sub> climbing, hot outlet rising:</strong> classical fouling. Schedule a clean when R<sub>f</sub> crosses the alarm threshold or when duty deviation passes 10 %.</p>
+    <p><strong>Q imbalance jumping but U/R<sub>f</sub> stable:</strong> instrument drift. Likely candidates: flow meter calibration on the side that moved, Cp assumption changing with composition, or sensor placement issues.</p>
+    <p><strong>Effectiveness ε falling with U flat:</strong> envelope shift, not fouling. The hot inlet may have dropped or the flow ratio changed - check upstream feed conditions before scheduling work.</p>
+    <p><strong>Temperature crossover (row alarm, F-factor null):</strong> impossible thermodynamically for a single-pass counter-current; almost always an instrumentation fault, a swap of inlet and outlet sensors, or a bypass leak. Check sensor labels first.</p>
+    <p><strong>R<sub>f</sub> goes negative after a maintenance window:</strong> the bundle is performing better than the U_clean reference. Update the U_clean baseline to the post-clean stabilized value and re-evaluate.</p>
+
+    <h3>12. References</h3>
+    <p>TEMA (Tubular Exchanger Manufacturers Association), <em>Standards of the Tubular Exchanger Manufacturers Association</em>, Section T-3.1 (U calculation) and Section RGP-T-2.4 (R<sub>f</sub> guidance), 10th ed.</p>
+    <p>Bowman, R. A., Mueller, A. C., Nagle, W. M. (1940). Mean temperature difference in design. <em>Transactions of the ASME</em>, 62(4), 283-294.</p>
+    <p>Kern, D. Q. (1950). <em>Process Heat Transfer</em>, Ch. 5 (LMTD method) and Ch. 7 (shell-and-tube design). McGraw-Hill.</p>
+    <p>ASME PTC 12-5 (2000), <em>Single-Phase Heat Exchangers</em> - performance test code.</p>
+    <p>cheguide.com - LMTD correction factor F formulas for TEMA E, F, and G shells (general N-shell-pass form used in this dashboard).</p>
   </div>
 </div>
 
 <script>
 // ═══════════════════════════════════════════════════════
-// TAG ALIASES
+// TAG ALIASES (generic - no plant tags)
 // ═══════════════════════════════════════════════════════
-const TAG_ALIASES={timestamp:["timestamp","Timestamp","Date","date","Time"],hot_in_c:["hot_in_c","Hot Inlet T","T Hot In","Shell Side In","T1"],hot_out_c:["hot_out_c","Hot Outlet T","T Hot Out","Shell Side Out","T2"],hot_flow_kghr:["hot_flow_kghr","Hot Flow","Shell Flow","m_hot"],hot_cp_kjkgk:["hot_cp_kjkgk","Hot Cp","Cp Hot","cp_h"],cold_in_c:["cold_in_c","Cold Inlet T","T Cold In","Tube Side In","T3"],cold_out_c:["cold_out_c","Cold Outlet T","T Cold Out","Tube Side Out","T4"],cold_flow_kghr:["cold_flow_kghr","Cold Flow","Tube Flow","m_cold"],cold_cp_kjkgk:["cold_cp_kjkgk","Cold Cp","Cp Cold","cp_c"],shell_dp_bar:["shell_dp_bar","Shell DP","Shell dP","DPs"],tube_dp_bar:["tube_dp_bar","Tube DP","Tube dP","DPt"]};
-
-function lookup(row,canonical){const aliases=TAG_ALIASES[canonical]||[canonical];for(const a of aliases){if(row[a]!==undefined&&row[a]!==null&&String(row[a]).trim()!=="")return row[a];}return null;}
-function num(v){if(v===null||v===undefined||v==="")return NaN;if(typeof v==="number")return v;const n=parseFloat(String(v).replace(/,/g,"").trim());return isNaN(n)?NaN:n;}
-function parseTs(v){if(!v)return null;const s=String(v).trim();const m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?$/);if(m)return new Date(+m[1],+m[2]-1,+m[3],+m[4],+m[5],+(m[6]||0));const m2=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})\s+(\d{1,2}):(\d{2})$/);if(m2){let y=+m2[3];if(y<100)y+=2000;return new Date(y,+m2[1]-1,+m2[2],+m2[4],+m2[5]);}const d=new Date(s);return isNaN(d.getTime())?null:d;}
-
-// ═══════════════════════════════════════════════════════
-// CORE MATH
-// ═══════════════════════════════════════════════════════
-function duty(m,cp,dT){return m*cp*Math.abs(dT)/3600;}
-function lmtd(thi,tho,tci,tco){const dt1=thi-tco,dt2=tho-tci;if(dt1<=0||dt2<=0)return NaN;if(Math.abs(dt1-dt2)<1e-6)return dt1;return(dt1-dt2)/Math.log(dt1/dt2);}
-function overallU(qkw,A,F,lm){if(A<=0||lm<=0||qkw<=0)return NaN;return qkw*1000/(A*F*lm);}
-function rfouling(u,uc){if(u<=0||uc<=0)return NaN;return 1/u-1/uc;}
-function buildAlerts(u,rf,rfLim,hotApp,coldApp,appLim,shellDp,tubeDp,dpShellLim,dpTubeLim,imb){const a=[];if(!isNaN(rf)&&rf>=rfLim)a.push({severity:"alarm",message:`Fouling Rf ${(rf*1e4).toFixed(2)}×10⁻⁴ m²K/W exceeds threshold ${(rfLim*1e4).toFixed(1)}×10⁻⁴. Consider cleaning.`,source:"fouling protocol"});if(!isNaN(hotApp)&&hotApp<appLim)a.push({severity:"advisory",message:`Hot stream approach ${hotApp.toFixed(1)} C below minimum ${appLim} C.`,source:"design check"});if(!isNaN(coldApp)&&coldApp<appLim)a.push({severity:"advisory",message:`Cold stream approach ${coldApp.toFixed(1)} C below minimum ${appLim} C.`,source:"design check"});if(!isNaN(shellDp)&&shellDp>dpShellLim)a.push({severity:"advisory",message:`Shell DP ${shellDp.toFixed(3)} bar exceeds ${dpShellLim} bar.`,source:"pressure drop"});if(!isNaN(tubeDp)&&tubeDp>dpTubeLim)a.push({severity:"advisory",message:`Tube DP ${tubeDp.toFixed(3)} bar exceeds ${dpTubeLim} bar.`,source:"pressure drop"});if(!isNaN(imb)&&imb>8)a.push({severity:"advisory",message:`Duty imbalance ${imb.toFixed(1)}% exceeds 8%. Check mass/energy balance.`,source:"energy balance"});return a;}
-function rollUp(alerts){if(alerts.some(x=>x.severity==="alarm"))return"alarm";if(alerts.some(x=>x.severity==="advisory"))return"advisory";return"ok";}
+const TAG_ALIASES = {
+  timestamp:    ["timestamp","Timestamp","Date","date","Time","Date / Timestamp"],
+  t_hot_in_c:   ["t_hot_in_c","Hot Inlet T","Hot Inlet Temp","T Hot In","Shell Side In","Hot In","hot_in_c"],
+  t_hot_out_c:  ["t_hot_out_c","Hot Outlet T","Hot Outlet Temp","T Hot Out","Shell Side Out","Hot Out","hot_out_c"],
+  m_hot_kghr:   ["m_hot_kghr","Hot Mass Flow","Hot Flow","Hot Flow (kg/h)","hot_flow_kghr","mass_hot"],
+  cp_hot:       ["cp_hot","Hot Cp","Hot Cp (kJ/kg/K)","hot_cp_kjkgk","Cp Hot"],
+  t_cold_in_c:  ["t_cold_in_c","Cold Inlet T","Cold Inlet Temp","T Cold In","Tube Side In","Cold In","cold_in_c"],
+  t_cold_out_c: ["t_cold_out_c","Cold Outlet T","Cold Outlet Temp","T Cold Out","Tube Side Out","Cold Out","cold_out_c"],
+  m_cold_kghr:  ["m_cold_kghr","Cold Mass Flow","Cold Flow","Cold Flow (kg/h)","cold_flow_kghr","mass_cold"],
+  cp_cold:      ["cp_cold","Cold Cp","Cold Cp (kJ/kg/K)","cold_cp_kjkgk","Cp Cold"]
+};
 
 // ═══════════════════════════════════════════════════════
-// ROW & BATCH PROCESSOR
+// DEMO DATA - 71 daily samples from a real heavy-hydrocarbon /
+// heat-transfer-fluid exchanger, June 2020 - January 2021.
+// columns: date, t_hot_in_c, t_hot_out_c, m_hot_kghr, cp_hot,
+//          t_cold_in_c, t_cold_out_c, m_cold_kghr, cp_cold
 // ═══════════════════════════════════════════════════════
-function processRow(row,s,lim){const ts=parseTs(lookup(row,"timestamp"));if(!ts)return{drop:true,reason:"bad timestamp"};const thi=num(lookup(row,"hot_in_c")),tho=num(lookup(row,"hot_out_c")),mh=num(lookup(row,"hot_flow_kghr")),cph=num(lookup(row,"hot_cp_kjkgk"));const tci=num(lookup(row,"cold_in_c")),tco=num(lookup(row,"cold_out_c")),mc=num(lookup(row,"cold_flow_kghr")),cpc=num(lookup(row,"cold_cp_kjkgk"));const sdp=num(lookup(row,"shell_dp_bar")),tdp=num(lookup(row,"tube_dp_bar"));if(isNaN(thi)||isNaN(tho)||isNaN(mh)||isNaN(cph)||isNaN(tci)||isNaN(tco)||isNaN(mc)||isNaN(cpc))return{drop:true,reason:"missing critical tag"};const Qh=duty(mh,cph,thi-tho),Qc=duty(mc,cpc,tco-tci);const Qavg=(Qh+Qc)/2;if(Qavg<=0)return{drop:true,reason:"no net duty"};const imb=Math.abs(Qh-Qc)/Qavg*100;const lm=lmtd(thi,tho,tci,tco);if(isNaN(lm)||lm<=0)return{drop:true,reason:"bad LMTD"};const U=overallU(Qavg,s.A,s.F,lm);const Rf=rfouling(U,s.Uc);const UA=U*s.A*s.F/1000;const hotApp=thi-tco,coldApp=tho-tci;const rfVal=isNaN(Rf)?NaN:Rf;const rfValE4=isNaN(rfVal)?NaN:rfVal*1e4;const alerts=buildAlerts(U,rfVal,lim.rfClean,hotApp,coldApp,lim.approach,sdp,tdp,lim.shellDp,lim.tubeDp,imb);const status=rollUp(alerts);return{drop:false,timestamp:ts,thi,tho,tci,tco,mh,mc,cph,cpc,Qh,Qc,Qavg,imb,lm,U,Rf:rfVal,rfE4:rfValE4,UA,hotApp,coldApp,sdp,tdp,alerts,status};}
-function processBatch(rows,s,lim){const parsed=[];for(const r of rows){const ts=parseTs(lookup(r,"timestamp"));if(ts)parsed.push([ts,r]);}parsed.sort((a,b)=>a[0]-b[0]);const out=[];let dropped=0;const reasons={};for(const[ts,r]of parsed){const res=processRow(r,s,lim);if(res.drop){dropped++;reasons[res.reason]=(reasons[res.reason]||0)+1;}else out.push(res);}return{processed:out,dropped,reasons};}
+const DEMO_DATA = [
+  ["2020-06-11", 274.32, 176.45, 11081.0, 2.4646, 122.64, 205.0, 16871.0, 1.9741],
+  ["2020-06-12", 285.07, 187.2, 13924.0, 2.4969, 124.7, 223.56, 19903.0, 1.9831],
+  ["2020-06-13", 295.82, 199.1, 17471.0, 2.5378, 127.79, 238.93, 21928.0, 1.9834],
+  ["2020-06-14", 306.96, 211.33, 21243.0, 2.5486, 130.67, 254.52, 25226.0, 1.994],
+  ["2020-06-15", 316.69, 222.33, 25022.0, 2.595, 132.91, 274.31, 28132.0, 2.0155],
+  ["2020-06-16", 327.17, 234.04, 28232.0, 2.6179, 136.2, 290.0, 30893.0, 2.0158],
+  ["2020-06-17", 328.02, 233.11, 30866.0, 2.6204, 135.01, 290.0, 33220.0, 2.0121],
+  ["2020-06-18", 324.74, 231.08, 26571.0, 2.6108, 135.45, 275.0, 28948.0, 2.0135],
+  ["2020-06-19", 324.9, 231.64, 26648.0, 2.6185, 134.81, 275.53, 29317.0, 2.0057],
+  ["2020-06-20", 324.82, 231.79, 26692.0, 2.6092, 135.54, 276.29, 29355.0, 2.0258],
+  ["2020-06-21", 324.84, 231.46, 27312.0, 2.6229, 136.04, 274.45, 29478.0, 2.0214],
+  ["2020-06-22", 324.6, 231.7, 27493.0, 2.6104, 136.05, 275.88, 29577.0, 2.0163],
+  ["2020-06-23", 325.0, 231.2, 27503.0, 2.6141, 136.81, 274.47, 29789.0, 2.016],
+  ["2020-06-24", 325.74, 231.92, 27492.0, 2.6083, 135.9, 275.71, 30147.0, 2.0164],
+  ["2020-06-25", 324.9, 231.62, 27519.0, 2.6142, 136.25, 275.6, 30771.0, 2.0146],
+  ["2020-06-26", 325.08, 231.54, 28156.0, 2.6129, 136.13, 277.08, 30650.0, 2.0098],
+  ["2020-06-27", 325.67, 231.64, 28555.0, 2.6091, 136.6, 273.37, 30900.0, 2.0221],
+  ["2020-06-28", 326.19, 231.68, 28442.0, 2.6136, 136.46, 275.31, 31121.0, 2.0271],
+  ["2020-06-29", 325.6, 231.85, 28363.0, 2.6135, 136.62, 276.0, 31529.0, 2.0179],
+  ["2020-06-30", 325.54, 231.79, 28807.0, 2.609, 137.51, 274.88, 31323.0, 2.0183],
+  ["2020-07-01", 326.15, 231.77, 29224.0, 2.6142, 137.74, 273.9, 31465.0, 2.0166],
+  ["2020-07-02", 326.13, 232.06, 29149.0, 2.6162, 138.06, 275.6, 32177.0, 2.0142],
+  ["2020-07-03", 325.89, 231.81, 29567.0, 2.622, 137.19, 276.5, 31862.0, 2.0167],
+  ["2020-07-04", 325.41, 232.18, 29771.0, 2.6108, 137.1, 273.93, 32097.0, 2.0234],
+  ["2020-07-05", 326.26, 232.22, 29672.0, 2.6146, 137.3, 276.46, 32461.0, 2.0247],
+  ["2020-07-06", 325.73, 231.92, 30057.0, 2.6087, 137.47, 276.72, 33017.0, 2.0139],
+  ["2020-07-07", 326.1, 232.39, 30586.0, 2.6178, 137.85, 274.7, 32773.0, 2.0205],
+  ["2020-07-08", 325.32, 231.97, 30552.0, 2.6146, 138.35, 275.03, 33245.0, 2.0189],
+  ["2020-07-09", 326.06, 232.09, 30638.0, 2.6203, 138.95, 274.8, 33600.0, 2.0216],
+  ["2020-07-10", 326.21, 232.88, 30857.0, 2.6117, 138.22, 276.26, 33476.0, 2.018],
+  ["2020-07-11", 326.16, 232.46, 31067.0, 2.6159, 138.39, 275.33, 33623.0, 2.0223],
+  ["2020-07-12", 325.61, 232.48, 31261.0, 2.6166, 138.48, 274.38, 34000.0, 2.0272],
+  ["2020-07-13", 326.53, 232.85, 31612.0, 2.6169, 138.29, 276.74, 34465.0, 2.0271],
+  ["2020-07-14", 326.18, 233.59, 31865.0, 2.6177, 138.66, 275.55, 34695.0, 2.0215],
+  ["2020-07-15", 327.29, 233.43, 32251.0, 2.6161, 138.61, 276.57, 34850.0, 2.0216],
+  ["2020-07-16", 325.9, 232.72, 31973.0, 2.6193, 138.71, 274.9, 34848.0, 2.0205],
+  ["2020-07-17", 326.56, 233.37, 31775.0, 2.609, 139.29, 276.02, 35086.0, 2.0247],
+  ["2020-07-18", 326.9, 232.04, 32595.0, 2.6177, 139.03, 275.34, 35411.0, 2.0305],
+  ["2020-07-19", 326.71, 233.07, 32415.0, 2.6127, 140.03, 275.9, 35281.0, 2.0227],
+  ["2020-07-20", 326.95, 232.89, 32852.0, 2.617, 139.75, 276.38, 35452.0, 2.0293],
+  ["2020-07-21", 326.78, 233.33, 33246.0, 2.6187, 139.39, 276.21, 35836.0, 2.0242],
+  ["2020-07-22", 327.62, 233.11, 33105.0, 2.6129, 139.54, 276.3, 36182.0, 2.0228],
+  ["2020-07-23", 327.32, 233.86, 33732.0, 2.619, 140.08, 275.28, 36492.0, 2.0337],
+  ["2020-07-24", 327.19, 232.9, 33695.0, 2.619, 140.18, 277.33, 36613.0, 2.0308],
+  ["2020-07-25", 327.0, 233.89, 34002.0, 2.629, 139.37, 276.85, 36558.0, 2.0308],
+  ["2020-07-26", 327.26, 233.62, 33868.0, 2.6209, 140.6, 276.56, 36941.0, 2.026],
+  ["2020-07-27", 327.11, 233.98, 34176.0, 2.6216, 141.22, 276.49, 37211.0, 2.0271],
+  ["2020-07-28", 327.43, 233.92, 34626.0, 2.6128, 141.27, 274.51, 37615.0, 2.0312],
+  ["2020-07-29", 327.17, 233.68, 34838.0, 2.6132, 140.88, 276.2, 37415.0, 2.0322],
+  ["2020-07-30", 327.52, 233.58, 34723.0, 2.6212, 141.59, 277.76, 37393.0, 2.0319],
+  ["2020-07-31", 327.7, 233.65, 34674.0, 2.6244, 141.07, 277.06, 38169.0, 2.0321],
+  ["2020-08-01", 327.34, 233.89, 34823.0, 2.6142, 141.65, 276.4, 38286.0, 2.0313],
+  ["2020-08-02", 328.29, 234.08, 35206.0, 2.6257, 141.04, 276.18, 38430.0, 2.0248],
+  ["2020-08-03", 328.11, 233.85, 35164.0, 2.6192, 141.67, 276.77, 38775.0, 2.0274],
+  ["2020-08-04", 327.73, 234.36, 35398.0, 2.622, 140.88, 276.72, 38857.0, 2.0427],
+  ["2020-08-05", 327.46, 234.25, 35837.0, 2.6198, 142.19, 276.81, 39319.0, 2.0307],
+  ["2020-08-06", 328.23, 234.46, 36051.0, 2.6137, 141.65, 276.2, 39242.0, 2.0304],
+  ["2020-08-07", 327.48, 234.7, 36164.0, 2.6155, 142.0, 276.47, 39519.0, 2.04],
+  ["2020-08-08", 327.62, 234.73, 36750.0, 2.6193, 142.29, 277.44, 40088.0, 2.0396],
+  ["2020-08-09", 328.42, 234.67, 36340.0, 2.6185, 141.83, 277.92, 39988.0, 2.0301],
+  ["2020-08-10", 328.57, 234.84, 36932.0, 2.6171, 142.91, 276.18, 40168.0, 2.0279],
+  ["2020-08-11", 328.41, 234.47, 36936.0, 2.6131, 142.77, 277.16, 40448.0, 2.0298],
+  ["2020-08-12", 327.51, 234.87, 37209.0, 2.6212, 143.46, 277.7, 40366.0, 2.0373],
+  ["2020-08-13", 328.47, 235.24, 37344.0, 2.6229, 143.42, 278.12, 40716.0, 2.0397],
+  ["2020-08-14", 328.34, 234.89, 37431.0, 2.6273, 143.06, 276.48, 40991.0, 2.0383],
+  ["2020-08-15", 328.73, 235.17, 38026.0, 2.6201, 143.52, 277.12, 41110.0, 2.0292],
+  ["2020-08-16", 329.08, 235.87, 38212.0, 2.6224, 143.55, 278.44, 41292.0, 2.0341],
+  ["2020-08-17", 328.73, 235.49, 38190.0, 2.6228, 143.43, 277.96, 41399.0, 2.0427],
+  ["2020-08-18", 327.88, 235.3, 38559.0, 2.621, 143.26, 278.38, 42042.0, 2.0355],
+  ["2020-08-19", 329.04, 235.45, 38942.0, 2.6221, 143.73, 277.09, 42294.0, 2.0331],
+  ["2020-08-20", 329.2, 234.74, 38776.0, 2.6236, 143.99, 278.78, 42262.0, 2.0428],
+  ["2020-08-21", 329.76, 234.56, 39161.0, 2.626, 143.99, 277.19, 42846.0, 2.0402],
+  ["2020-08-22", 328.37, 235.36, 39009.0, 2.63, 144.1, 278.93, 43072.0, 2.0387],
+  ["2020-08-23", 329.08, 235.09, 39591.0, 2.6216, 145.02, 277.29, 42854.0, 2.0371],
+  ["2020-08-24", 329.07, 235.05, 39787.0, 2.6234, 144.14, 277.73, 42760.0, 2.0396],
+  ["2020-08-25", 329.51, 235.52, 39801.0, 2.6245, 144.36, 276.09, 43055.0, 2.0391],
+  ["2020-08-26", 329.38, 235.12, 39781.0, 2.6185, 145.11, 278.37, 43447.0, 2.0412],
+  ["2020-08-27", 329.87, 235.41, 40323.0, 2.6212, 144.19, 277.84, 43937.0, 2.0446],
+  ["2020-08-28", 329.41, 235.44, 40219.0, 2.6204, 145.23, 277.93, 44163.0, 2.0567],
+  ["2020-08-29", 329.77, 235.64, 40668.0, 2.6197, 144.93, 275.19, 44535.0, 2.0447],
+  ["2020-08-30", 329.39, 235.49, 41138.0, 2.6252, 145.23, 278.5, 44237.0, 2.046],
+  ["2020-08-31", 330.03, 235.28, 41125.0, 2.6355, 144.83, 278.8, 44733.0, 2.0436],
+  ["2020-09-01", 329.86, 236.09, 41030.0, 2.6292, 145.0, 277.58, 44652.0, 2.0451],
+  ["2020-09-02", 329.93, 236.02, 41574.0, 2.6274, 145.67, 278.77, 44911.0, 2.0478],
+  ["2020-09-03", 329.9, 235.98, 41805.0, 2.627, 144.87, 276.39, 45307.0, 2.0486],
+  ["2020-09-04", 330.56, 235.69, 41819.0, 2.6295, 145.3, 278.12, 45229.0, 2.0471],
+  ["2020-09-05", 330.16, 236.84, 41739.0, 2.6304, 145.43, 280.04, 45298.0, 2.0408],
+  ["2020-09-06", 329.95, 235.83, 42393.0, 2.6304, 145.46, 276.93, 45517.0, 2.0384],
+  ["2020-09-07", 330.33, 236.72, 42519.0, 2.6278, 146.31, 277.77, 46076.0, 2.0462],
+  ["2020-09-08", 331.23, 236.8, 42755.0, 2.6229, 146.54, 278.67, 46404.0, 2.0544],
+  ["2020-09-09", 330.58, 236.38, 42750.0, 2.6374, 147.43, 277.14, 46731.0, 2.0414],
+  ["2020-09-10", 331.09, 237.13, 42978.0, 2.6298, 146.86, 280.67, 47001.0, 2.0481],
+  ["2020-09-11", 330.4, 237.04, 42954.0, 2.625, 146.56, 278.31, 46689.0, 2.0485],
+  ["2020-09-12", 330.8, 237.02, 43703.0, 2.6292, 147.04, 278.88, 47396.0, 2.0464],
+  ["2020-09-13", 330.4, 236.89, 43740.0, 2.6341, 147.18, 278.02, 47223.0, 2.0538],
+  ["2020-09-14", 330.68, 236.81, 43886.0, 2.6358, 147.02, 278.08, 47409.0, 2.0488],
+  ["2020-09-15", 330.64, 236.94, 44131.0, 2.6266, 146.94, 276.96, 47778.0, 2.0498],
+  ["2020-09-16", 331.14, 236.6, 44189.0, 2.6376, 147.23, 279.75, 47971.0, 2.0497],
+  ["2020-09-17", 330.65, 236.86, 44297.0, 2.6322, 148.09, 278.05, 48285.0, 2.057],
+  ["2020-09-18", 331.11, 236.54, 44693.0, 2.6224, 147.38, 280.3, 48235.0, 2.0464],
+  ["2020-09-19", 331.42, 237.22, 44724.0, 2.6242, 148.28, 277.66, 48427.0, 2.0529],
+  ["2020-09-20", 330.97, 236.6, 44811.0, 2.6305, 146.66, 278.86, 48403.0, 2.0499],
+  ["2020-09-21", 331.57, 236.74, 45301.0, 2.6232, 147.73, 277.44, 49163.0, 2.059],
+  ["2020-09-22", 331.85, 236.69, 45522.0, 2.6328, 148.37, 278.65, 48938.0, 2.0517],
+  ["2020-09-23", 331.81, 236.86, 45468.0, 2.6304, 148.01, 277.35, 49672.0, 2.0566],
+  ["2020-09-24", 332.22, 237.31, 46218.0, 2.6325, 148.66, 279.34, 49628.0, 2.0576],
+  ["2020-09-25", 331.48, 237.79, 46166.0, 2.6378, 148.78, 278.94, 49750.0, 2.0514],
+  ["2020-09-26", 331.45, 237.63, 45636.0, 2.6228, 148.43, 279.47, 50124.0, 2.0544],
+  ["2020-09-27", 331.35, 237.55, 46543.0, 2.6343, 148.96, 279.8, 50582.0, 2.0533],
+  ["2020-09-28", 331.51, 237.42, 46430.0, 2.6284, 148.81, 281.14, 50559.0, 2.0595],
+  ["2020-09-29", 331.57, 237.88, 46765.0, 2.6297, 149.34, 278.71, 50955.0, 2.062],
+  ["2020-09-30", 331.61, 237.3, 47084.0, 2.6276, 149.36, 280.2, 51110.0, 2.0625],
+  ["2020-10-01", 332.47, 237.24, 46978.0, 2.632, 149.22, 278.57, 51441.0, 2.0617],
+  ["2020-10-02", 332.07, 238.44, 47386.0, 2.6313, 149.34, 276.9, 51140.0, 2.0624],
+  ["2020-10-03", 332.18, 238.0, 47427.0, 2.6217, 149.32, 278.59, 51686.0, 2.0593],
+  ["2020-10-04", 332.73, 238.04, 47324.0, 2.6254, 149.49, 279.62, 51765.0, 2.0634],
+  ["2020-10-05", 332.43, 238.28, 47978.0, 2.6352, 149.65, 277.9, 51810.0, 2.0628],
+  ["2020-10-06", 332.76, 238.86, 48072.0, 2.6324, 148.85, 281.09, 52400.0, 2.0651],
+  ["2020-10-07", 331.89, 238.25, 48235.0, 2.6416, 149.88, 279.85, 52466.0, 2.061],
+  ["2020-10-08", 332.93, 238.71, 48486.0, 2.6389, 150.09, 280.9, 52257.0, 2.0566],
+  ["2020-10-09", 332.39, 238.21, 48581.0, 2.6292, 150.09, 278.94, 52817.0, 2.0549],
+  ["2020-10-10", 332.8, 238.21, 48622.0, 2.6367, 150.61, 279.92, 53152.0, 2.0543],
+  ["2020-10-11", 332.76, 238.22, 48964.0, 2.6382, 150.36, 280.92, 53319.0, 2.0615],
+  ["2020-10-12", 333.21, 238.09, 48905.0, 2.6314, 151.08, 278.58, 53657.0, 2.051],
+  ["2020-10-13", 332.93, 238.8, 49522.0, 2.6372, 151.31, 279.26, 53574.0, 2.0611],
+  ["2020-10-14", 333.14, 238.37, 49530.0, 2.6397, 151.22, 279.87, 54061.0, 2.0637],
+  ["2020-10-15", 332.82, 238.13, 49989.0, 2.6321, 150.52, 280.28, 54026.0, 2.0565],
+  ["2020-10-16", 333.0, 238.75, 50257.0, 2.6337, 151.0, 280.6, 54004.0, 2.0651],
+  ["2020-10-17", 333.71, 238.99, 50352.0, 2.6359, 151.99, 279.38, 54643.0, 2.0598],
+  ["2020-10-18", 333.74, 238.54, 50039.0, 2.6302, 151.17, 280.25, 54820.0, 2.0545],
+  ["2020-10-19", 333.41, 239.04, 50617.0, 2.636, 151.7, 280.0, 54930.0, 2.0631],
+  ["2020-10-20", 334.74, 236.69, 49711.0, 2.6399, 149.13, 290.0, 55134.0, 2.0553],
+  ["2020-10-21", 328.72, 217.63, 41443.0, 2.6224, 127.98, 270.0, 54219.0, 1.9905],
+  ["2020-10-22", 330.05, 222.28, 42765.0, 2.6263, 137.78, 275.0, 54352.0, 2.0206],
+  ["2020-10-23", 332.38, 219.1, 40901.0, 2.633, 133.96, 270.0, 54311.0, 2.0089],
+  ["2020-10-24", 334.85, 220.49, 40112.0, 2.6402, 134.43, 275.0, 54623.0, 2.0103],
+  ["2020-10-25", 334.28, 226.0, 40466.0, 2.6385, 145.13, 265.0, 54027.0, 2.0431],
+  ["2020-10-26", 336.11, 232.95, 45631.0, 2.6438, 149.1, 265.0, 54607.0, 2.0552],
+  ["2020-10-27", 335.87, 229.23, 45013.0, 2.6389, 143.85, 272.19, 54903.0, 2.0329],
+  ["2020-10-28", 334.63, 225.0, 44129.0, 2.6395, 137.86, 280.0, 54674.0, 2.0208],
+  ["2020-10-29", 331.64, 231.48, 46601.0, 2.6291, 139.03, 276.21, 54246.0, 2.0268],
+  ["2020-10-30", 328.75, 237.49, 49003.0, 2.6225, 141.4, 275.0, 53481.0, 2.0317],
+  ["2020-10-31", 332.81, 226.92, 39714.0, 2.6343, 134.54, 270.0, 54126.0, 2.0107],
+  ["2020-11-01", 332.75, 227.8, 41602.0, 2.635, 129.93, 272.21, 52297.0, 1.9953],
+  ["2020-11-02", 332.64, 229.12, 43485.0, 2.6338, 125.02, 275.0, 50085.0, 1.9815],
+  ["2020-11-03", 328.98, 226.88, 44003.0, 2.6232, 130.7, 280.0, 54923.0, 1.9989],
+  ["2020-11-04", 329.9, 218.38, 41551.0, 2.6258, 129.73, 275.0, 54883.0, 1.9959],
+  ["2020-11-05", 326.67, 216.88, 35304.0, 2.6165, 129.95, 265.0, 54440.0, 1.9966],
+  ["2020-11-06", 329.83, 217.09, 36333.0, 2.6223, 129.14, 258.37, 54415.0, 2.0007],
+  ["2020-11-07", 331.44, 216.76, 37925.0, 2.6303, 129.05, 255.0, 54280.0, 1.9938],
+  ["2020-11-08", 334.35, 217.46, 36548.0, 2.6387, 127.38, 255.0, 54323.0, 1.9887],
+  ["2020-11-09", 337.11, 250.99, 52023.0, 2.6467, 158.62, 285.0, 54612.0, 2.0842],
+  ["2020-11-10", 332.51, 216.6, 37061.0, 2.6334, 130.23, 280.0, 54294.0, 1.9975],
+  ["2020-11-11", 333.4, 217.25, 36683.0, 2.636, 130.01, 250.0, 54351.0, 1.9968],
+  ["2020-11-12", 320.57, 216.62, 34187.0, 2.5988, 125.98, 240.0, 47239.0, 1.9844],
+  ["2020-11-13", 323.32, 219.83, 35625.0, 2.619, 125.76, 244.48, 47320.0, 1.9907],
+  ["2020-11-14", 327.68, 223.16, 36814.0, 2.6194, 124.62, 250.0, 46998.0, 1.9802],
+  ["2020-11-15", 330.1, 225.81, 35462.0, 2.6264, 125.84, 235.0, 52630.0, 1.984],
+  ["2020-11-16", 325.96, 231.27, 46070.0, 2.6144, 133.97, 270.0, 53106.0, 2.0089],
+  ["2020-11-17", 329.43, 222.04, 39392.0, 2.6244, 138.81, 270.0, 52739.0, 2.0238],
+  ["2020-11-18", 329.36, 221.66, 36195.0, 2.6243, 126.61, 240.0, 52867.0, 1.9863],
+  ["2020-11-19", 326.37, 236.29, 35876.0, 2.6156, 125.49, 240.0, 33606.0, 1.9829],
+  ["2020-11-20", 324.54, 219.23, 33457.0, 2.6103, 129.75, 250.0, 47413.0, 1.996],
+  ["2020-11-21", 328.13, 223.42, 36577.0, 2.6218, 131.81, 250.01, 48051.0, 2.0072],
+  ["2020-11-22", 332.52, 226.3, 39187.0, 2.6334, 134.66, 255.0, 49257.0, 2.0111],
+  ["2020-11-23", 333.18, 225.18, 38357.0, 2.6347, 135.59, 260.42, 50911.0, 2.0117],
+  ["2020-11-24", 334.54, 222.91, 37831.0, 2.6393, 136.51, 265.0, 52860.0, 2.0167],
+  ["2020-11-25", 334.64, 234.81, 38358.0, 2.6396, 126.13, 250.0, 43081.0, 1.9849],
+  ["2020-11-26", 332.92, 234.29, 41452.0, 2.6279, 135.69, 271.06, 48444.0, 2.0174],
+  ["2020-11-27", 332.47, 234.48, 45213.0, 2.6333, 145.43, 290.0, 53442.0, 2.044],
+  ["2020-11-28", 333.19, 239.97, 51055.0, 2.6353, 144.24, 280.0, 53605.0, 2.0404],
+  ["2020-11-29", 318.53, 229.84, 25355.0, 2.5928, 124.91, 275.0, 19427.0, 1.9811],
+  ["2020-11-30", 325.92, 229.77, 34638.0, 2.612, 129.62, 260.69, 34686.0, 1.9926],
+  ["2020-12-01", 333.22, 229.54, 43344.0, 2.6354, 134.68, 250.0, 49980.0, 2.0111],
+  ["2020-12-02", 335.76, 238.56, 41585.0, 2.6428, 129.42, 285.0, 39980.0, 1.995],
+  ["2020-12-03", 335.5, 239.07, 39492.0, 2.642, 125.17, 290.0, 37072.0, 1.9819],
+  ["2020-12-04", 334.11, 235.96, 41773.0, 2.6358, 131.26, 280.39, 43572.0, 2.0096],
+  ["2020-12-05", 332.15, 232.21, 43723.0, 2.6323, 136.81, 270.0, 50137.0, 2.0176],
+  ["2020-12-06", 333.51, 232.97, 37630.0, 2.6363, 124.26, 255.0, 42520.0, 1.9791],
+  ["2020-12-07", 332.23, 233.51, 39682.0, 2.6326, 126.6, 255.0, 44602.0, 1.9863],
+  ["2020-12-08", 330.42, 233.31, 39763.0, 2.6265, 128.18, 258.82, 43296.0, 1.9906],
+  ["2020-12-09", 327.66, 232.39, 39009.0, 2.6193, 130.11, 260.0, 42036.0, 1.9971],
+  ["2020-12-10", 331.66, 233.89, 38596.0, 2.6309, 126.54, 285.0, 42417.0, 1.9861],
+  ["2020-12-11", 331.98, 235.46, 47204.0, 2.6319, 144.25, 270.0, 53232.0, 2.0404],
+  ["2020-12-12", 258.46, 179.96, 26824.0, 2.4197, 127.97, 200.5, 35348.0, 1.9863],
+  ["2020-12-13", 184.56, 125.23, 6462.0, 2.2043, 111.84, 130.0, 17028.0, 1.9408],
+  ["2020-12-14", 216.31, 151.58, 7753.0, 2.2964, 131.21, 165.0, 16743.0, 2.0005],
+  ["2020-12-15", 200.92, 138.36, 5627.0, 2.25, 120.53, 152.21, 16771.0, 1.9658],
+  ["2020-12-16", 185.85, 125.53, 4191.0, 2.2081, 109.64, 140.0, 17064.0, 1.934],
+  ["2020-12-17", 155.92, 115.85, 4914.0, 2.1213, 100.98, 120.0, 17191.0, 1.9072],
+  ["2020-12-18", 172.3, 126.03, 8203.0, 2.1734, 105.49, 127.09, 17236.0, 1.9229],
+  ["2020-12-19", 188.3, 136.83, 11394.0, 2.2152, 110.91, 130.0, 17044.0, 1.9379],
+  ["2020-12-20", 184.25, 123.84, 5016.0, 2.2034, 102.39, 130.0, 17164.0, 1.9116],
+  ["2020-12-21", 319.44, 256.8, 47925.0, 2.5955, 190.21, 275.0, 51897.0, 2.1798],
+  ["2020-12-22", 319.96, 254.2, 47115.0, 2.602, 187.18, 273.92, 52154.0, 2.1735],
+  ["2020-12-23", 321.99, 252.92, 46893.0, 2.601, 183.17, 271.35, 52233.0, 2.1552],
+  ["2020-12-24", 322.22, 251.39, 46160.0, 2.5942, 179.22, 269.84, 52491.0, 2.1499],
+  ["2020-12-25", 323.62, 248.24, 45893.0, 2.6197, 175.98, 268.55, 52753.0, 2.1388],
+  ["2020-12-26", 324.07, 246.7, 45322.0, 2.599, 172.88, 266.14, 52846.0, 2.127],
+  ["2020-12-27", 324.97, 244.68, 44665.0, 2.6178, 169.0, 261.77, 52687.0, 2.1166],
+  ["2020-12-28", 326.11, 242.9, 43948.0, 2.622, 165.81, 259.56, 53221.0, 2.1036],
+  ["2020-12-29", 326.01, 240.05, 43665.0, 2.614, 161.57, 258.74, 53647.0, 2.0859],
+  ["2020-12-30", 327.88, 238.69, 42920.0, 2.62, 158.37, 258.53, 53475.0, 2.0748],
+  ["2020-12-31", 328.37, 237.75, 42461.0, 2.6229, 154.96, 254.63, 53686.0, 2.0737],
+  ["2021-01-01", 329.39, 234.43, 41590.0, 2.6236, 151.63, 251.33, 53804.0, 2.052],
+  ["2021-01-02", 329.95, 232.87, 41221.0, 2.6264, 148.46, 249.45, 53767.0, 2.054],
+  ["2021-01-03", 331.74, 230.54, 41332.0, 2.6199, 145.08, 247.77, 54257.0, 2.0385],
+  ["2021-01-04", 332.24, 228.89, 40213.0, 2.6321, 141.75, 245.88, 54767.0, 2.0358],
+  ["2021-01-05", 333.37, 226.65, 39669.0, 2.6359, 137.63, 245.0, 54720.0, 2.0201],
+  ["2021-01-06", 331.63, 224.36, 37742.0, 2.642, 137.29, 243.42, 54285.0, 2.0146],
+  ["2021-01-07", 328.79, 224.51, 35377.0, 2.6226, 138.2, 245.0, 53658.0, 2.0219],
+  ["2021-01-08", 330.14, 225.49, 35682.0, 2.6262, 138.74, 247.14, 52461.0, 2.006],
+  ["2021-01-09", 330.73, 226.9, 36135.0, 2.6285, 136.82, 249.78, 51882.0, 2.0153],
+  ["2021-01-10", 331.19, 227.58, 37119.0, 2.6286, 136.69, 251.53, 50717.0, 2.0087],
+  ["2021-01-11", 331.81, 229.15, 37286.0, 2.627, 135.77, 254.07, 50483.0, 2.0193],
+  ["2021-01-12", 332.84, 229.95, 37880.0, 2.6291, 135.19, 258.17, 49127.0, 2.0119],
+  ["2021-01-13", 333.82, 230.99, 38132.0, 2.6414, 134.62, 259.99, 48825.0, 2.0105],
+  ["2021-01-14", 334.51, 231.79, 38812.0, 2.6408, 134.47, 262.08, 47598.0, 2.0187],
+  ["2021-01-15", 335.79, 233.46, 39110.0, 2.6429, 133.65, 265.0, 46985.0, 2.008],
+  ["2021-01-16", 335.64, 231.69, 42937.0, 2.6425, 134.39, 265.0, 51166.0, 2.0102],
+  ["2021-01-17", 334.5, 228.02, 38587.0, 2.6392, 136.43, 255.0, 54300.0, 2.0165],
+  ["2021-01-18", 327.6, 226.04, 42447.0, 2.6191, 134.32, 263.0, 50725.0, 2.01],
+  ["2021-01-19", 331.58, 224.93, 38552.0, 2.6307, 132.94, 270.0, 47370.0, 2.0058],
+  ["2021-01-20", 332.75, 231.77, 39073.0, 2.6364, 134.36, 273.57, 44957.0, 2.0012],
+  ["2021-01-21", 333.14, 238.13, 39547.0, 2.6352, 134.84, 275.0, 42150.0, 2.0116],
+  ["2021-01-22", 333.95, 227.54, 38811.0, 2.6375, 134.52, 255.0, 54980.0, 2.0106],
+  ["2021-01-23", 335.34, 229.22, 40836.0, 2.6416, 152.59, 255.0, 54321.0, 2.0658],
+  ["2021-01-24", 333.15, 225.37, 41066.0, 2.6352, 142.82, 260.0, 54689.0, 2.036]
+];
+
+const DEFAULTS = {
+  setNshell: 2, setArea: 124.8, setUClean: 500, setDesignQ: 3.5,
+  limRfAdv: 5, limRfAlm: 10, limEffAdv: 50, limImbAdv: 8,
+  limAppMin: 10, limDutyAdv: 5, limDutyAlm: 10
+};
+
+const EPSILON = 1e-9;
 
 // ═══════════════════════════════════════════════════════
-// UI
+// HELPERS
 // ═══════════════════════════════════════════════════════
-let currentRows=[];let currentBatch=null;const charts={};
-// TEMA F-factor ranges (typical for counter-current, per Kern Ch.7 & TEMA RCB)
-var TEMA_F_DEFAULTS={"1-2":{f:0.90,min:0.85,max:0.95,label:"1-2 shell: F = 0.85 - 0.95"},"1-4":{f:0.85,min:0.80,max:0.92,label:"1-4 shell: F = 0.80 - 0.92"},"2-4":{f:0.88,min:0.82,max:0.95,label:"2-4 shell: F = 0.82 - 0.95"},"custom":{f:null,min:0.50,max:1.00,label:"User-defined F value"}};
-function applyTEMA(){var sel=document.getElementById("setTEMA").value;var info=TEMA_F_DEFAULTS[sel];var fInput=document.getElementById("setF");var hint=document.getElementById("fHint");if(info.f!==null){fInput.value=info.f.toFixed(2);}hint.textContent=info.label;runProcess();}
-function readSettings(){return{A:+document.getElementById("setArea").value,F:+document.getElementById("setF").value,Uc:+document.getElementById("setUClean").value,tema:document.getElementById("setTEMA").value};}
-function readLimits(){return{rfClean:+document.getElementById("limRfClean").value*1e-4,approach:+document.getElementById("limApproach").value,shellDp:+document.getElementById("limShellDP").value,tubeDp:+document.getElementById("limTubeDP").value};}
-function fmt(v,d){return(v===null||v===undefined||isNaN(v))?"—":(+v).toFixed(d);}
-
-function renderResult(res,lim){document.getElementById("statusArea").style.display="none";document.getElementById("kpiArea").style.display="block";document.getElementById("kpiU").textContent=fmt(res.U,0);document.getElementById("kpiRf").textContent=fmt(res.rfE4,2);document.getElementById("kpiRfLim").textContent=`alarm >= ${(lim.rfClean*1e4).toFixed(1)}`;document.getElementById("kpiUA").textContent=fmt(res.UA,2);document.getElementById("kpiLMTD").textContent=fmt(res.lm,2);document.getElementById("kpiQ").textContent=fmt(res.Qavg,1);document.getElementById("kpiImb").textContent=fmt(res.imb,1);document.getElementById("kpiHotApp").textContent=fmt(res.hotApp,2);document.getElementById("kpiColdApp").textContent=fmt(res.coldApp,2);document.getElementById("kpiHotAppLim").textContent=`min ${lim.approach} C`;document.getElementById("kpiColdAppLim").textContent=`min ${lim.approach} C`;document.getElementById("hIn").textContent=fmt(res.thi,1);document.getElementById("hOut").textContent=fmt(res.tho,1);document.getElementById("hDT").textContent=fmt(res.thi-res.tho,1);document.getElementById("hFlow").textContent=fmt(res.mh,0);document.getElementById("hCp").textContent=fmt(res.cph,3);document.getElementById("hQ").textContent=fmt(res.Qh,1);document.getElementById("cIn").textContent=fmt(res.tci,1);document.getElementById("cOut").textContent=fmt(res.tco,1);document.getElementById("cDT").textContent=fmt(res.tco-res.tci,1);document.getElementById("cFlow").textContent=fmt(res.mc,0);document.getElementById("cCp").textContent=fmt(res.cpc,3);document.getElementById("cQ").textContent=fmt(res.Qc,1);document.getElementById("appRow").textContent=fmt(res.hotApp,2)+" C (hot) / "+fmt(res.coldApp,2)+" C (cold)";document.getElementById("dpShellRow").textContent=fmt(res.sdp,3)+" bar";document.getElementById("dpTubeRow").textContent=fmt(res.tdp,3)+" bar";const banner=document.getElementById("statusBanner");banner.className="banner status-"+res.status;document.getElementById("statusText").textContent=res.status.toUpperCase();document.getElementById("statusDetail").textContent=res.alerts.length?`${res.alerts.length} active alert(s)`:"No active alerts.";document.getElementById("alertList").innerHTML=res.alerts.map(al=>`<div class="alert-item severity-${al.severity}"><strong>[${al.severity.toUpperCase()}]</strong> ${al.message}<span class="src">Source: ${al.source}</span></div>`).join("");}
-
-function mkChart(id,labels,datasets,dualY){if(charts[id]){charts[id].destroy();}const ctx=document.getElementById("chart-"+id).getContext("2d");const opts={responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{position:"bottom",labels:{font:{size:11,family:"IBM Plex Sans"},boxWidth:12}}},scales:{x:{ticks:{maxTicksLimit:6,font:{size:10,family:"IBM Plex Sans"}}},y:{ticks:{font:{size:10,family:"IBM Plex Mono"}}}},elements:{point:{radius:0},line:{borderWidth:1.5,tension:0.1}}};if(dualY)opts.scales.y1={position:"right",grid:{drawOnChartArea:false},ticks:{font:{size:10,family:"IBM Plex Mono"}}};charts[id]=new Chart(ctx,{type:"line",data:{labels,datasets},options:opts});}
-
-
-function renderBatch(batch){const sumEl=document.getElementById("batchSummary");const tbody=document.getElementById("resultTable").querySelector("tbody");if(!batch||!batch.processed.length){sumEl.innerHTML='<div class="stat">No rows processed.</div>';tbody.innerHTML='<tr><td colspan="11" style="text-align:center;color:var(--text-secondary)">No rows.</td></tr>';return;}const reasons=Object.entries(batch.reasons).map(([k,v])=>`${k}: ${v}`).join("; ")||"none";const sc=batch.processed.reduce((acc,r)=>{acc[r.status]=(acc[r.status]||0)+1;return acc;},{});sumEl.innerHTML=`<div class="stat">Processed: <strong>${batch.processed.length}</strong></div><div class="stat">Dropped: <strong>${batch.dropped}</strong></div><div class="stat">Drop reasons: ${reasons}</div><div class="stat">OK: <strong>${sc.ok||0}</strong></div><div class="stat">Advisory: <strong>${sc.advisory||0}</strong></div>`;const rows=batch.processed.slice(-50).reverse();tbody.innerHTML=rows.map(r=>{const ts=r.timestamp;const tsStr=`${ts.getFullYear()}-${String(ts.getMonth()+1).padStart(2,"0")}-${String(ts.getDate()).padStart(2,"0")} ${String(ts.getHours()).padStart(2,"0")}:${String(ts.getMinutes()).padStart(2,"0")}`;return`<tr><td>${tsStr}</td><td class="num">${fmt(r.U,0)}</td><td class="num">${fmt(r.rfE4,2)}</td><td class="num">${fmt(r.Qavg,1)}</td><td class="num">${fmt(r.lm,2)}</td><td class="num">${fmt(r.imb,1)}</td><td class="num">${fmt(r.hotApp,2)}</td><td class="num">${fmt(r.coldApp,2)}</td><td class="num">${fmt(r.sdp,3)}</td><td class="num">${fmt(r.tdp,3)}</td><td><span class="status-pill ${r.status}">${r.status}</span></td></tr>`;}).join("");if(batch.processed.length<2)return;const stride=Math.max(1,Math.floor(batch.processed.length/200));const sample=batch.processed.filter((_,i)=>i%stride===0);const labels=sample.map(r=>{const d=r.timestamp;return`${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;});mkChart("u",labels,[{label:"U (W/m²/K)",data:sample.map(r=>r.U),borderColor:"#BB6E3D",backgroundColor:"transparent"}],false);mkChart("rf",labels,[{label:"Rf (×10⁻⁴ m²K/W)",data:sample.map(r=>r.rfE4),borderColor:"#D4432A",backgroundColor:"transparent"}],false);mkChart("q",labels,[{label:"Duty Qavg (kW)",data:sample.map(r=>r.Qavg),borderColor:"#3A7D52",backgroundColor:"transparent"}],false);mkChart("app",labels,[{label:"Hot approach (C)",data:sample.map(r=>r.hotApp),borderColor:"#D4432A",backgroundColor:"transparent",yAxisID:"y"},{label:"Cold approach (C)",data:sample.map(r=>r.coldApp),borderColor:"#3A7D52",backgroundColor:"transparent",yAxisID:"y1"}],true);}
-
-function runProcess(){if(!currentRows.length)return;const s=readSettings(),l=readLimits();currentBatch=processBatch(currentRows,s,l);if(currentBatch.processed.length){const res=currentBatch.processed[currentBatch.processed.length-1];renderResult(res,l);}else{document.getElementById("statusArea").style.display="block";document.getElementById("kpiArea").style.display="none";document.getElementById("statusArea").innerHTML='<div class="empty-state"><h3>All rows dropped</h3><p>Check Data & Log tab for drop reasons.</p></div>';}renderBatch(currentBatch);}
-
-// Demo data (28 rows, heat exchanger duty trending)
-const DEMO_SERIES=[{"Timestamp":"2026-01-29 23:50","Hot Inlet T":"178.1","Hot Outlet T":"109.8","Hot Flow":"99801","Hot Cp":"2.400","Cold Inlet T":"41.8","Cold Outlet T":"99.6","Cold Flow":"114818","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-01-30 11:50","Hot Inlet T":"180.5","Hot Outlet T":"108.7","Hot Flow":"100564","Hot Cp":"2.400","Cold Inlet T":"37.7","Cold Outlet T":"99.7","Cold Flow":"113490","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-01-30 23:50","Hot Inlet T":"177.7","Hot Outlet T":"109.9","Hot Flow":"99979","Hot Cp":"2.400","Cold Inlet T":"42.0","Cold Outlet T":"98.5","Cold Flow":"114702","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-01-31 11:50","Hot Inlet T":"179.8","Hot Outlet T":"110.2","Hot Flow":"100314","Hot Cp":"2.400","Cold Inlet T":"37.2","Cold Outlet T":"98.7","Cold Flow":"113211","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.28"},{"Timestamp":"2026-01-31 23:50","Hot Inlet T":"177.4","Hot Outlet T":"109.3","Hot Flow":"100773","Hot Cp":"2.400","Cold Inlet T":"42.0","Cold Outlet T":"99.5","Cold Flow":"113987","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-01 11:50","Hot Inlet T":"178.7","Hot Outlet T":"109.5","Hot Flow":"100984","Hot Cp":"2.400","Cold Inlet T":"37.5","Cold Outlet T":"99.3","Cold Flow":"113384","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.3"},{"Timestamp":"2026-02-01 23:50","Hot Inlet T":"178.0","Hot Outlet T":"109.2","Hot Flow":"101125","Hot Cp":"2.400","Cold Inlet T":"41.3","Cold Outlet T":"98.5","Cold Flow":"113772","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-02 11:50","Hot Inlet T":"180.4","Hot Outlet T":"108.8","Hot Flow":"100551","Hot Cp":"2.400","Cold Inlet T":"37.5","Cold Outlet T":"99.0","Cold Flow":"113144","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.28"},{"Timestamp":"2026-02-02 23:50","Hot Inlet T":"179.3","Hot Outlet T":"108.9","Hot Flow":"99759","Hot Cp":"2.400","Cold Inlet T":"41.4","Cold Outlet T":"98.6","Cold Flow":"114359","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-03 11:50","Hot Inlet T":"179.0","Hot Outlet T":"109.1","Hot Flow":"99978","Hot Cp":"2.400","Cold Inlet T":"37.0","Cold Outlet T":"99.1","Cold Flow":"114619","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-03 23:50","Hot Inlet T":"178.3","Hot Outlet T":"109.2","Hot Flow":"100660","Hot Cp":"2.400","Cold Inlet T":"41.7","Cold Outlet T":"98.6","Cold Flow":"113134","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-04 11:50","Hot Inlet T":"178.6","Hot Outlet T":"110.1","Hot Flow":"100092","Hot Cp":"2.400","Cold Inlet T":"37.3","Cold Outlet T":"99.0","Cold Flow":"114293","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-04 23:50","Hot Inlet T":"177.8","Hot Outlet T":"110.2","Hot Flow":"100190","Hot Cp":"2.400","Cold Inlet T":"41.6","Cold Outlet T":"98.7","Cold Flow":"113936","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-05 11:50","Hot Inlet T":"178.6","Hot Outlet T":"110.0","Hot Flow":"100669","Hot Cp":"2.400","Cold Inlet T":"37.1","Cold Outlet T":"98.8","Cold Flow":"114075","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-05 23:50","Hot Inlet T":"178.6","Hot Outlet T":"110.1","Hot Flow":"100911","Hot Cp":"2.400","Cold Inlet T":"41.5","Cold Outlet T":"99.0","Cold Flow":"114669","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-06 11:50","Hot Inlet T":"179.5","Hot Outlet T":"108.8","Hot Flow":"101047","Hot Cp":"2.400","Cold Inlet T":"37.5","Cold Outlet T":"99.0","Cold Flow":"114730","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-06 23:50","Hot Inlet T":"178.7","Hot Outlet T":"108.8","Hot Flow":"100813","Hot Cp":"2.400","Cold Inlet T":"41.4","Cold Outlet T":"99.7","Cold Flow":"114861","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.28"},{"Timestamp":"2026-02-07 11:50","Hot Inlet T":"179.3","Hot Outlet T":"110.4","Hot Flow":"100296","Hot Cp":"2.400","Cold Inlet T":"37.8","Cold Outlet T":"99.2","Cold Flow":"114609","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.3"},{"Timestamp":"2026-02-07 23:50","Hot Inlet T":"179.4","Hot Outlet T":"108.8","Hot Flow":"100220","Hot Cp":"2.400","Cold Inlet T":"41.5","Cold Outlet T":"98.8","Cold Flow":"113591","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-08 11:50","Hot Inlet T":"180.1","Hot Outlet T":"109.7","Hot Flow":"100436","Hot Cp":"2.400","Cold Inlet T":"37.3","Cold Outlet T":"98.9","Cold Flow":"113358","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-08 23:50","Hot Inlet T":"179.4","Hot Outlet T":"110.3","Hot Flow":"100500","Hot Cp":"2.400","Cold Inlet T":"41.3","Cold Outlet T":"98.7","Cold Flow":"114065","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-09 11:50","Hot Inlet T":"179.3","Hot Outlet T":"109.5","Hot Flow":"100575","Hot Cp":"2.400","Cold Inlet T":"37.0","Cold Outlet T":"98.7","Cold Flow":"113350","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-09 23:50","Hot Inlet T":"177.5","Hot Outlet T":"110.2","Hot Flow":"100129","Hot Cp":"2.400","Cold Inlet T":"41.4","Cold Outlet T":"99.3","Cold Flow":"114767","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.28"},{"Timestamp":"2026-02-10 11:50","Hot Inlet T":"180.2","Hot Outlet T":"109.2","Hot Flow":"100047","Hot Cp":"2.400","Cold Inlet T":"37.4","Cold Outlet T":"99.3","Cold Flow":"113267","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.28"},{"Timestamp":"2026-02-10 23:50","Hot Inlet T":"179.5","Hot Outlet T":"109.4","Hot Flow":"100923","Hot Cp":"2.400","Cold Inlet T":"41.4","Cold Outlet T":"98.9","Cold Flow":"114265","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-11 11:50","Hot Inlet T":"180.2","Hot Outlet T":"109.9","Hot Flow":"100816","Hot Cp":"2.400","Cold Inlet T":"37.6","Cold Outlet T":"99.4","Cold Flow":"114027","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-11 23:50","Hot Inlet T":"178.5","Hot Outlet T":"108.9","Hot Flow":"100964","Hot Cp":"2.400","Cold Inlet T":"41.9","Cold Outlet T":"98.3","Cold Flow":"113439","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-12 11:50","Hot Inlet T":"179.0","Hot Outlet T":"109.4","Hot Flow":"101071","Hot Cp":"2.400","Cold Inlet T":"37.5","Cold Outlet T":"98.7","Cold Flow":"114590","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-12 23:50","Hot Inlet T":"177.7","Hot Outlet T":"108.7","Hot Flow":"100195","Hot Cp":"2.400","Cold Inlet T":"41.7","Cold Outlet T":"98.5","Cold Flow":"114675","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-13 11:50","Hot Inlet T":"178.8","Hot Outlet T":"110.2","Hot Flow":"100799","Hot Cp":"2.400","Cold Inlet T":"37.5","Cold Outlet T":"98.7","Cold Flow":"113793","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-13 23:50","Hot Inlet T":"179.5","Hot Outlet T":"110.2","Hot Flow":"100636","Hot Cp":"2.400","Cold Inlet T":"41.8","Cold Outlet T":"98.7","Cold Flow":"113834","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.3"},{"Timestamp":"2026-02-14 11:50","Hot Inlet T":"180.1","Hot Outlet T":"108.7","Hot Flow":"101061","Hot Cp":"2.400","Cold Inlet T":"37.5","Cold Outlet T":"99.1","Cold Flow":"113103","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.3"},{"Timestamp":"2026-02-14 23:50","Hot Inlet T":"178.1","Hot Outlet T":"110.3","Hot Flow":"100629","Hot Cp":"2.400","Cold Inlet T":"41.6","Cold Outlet T":"98.8","Cold Flow":"113724","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-15 11:50","Hot Inlet T":"179.9","Hot Outlet T":"110.1","Hot Flow":"100234","Hot Cp":"2.400","Cold Inlet T":"37.1","Cold Outlet T":"99.0","Cold Flow":"114296","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-15 23:50","Hot Inlet T":"178.8","Hot Outlet T":"109.7","Hot Flow":"100076","Hot Cp":"2.400","Cold Inlet T":"41.3","Cold Outlet T":"98.4","Cold Flow":"114890","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-16 11:50","Hot Inlet T":"179.0","Hot Outlet T":"109.9","Hot Flow":"101030","Hot Cp":"2.400","Cold Inlet T":"37.2","Cold Outlet T":"98.5","Cold Flow":"114484","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-16 23:50","Hot Inlet T":"179.1","Hot Outlet T":"109.7","Hot Flow":"100657","Hot Cp":"2.400","Cold Inlet T":"41.8","Cold Outlet T":"99.3","Cold Flow":"114283","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-17 11:50","Hot Inlet T":"179.3","Hot Outlet T":"109.3","Hot Flow":"99653","Hot Cp":"2.400","Cold Inlet T":"37.5","Cold Outlet T":"99.1","Cold Flow":"113434","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-17 23:50","Hot Inlet T":"178.6","Hot Outlet T":"110.0","Hot Flow":"101053","Hot Cp":"2.400","Cold Inlet T":"41.8","Cold Outlet T":"99.0","Cold Flow":"114630","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-18 11:50","Hot Inlet T":"178.8","Hot Outlet T":"108.8","Hot Flow":"99802","Hot Cp":"2.400","Cold Inlet T":"37.2","Cold Outlet T":"99.4","Cold Flow":"114479","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-18 23:50","Hot Inlet T":"178.1","Hot Outlet T":"108.8","Hot Flow":"100167","Hot Cp":"2.400","Cold Inlet T":"41.8","Cold Outlet T":"98.7","Cold Flow":"114525","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-19 11:50","Hot Inlet T":"179.1","Hot Outlet T":"110.1","Hot Flow":"100352","Hot Cp":"2.400","Cold Inlet T":"37.6","Cold Outlet T":"99.1","Cold Flow":"114810","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.3"},{"Timestamp":"2026-02-19 23:50","Hot Inlet T":"178.5","Hot Outlet T":"110.2","Hot Flow":"100209","Hot Cp":"2.400","Cold Inlet T":"41.5","Cold Outlet T":"98.4","Cold Flow":"114646","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.28"},{"Timestamp":"2026-02-20 11:50","Hot Inlet T":"179.3","Hot Outlet T":"109.7","Hot Flow":"101053","Hot Cp":"2.400","Cold Inlet T":"37.4","Cold Outlet T":"98.7","Cold Flow":"114393","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-20 23:50","Hot Inlet T":"178.8","Hot Outlet T":"109.0","Hot Flow":"100616","Hot Cp":"2.400","Cold Inlet T":"41.2","Cold Outlet T":"98.7","Cold Flow":"114476","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-21 11:50","Hot Inlet T":"179.5","Hot Outlet T":"110.0","Hot Flow":"99738","Hot Cp":"2.400","Cold Inlet T":"37.5","Cold Outlet T":"99.2","Cold Flow":"113823","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-21 23:50","Hot Inlet T":"177.5","Hot Outlet T":"109.0","Hot Flow":"100196","Hot Cp":"2.400","Cold Inlet T":"41.2","Cold Outlet T":"98.7","Cold Flow":"114607","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-22 01:50","Hot Inlet T":"179.8","Hot Outlet T":"109.1","Hot Flow":"100710","Hot Cp":"2.400","Cold Inlet T":"40.1","Cold Outlet T":"98.5","Cold Flow":"113787","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-22 03:50","Hot Inlet T":"181.1","Hot Outlet T":"109.2","Hot Flow":"100063","Hot Cp":"2.400","Cold Inlet T":"38.9","Cold Outlet T":"99.1","Cold Flow":"113704","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-22 05:50","Hot Inlet T":"180.6","Hot Outlet T":"110.2","Hot Flow":"100173","Hot Cp":"2.400","Cold Inlet T":"37.1","Cold Outlet T":"99.6","Cold Flow":"114762","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-22 07:50","Hot Inlet T":"181.4","Hot Outlet T":"108.9","Hot Flow":"100776","Hot Cp":"2.400","Cold Inlet T":"36.7","Cold Outlet T":"98.5","Cold Flow":"113756","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-22 09:50","Hot Inlet T":"181.2","Hot Outlet T":"109.1","Hot Flow":"100455","Hot Cp":"2.400","Cold Inlet T":"36.3","Cold Outlet T":"99.7","Cold Flow":"114295","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-22 11:50","Hot Inlet T":"179.9","Hot Outlet T":"109.4","Hot Flow":"100207","Hot Cp":"2.400","Cold Inlet T":"37.4","Cold Outlet T":"98.9","Cold Flow":"113367","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-22 13:50","Hot Inlet T":"178.1","Hot Outlet T":"109.8","Hot Flow":"100661","Hot Cp":"2.400","Cold Inlet T":"38.5","Cold Outlet T":"99.1","Cold Flow":"113338","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.28"},{"Timestamp":"2026-02-22 15:50","Hot Inlet T":"178.1","Hot Outlet T":"108.9","Hot Flow":"99779","Hot Cp":"2.400","Cold Inlet T":"40.0","Cold Outlet T":"98.6","Cold Flow":"113452","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-22 17:50","Hot Inlet T":"176.4","Hot Outlet T":"109.9","Hot Flow":"100071","Hot Cp":"2.400","Cold Inlet T":"41.2","Cold Outlet T":"99.0","Cold Flow":"113466","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-22 19:50","Hot Inlet T":"176.0","Hot Outlet T":"109.8","Hot Flow":"101053","Hot Cp":"2.400","Cold Inlet T":"42.7","Cold Outlet T":"99.2","Cold Flow":"113360","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-22 21:50","Hot Inlet T":"178.1","Hot Outlet T":"108.8","Hot Flow":"100007","Hot Cp":"2.400","Cold Inlet T":"42.2","Cold Outlet T":"99.7","Cold Flow":"113627","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-22 23:50","Hot Inlet T":"177.8","Hot Outlet T":"108.7","Hot Flow":"100063","Hot Cp":"2.400","Cold Inlet T":"41.9","Cold Outlet T":"98.7","Cold Flow":"114435","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-23 01:50","Hot Inlet T":"178.5","Hot Outlet T":"110.2","Hot Flow":"100662","Hot Cp":"2.400","Cold Inlet T":"40.0","Cold Outlet T":"98.8","Cold Flow":"113886","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-23 03:50","Hot Inlet T":"179.5","Hot Outlet T":"110.1","Hot Flow":"99890","Hot Cp":"2.400","Cold Inlet T":"38.6","Cold Outlet T":"99.6","Cold Flow":"113583","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-23 05:50","Hot Inlet T":"181.6","Hot Outlet T":"109.8","Hot Flow":"100876","Hot Cp":"2.400","Cold Inlet T":"37.1","Cold Outlet T":"99.2","Cold Flow":"113194","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.28"},{"Timestamp":"2026-02-23 07:50","Hot Inlet T":"180.8","Hot Outlet T":"109.7","Hot Flow":"100885","Hot Cp":"2.400","Cold Inlet T":"36.7","Cold Outlet T":"98.5","Cold Flow":"113780","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-23 09:50","Hot Inlet T":"180.8","Hot Outlet T":"110.1","Hot Flow":"101160","Hot Cp":"2.400","Cold Inlet T":"36.3","Cold Outlet T":"99.5","Cold Flow":"113294","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-23 11:50","Hot Inlet T":"179.0","Hot Outlet T":"109.2","Hot Flow":"100728","Hot Cp":"2.400","Cold Inlet T":"37.5","Cold Outlet T":"99.3","Cold Flow":"114139","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-23 13:50","Hot Inlet T":"178.8","Hot Outlet T":"109.3","Hot Flow":"100437","Hot Cp":"2.400","Cold Inlet T":"38.9","Cold Outlet T":"98.4","Cold Flow":"114294","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-23 15:50","Hot Inlet T":"178.0","Hot Outlet T":"109.3","Hot Flow":"100944","Hot Cp":"2.400","Cold Inlet T":"40.3","Cold Outlet T":"99.7","Cold Flow":"113187","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-23 17:50","Hot Inlet T":"177.8","Hot Outlet T":"110.2","Hot Flow":"100993","Hot Cp":"2.400","Cold Inlet T":"41.3","Cold Outlet T":"99.0","Cold Flow":"113527","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.28"},{"Timestamp":"2026-02-23 19:50","Hot Inlet T":"176.5","Hot Outlet T":"109.8","Hot Flow":"100244","Hot Cp":"2.400","Cold Inlet T":"42.2","Cold Outlet T":"98.9","Cold Flow":"114549","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-23 21:50","Hot Inlet T":"177.5","Hot Outlet T":"108.9","Hot Flow":"100395","Hot Cp":"2.400","Cold Inlet T":"42.5","Cold Outlet T":"98.4","Cold Flow":"113840","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-23 23:50","Hot Inlet T":"177.6","Hot Outlet T":"109.7","Hot Flow":"100591","Hot Cp":"2.400","Cold Inlet T":"41.5","Cold Outlet T":"99.0","Cold Flow":"113465","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-24 01:50","Hot Inlet T":"179.2","Hot Outlet T":"108.8","Hot Flow":"99954","Hot Cp":"2.400","Cold Inlet T":"40.2","Cold Outlet T":"99.0","Cold Flow":"114218","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-24 03:50","Hot Inlet T":"180.9","Hot Outlet T":"108.9","Hot Flow":"100816","Hot Cp":"2.400","Cold Inlet T":"38.5","Cold Outlet T":"98.8","Cold Flow":"114601","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-24 05:50","Hot Inlet T":"181.0","Hot Outlet T":"109.9","Hot Flow":"99670","Hot Cp":"2.400","Cold Inlet T":"37.1","Cold Outlet T":"98.5","Cold Flow":"114395","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.28"},{"Timestamp":"2026-02-24 07:50","Hot Inlet T":"181.2","Hot Outlet T":"109.0","Hot Flow":"101091","Hot Cp":"2.400","Cold Inlet T":"36.5","Cold Outlet T":"98.9","Cold Flow":"114513","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.28"},{"Timestamp":"2026-02-24 09:50","Hot Inlet T":"180.2","Hot Outlet T":"110.3","Hot Flow":"100942","Hot Cp":"2.400","Cold Inlet T":"36.7","Cold Outlet T":"99.3","Cold Flow":"113909","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-24 11:50","Hot Inlet T":"178.7","Hot Outlet T":"109.5","Hot Flow":"100448","Hot Cp":"2.400","Cold Inlet T":"37.0","Cold Outlet T":"99.6","Cold Flow":"114618","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-24 13:50","Hot Inlet T":"179.4","Hot Outlet T":"109.0","Hot Flow":"100526","Hot Cp":"2.400","Cold Inlet T":"38.9","Cold Outlet T":"98.5","Cold Flow":"113794","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-24 15:50","Hot Inlet T":"177.6","Hot Outlet T":"109.3","Hot Flow":"101170","Hot Cp":"2.400","Cold Inlet T":"40.6","Cold Outlet T":"99.3","Cold Flow":"113587","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-24 17:50","Hot Inlet T":"177.0","Hot Outlet T":"108.9","Hot Flow":"100259","Hot Cp":"2.400","Cold Inlet T":"41.8","Cold Outlet T":"99.3","Cold Flow":"113633","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-24 19:50","Hot Inlet T":"177.5","Hot Outlet T":"110.3","Hot Flow":"100612","Hot Cp":"2.400","Cold Inlet T":"42.1","Cold Outlet T":"99.1","Cold Flow":"113618","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-24 21:50","Hot Inlet T":"178.6","Hot Outlet T":"109.8","Hot Flow":"101136","Hot Cp":"2.400","Cold Inlet T":"42.4","Cold Outlet T":"99.2","Cold Flow":"113676","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-24 23:50","Hot Inlet T":"178.4","Hot Outlet T":"109.7","Hot Flow":"100668","Hot Cp":"2.400","Cold Inlet T":"41.5","Cold Outlet T":"99.3","Cold Flow":"114622","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-25 01:50","Hot Inlet T":"180.2","Hot Outlet T":"109.6","Hot Flow":"99637","Hot Cp":"2.400","Cold Inlet T":"40.0","Cold Outlet T":"99.2","Cold Flow":"113452","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.28"},{"Timestamp":"2026-02-25 03:50","Hot Inlet T":"179.9","Hot Outlet T":"109.1","Hot Flow":"100945","Hot Cp":"2.400","Cold Inlet T":"38.9","Cold Outlet T":"98.7","Cold Flow":"114462","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.3"},{"Timestamp":"2026-02-25 05:50","Hot Inlet T":"180.1","Hot Outlet T":"110.2","Hot Flow":"100784","Hot Cp":"2.400","Cold Inlet T":"37.6","Cold Outlet T":"99.3","Cold Flow":"114111","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-25 07:50","Hot Inlet T":"181.6","Hot Outlet T":"109.2","Hot Flow":"100664","Hot Cp":"2.400","Cold Inlet T":"36.9","Cold Outlet T":"98.8","Cold Flow":"114833","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-25 09:50","Hot Inlet T":"180.5","Hot Outlet T":"108.7","Hot Flow":"100000","Hot Cp":"2.400","Cold Inlet T":"36.7","Cold Outlet T":"99.3","Cold Flow":"114675","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-25 11:50","Hot Inlet T":"180.0","Hot Outlet T":"109.8","Hot Flow":"100809","Hot Cp":"2.400","Cold Inlet T":"37.4","Cold Outlet T":"99.1","Cold Flow":"114503","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-25 13:50","Hot Inlet T":"177.8","Hot Outlet T":"109.9","Hot Flow":"99897","Hot Cp":"2.400","Cold Inlet T":"38.5","Cold Outlet T":"99.0","Cold Flow":"113776","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-25 15:50","Hot Inlet T":"176.8","Hot Outlet T":"109.7","Hot Flow":"100006","Hot Cp":"2.400","Cold Inlet T":"40.1","Cold Outlet T":"99.2","Cold Flow":"113370","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-25 17:50","Hot Inlet T":"176.1","Hot Outlet T":"110.3","Hot Flow":"100585","Hot Cp":"2.400","Cold Inlet T":"41.8","Cold Outlet T":"98.9","Cold Flow":"114132","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-25 19:50","Hot Inlet T":"176.7","Hot Outlet T":"109.1","Hot Flow":"99892","Hot Cp":"2.400","Cold Inlet T":"42.0","Cold Outlet T":"99.0","Cold Flow":"113846","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-25 21:50","Hot Inlet T":"177.0","Hot Outlet T":"109.1","Hot Flow":"100129","Hot Cp":"2.400","Cold Inlet T":"42.3","Cold Outlet T":"98.6","Cold Flow":"114460","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-25 23:50","Hot Inlet T":"179.2","Hot Outlet T":"110.4","Hot Flow":"99610","Hot Cp":"2.400","Cold Inlet T":"41.8","Cold Outlet T":"98.9","Cold Flow":"114737","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-26 01:50","Hot Inlet T":"180.5","Hot Outlet T":"109.9","Hot Flow":"100112","Hot Cp":"2.400","Cold Inlet T":"40.6","Cold Outlet T":"99.6","Cold Flow":"113791","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-26 03:50","Hot Inlet T":"181.3","Hot Outlet T":"110.1","Hot Flow":"100199","Hot Cp":"2.400","Cold Inlet T":"39.0","Cold Outlet T":"98.9","Cold Flow":"113167","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-26 05:50","Hot Inlet T":"181.0","Hot Outlet T":"110.3","Hot Flow":"99865","Hot Cp":"2.400","Cold Inlet T":"37.7","Cold Outlet T":"99.0","Cold Flow":"113101","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-26 07:50","Hot Inlet T":"181.5","Hot Outlet T":"110.2","Hot Flow":"100278","Hot Cp":"2.400","Cold Inlet T":"36.3","Cold Outlet T":"99.0","Cold Flow":"114369","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-26 09:50","Hot Inlet T":"180.7","Hot Outlet T":"110.3","Hot Flow":"100796","Hot Cp":"2.400","Cold Inlet T":"36.4","Cold Outlet T":"98.9","Cold Flow":"113693","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.28"},{"Timestamp":"2026-02-26 11:50","Hot Inlet T":"180.2","Hot Outlet T":"109.7","Hot Flow":"100520","Hot Cp":"2.400","Cold Inlet T":"37.2","Cold Outlet T":"98.6","Cold Flow":"113795","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-26 13:50","Hot Inlet T":"177.4","Hot Outlet T":"109.9","Hot Flow":"100455","Hot Cp":"2.400","Cold Inlet T":"38.8","Cold Outlet T":"99.1","Cold Flow":"114466","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-26 15:50","Hot Inlet T":"176.7","Hot Outlet T":"110.3","Hot Flow":"99767","Hot Cp":"2.400","Cold Inlet T":"40.5","Cold Outlet T":"98.7","Cold Flow":"113245","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-26 17:50","Hot Inlet T":"176.8","Hot Outlet T":"109.8","Hot Flow":"100358","Hot Cp":"2.400","Cold Inlet T":"41.6","Cold Outlet T":"98.5","Cold Flow":"113801","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-26 19:50","Hot Inlet T":"178.1","Hot Outlet T":"109.0","Hot Flow":"100684","Hot Cp":"2.400","Cold Inlet T":"42.8","Cold Outlet T":"99.4","Cold Flow":"114418","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-26 21:50","Hot Inlet T":"177.7","Hot Outlet T":"109.7","Hot Flow":"99794","Hot Cp":"2.400","Cold Inlet T":"42.0","Cold Outlet T":"99.1","Cold Flow":"114067","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-26 23:50","Hot Inlet T":"179.0","Hot Outlet T":"110.3","Hot Flow":"100149","Hot Cp":"2.400","Cold Inlet T":"41.5","Cold Outlet T":"99.2","Cold Flow":"114022","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-27 01:50","Hot Inlet T":"180.2","Hot Outlet T":"109.0","Hot Flow":"99888","Hot Cp":"2.400","Cold Inlet T":"40.5","Cold Outlet T":"99.4","Cold Flow":"114640","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-27 03:50","Hot Inlet T":"180.3","Hot Outlet T":"109.7","Hot Flow":"100063","Hot Cp":"2.400","Cold Inlet T":"38.4","Cold Outlet T":"98.4","Cold Flow":"114411","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-27 05:50","Hot Inlet T":"180.1","Hot Outlet T":"109.8","Hot Flow":"99757","Hot Cp":"2.400","Cold Inlet T":"37.5","Cold Outlet T":"99.5","Cold Flow":"113667","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-27 07:50","Hot Inlet T":"180.5","Hot Outlet T":"109.7","Hot Flow":"100505","Hot Cp":"2.400","Cold Inlet T":"36.5","Cold Outlet T":"98.7","Cold Flow":"113869","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-27 09:50","Hot Inlet T":"179.8","Hot Outlet T":"110.0","Hot Flow":"100297","Hot Cp":"2.400","Cold Inlet T":"36.9","Cold Outlet T":"98.4","Cold Flow":"114424","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-27 11:50","Hot Inlet T":"179.2","Hot Outlet T":"109.2","Hot Flow":"100483","Hot Cp":"2.400","Cold Inlet T":"37.1","Cold Outlet T":"99.1","Cold Flow":"114623","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.28"},{"Timestamp":"2026-02-27 13:50","Hot Inlet T":"178.6","Hot Outlet T":"109.2","Hot Flow":"101020","Hot Cp":"2.400","Cold Inlet T":"38.4","Cold Outlet T":"98.4","Cold Flow":"113121","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-27 15:50","Hot Inlet T":"177.8","Hot Outlet T":"109.4","Hot Flow":"100544","Hot Cp":"2.400","Cold Inlet T":"40.6","Cold Outlet T":"99.0","Cold Flow":"114079","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-27 17:50","Hot Inlet T":"177.7","Hot Outlet T":"109.3","Hot Flow":"99955","Hot Cp":"2.400","Cold Inlet T":"41.9","Cold Outlet T":"99.3","Cold Flow":"113618","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-27 19:50","Hot Inlet T":"176.8","Hot Outlet T":"109.6","Hot Flow":"100661","Hot Cp":"2.400","Cold Inlet T":"42.7","Cold Outlet T":"99.4","Cold Flow":"114208","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-27 21:50","Hot Inlet T":"177.5","Hot Outlet T":"109.0","Hot Flow":"101120","Hot Cp":"2.400","Cold Inlet T":"42.5","Cold Outlet T":"99.6","Cold Flow":"114430","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 00:00","Hot Inlet T":"178.4","Hot Outlet T":"109.6","Hot Flow":"99697","Hot Cp":"2.400","Cold Inlet T":"40.9","Cold Outlet T":"98.3","Cold Flow":"113465","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-28 00:30","Hot Inlet T":"178.9","Hot Outlet T":"109.5","Hot Flow":"99671","Hot Cp":"2.400","Cold Inlet T":"41.4","Cold Outlet T":"98.7","Cold Flow":"114371","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-28 01:00","Hot Inlet T":"180.2","Hot Outlet T":"109.2","Hot Flow":"100471","Hot Cp":"2.400","Cold Inlet T":"40.0","Cold Outlet T":"99.2","Cold Flow":"113754","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-28 01:30","Hot Inlet T":"179.6","Hot Outlet T":"109.4","Hot Flow":"101054","Hot Cp":"2.400","Cold Inlet T":"40.3","Cold Outlet T":"98.7","Cold Flow":"114670","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 02:00","Hot Inlet T":"180.2","Hot Outlet T":"109.6","Hot Flow":"99820","Hot Cp":"2.400","Cold Inlet T":"39.2","Cold Outlet T":"98.4","Cold Flow":"114261","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-28 02:30","Hot Inlet T":"179.7","Hot Outlet T":"110.0","Hot Flow":"99786","Hot Cp":"2.400","Cold Inlet T":"39.3","Cold Outlet T":"99.4","Cold Flow":"114401","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 03:00","Hot Inlet T":"179.8","Hot Outlet T":"109.0","Hot Flow":"100935","Hot Cp":"2.400","Cold Inlet T":"38.4","Cold Outlet T":"98.3","Cold Flow":"114134","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-28 03:30","Hot Inlet T":"179.4","Hot Outlet T":"109.7","Hot Flow":"99686","Hot Cp":"2.400","Cold Inlet T":"38.5","Cold Outlet T":"98.5","Cold Flow":"114835","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 04:00","Hot Inlet T":"179.7","Hot Outlet T":"110.0","Hot Flow":"100659","Hot Cp":"2.400","Cold Inlet T":"37.8","Cold Outlet T":"98.4","Cold Flow":"113907","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-28 04:30","Hot Inlet T":"180.0","Hot Outlet T":"110.2","Hot Flow":"100561","Hot Cp":"2.400","Cold Inlet T":"38.2","Cold Outlet T":"99.4","Cold Flow":"113419","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 05:00","Hot Inlet T":"181.4","Hot Outlet T":"109.3","Hot Flow":"100325","Hot Cp":"2.400","Cold Inlet T":"37.5","Cold Outlet T":"98.6","Cold Flow":"113791","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-28 05:30","Hot Inlet T":"181.7","Hot Outlet T":"109.6","Hot Flow":"100271","Hot Cp":"2.400","Cold Inlet T":"37.1","Cold Outlet T":"98.4","Cold Flow":"113955","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-28 06:00","Hot Inlet T":"181.6","Hot Outlet T":"109.6","Hot Flow":"99785","Hot Cp":"2.400","Cold Inlet T":"36.9","Cold Outlet T":"98.4","Cold Flow":"114188","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-28 06:30","Hot Inlet T":"181.6","Hot Outlet T":"109.8","Hot Flow":"100435","Hot Cp":"2.400","Cold Inlet T":"36.8","Cold Outlet T":"98.3","Cold Flow":"114054","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-28 07:00","Hot Inlet T":"181.6","Hot Outlet T":"109.4","Hot Flow":"100543","Hot Cp":"2.400","Cold Inlet T":"36.8","Cold Outlet T":"99.3","Cold Flow":"114358","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.28"},{"Timestamp":"2026-02-28 07:30","Hot Inlet T":"180.9","Hot Outlet T":"109.1","Hot Flow":"100976","Hot Cp":"2.400","Cold Inlet T":"36.4","Cold Outlet T":"99.5","Cold Flow":"113833","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-28 08:00","Hot Inlet T":"181.4","Hot Outlet T":"109.7","Hot Flow":"99786","Hot Cp":"2.400","Cold Inlet T":"36.1","Cold Outlet T":"99.2","Cold Flow":"114342","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 08:30","Hot Inlet T":"180.0","Hot Outlet T":"109.9","Hot Flow":"100004","Hot Cp":"2.400","Cold Inlet T":"36.8","Cold Outlet T":"98.8","Cold Flow":"113754","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 09:00","Hot Inlet T":"181.0","Hot Outlet T":"109.4","Hot Flow":"100855","Hot Cp":"2.400","Cold Inlet T":"36.6","Cold Outlet T":"98.8","Cold Flow":"114100","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 09:30","Hot Inlet T":"180.1","Hot Outlet T":"110.0","Hot Flow":"100778","Hot Cp":"2.400","Cold Inlet T":"36.9","Cold Outlet T":"99.2","Cold Flow":"114452","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 10:00","Hot Inlet T":"179.3","Hot Outlet T":"109.1","Hot Flow":"100240","Hot Cp":"2.400","Cold Inlet T":"36.8","Cold Outlet T":"99.0","Cold Flow":"114359","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.28"},{"Timestamp":"2026-02-28 10:30","Hot Inlet T":"181.0","Hot Outlet T":"108.7","Hot Flow":"99743","Hot Cp":"2.400","Cold Inlet T":"36.6","Cold Outlet T":"99.5","Cold Flow":"113882","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-28 11:00","Hot Inlet T":"178.6","Hot Outlet T":"108.8","Hot Flow":"100214","Hot Cp":"2.400","Cold Inlet T":"37.7","Cold Outlet T":"99.1","Cold Flow":"114038","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-28 11:30","Hot Inlet T":"180.5","Hot Outlet T":"110.2","Hot Flow":"100625","Hot Cp":"2.400","Cold Inlet T":"37.3","Cold Outlet T":"98.5","Cold Flow":"114286","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-28 12:00","Hot Inlet T":"178.0","Hot Outlet T":"109.8","Hot Flow":"100425","Hot Cp":"2.400","Cold Inlet T":"37.8","Cold Outlet T":"98.5","Cold Flow":"113153","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-28 12:30","Hot Inlet T":"178.3","Hot Outlet T":"110.5","Hot Flow":"100849","Hot Cp":"2.400","Cold Inlet T":"37.9","Cold Outlet T":"98.8","Cold Flow":"114157","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 13:00","Hot Inlet T":"177.6","Hot Outlet T":"108.9","Hot Flow":"100053","Hot Cp":"2.400","Cold Inlet T":"39.0","Cold Outlet T":"99.5","Cold Flow":"113722","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-28 13:30","Hot Inlet T":"178.7","Hot Outlet T":"109.1","Hot Flow":"101090","Hot Cp":"2.400","Cold Inlet T":"38.8","Cold Outlet T":"98.6","Cold Flow":"113830","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.28"},{"Timestamp":"2026-02-28 14:00","Hot Inlet T":"177.6","Hot Outlet T":"110.4","Hot Flow":"100886","Hot Cp":"2.400","Cold Inlet T":"39.9","Cold Outlet T":"99.5","Cold Flow":"114571","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 14:30","Hot Inlet T":"179.0","Hot Outlet T":"109.7","Hot Flow":"100833","Hot Cp":"2.400","Cold Inlet T":"39.7","Cold Outlet T":"99.6","Cold Flow":"113924","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 15:00","Hot Inlet T":"176.6","Hot Outlet T":"108.9","Hot Flow":"99705","Hot Cp":"2.400","Cold Inlet T":"40.4","Cold Outlet T":"99.6","Cold Flow":"114322","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 15:30","Hot Inlet T":"178.6","Hot Outlet T":"109.6","Hot Flow":"99612","Hot Cp":"2.400","Cold Inlet T":"40.5","Cold Outlet T":"98.6","Cold Flow":"113257","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-28 16:00","Hot Inlet T":"176.4","Hot Outlet T":"110.4","Hot Flow":"100362","Hot Cp":"2.400","Cold Inlet T":"40.9","Cold Outlet T":"99.5","Cold Flow":"113578","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-28 16:30","Hot Inlet T":"178.1","Hot Outlet T":"109.6","Hot Flow":"99917","Hot Cp":"2.400","Cold Inlet T":"41.2","Cold Outlet T":"99.5","Cold Flow":"113465","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-28 17:00","Hot Inlet T":"177.3","Hot Outlet T":"109.0","Hot Flow":"99768","Hot Cp":"2.400","Cold Inlet T":"42.0","Cold Outlet T":"99.2","Cold Flow":"114298","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-28 17:30","Hot Inlet T":"177.2","Hot Outlet T":"108.8","Hot Flow":"100371","Hot Cp":"2.400","Cold Inlet T":"41.7","Cold Outlet T":"98.9","Cold Flow":"114885","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.3"},{"Timestamp":"2026-02-28 18:00","Hot Inlet T":"177.0","Hot Outlet T":"110.5","Hot Flow":"101068","Hot Cp":"2.400","Cold Inlet T":"41.9","Cold Outlet T":"98.5","Cold Flow":"114139","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.3"},{"Timestamp":"2026-02-28 18:30","Hot Inlet T":"176.9","Hot Outlet T":"109.7","Hot Flow":"100403","Hot Cp":"2.400","Cold Inlet T":"42.0","Cold Outlet T":"99.2","Cold Flow":"113406","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-28 19:00","Hot Inlet T":"177.0","Hot Outlet T":"109.9","Hot Flow":"99615","Hot Cp":"2.400","Cold Inlet T":"42.1","Cold Outlet T":"99.0","Cold Flow":"113681","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 19:30","Hot Inlet T":"177.2","Hot Outlet T":"109.2","Hot Flow":"100353","Hot Cp":"2.400","Cold Inlet T":"42.5","Cold Outlet T":"98.7","Cold Flow":"113997","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 20:00","Hot Inlet T":"177.0","Hot Outlet T":"110.2","Hot Flow":"100046","Hot Cp":"2.400","Cold Inlet T":"42.2","Cold Outlet T":"98.4","Cold Flow":"114138","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-28 20:30","Hot Inlet T":"176.8","Hot Outlet T":"109.2","Hot Flow":"100291","Hot Cp":"2.400","Cold Inlet T":"42.4","Cold Outlet T":"98.4","Cold Flow":"114837","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.3"},{"Timestamp":"2026-02-28 21:00","Hot Inlet T":"176.9","Hot Outlet T":"109.6","Hot Flow":"101196","Hot Cp":"2.400","Cold Inlet T":"42.7","Cold Outlet T":"99.0","Cold Flow":"114402","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-28 21:30","Hot Inlet T":"177.7","Hot Outlet T":"109.7","Hot Flow":"100236","Hot Cp":"2.400","Cold Inlet T":"42.6","Cold Outlet T":"98.3","Cold Flow":"114572","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 22:00","Hot Inlet T":"177.9","Hot Outlet T":"109.3","Hot Flow":"100176","Hot Cp":"2.400","Cold Inlet T":"42.1","Cold Outlet T":"99.5","Cold Flow":"113558","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.28"},{"Timestamp":"2026-02-28 22:10","Hot Inlet T":"178.8","Hot Outlet T":"110.4","Hot Flow":"99916","Hot Cp":"2.400","Cold Inlet T":"42.2","Cold Outlet T":"99.1","Cold Flow":"113406","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-28 22:20","Hot Inlet T":"178.4","Hot Outlet T":"109.6","Hot Flow":"100779","Hot Cp":"2.400","Cold Inlet T":"42.4","Cold Outlet T":"98.8","Cold Flow":"113610","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.28"},{"Timestamp":"2026-02-28 22:30","Hot Inlet T":"177.3","Hot Outlet T":"110.2","Hot Flow":"100138","Hot Cp":"2.400","Cold Inlet T":"42.2","Cold Outlet T":"99.0","Cold Flow":"114636","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.28"},{"Timestamp":"2026-02-28 22:40","Hot Inlet T":"177.4","Hot Outlet T":"109.3","Hot Flow":"100064","Hot Cp":"2.400","Cold Inlet T":"41.9","Cold Outlet T":"99.1","Cold Flow":"113582","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-28 22:50","Hot Inlet T":"177.7","Hot Outlet T":"109.8","Hot Flow":"101147","Hot Cp":"2.400","Cold Inlet T":"42.0","Cold Outlet T":"98.5","Cold Flow":"113130","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-28 23:00","Hot Inlet T":"179.4","Hot Outlet T":"110.0","Hot Flow":"99725","Hot Cp":"2.400","Cold Inlet T":"41.3","Cold Outlet T":"98.4","Cold Flow":"113204","Cold Cp":"2.500","Shell DP":"0.37","Tube DP":"0.29"},{"Timestamp":"2026-02-28 23:10","Hot Inlet T":"177.5","Hot Outlet T":"109.4","Hot Flow":"100825","Hot Cp":"2.400","Cold Inlet T":"41.3","Cold Outlet T":"98.6","Cold Flow":"113371","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-28 23:20","Hot Inlet T":"178.1","Hot Outlet T":"109.2","Hot Flow":"100053","Hot Cp":"2.400","Cold Inlet T":"41.7","Cold Outlet T":"98.4","Cold Flow":"114617","Cold Cp":"2.500","Shell DP":"0.35","Tube DP":"0.29"},{"Timestamp":"2026-02-28 23:30","Hot Inlet T":"179.2","Hot Outlet T":"109.3","Hot Flow":"100361","Hot Cp":"2.400","Cold Inlet T":"42.0","Cold Outlet T":"99.0","Cold Flow":"113584","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.3"},{"Timestamp":"2026-02-28 23:40","Hot Inlet T":"178.9","Hot Outlet T":"109.0","Hot Flow":"100556","Hot Cp":"2.400","Cold Inlet T":"41.7","Cold Outlet T":"99.1","Cold Flow":"114116","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"},{"Timestamp":"2026-02-28 23:50","Hot Inlet T":"178.1","Hot Outlet T":"109.3","Hot Flow":"100463","Hot Cp":"2.400","Cold Inlet T":"41.9","Cold Outlet T":"98.8","Cold Flow":"113755","Cold Cp":"2.500","Shell DP":"0.36","Tube DP":"0.29"}];
+function lookup(row, canonical) {
+  const aliases = TAG_ALIASES[canonical] || [canonical];
+  for (const a of aliases) {
+    if (row[a] !== undefined && row[a] !== null && String(row[a]).trim() !== "") return row[a];
+  }
+  return null;
+}
+function num(v) {
+  if (v === null || v === undefined || v === "" || v === "—") return null;
+  if (typeof v === "number") return isNaN(v) ? null : v;
+  const n = parseFloat(String(v).replace(/,/g, "").trim());
+  return isNaN(n) ? null : n;
+}
+function fmt(v, decimals, suffix) {
+  if (v === null || v === undefined || isNaN(v)) return "—";
+  return v.toFixed(decimals) + (suffix || "");
+}
+function fmtInt(v, suffix) {
+  if (v === null || v === undefined || isNaN(v)) return "—";
+  return Math.round(v).toLocaleString() + (suffix || "");
+}
+function getCfg() {
+  const v = id => parseFloat(document.getElementById(id).value);
+  return {
+    nShell: Math.max(1, Math.round(v("setNshell"))),
+    area: v("setArea"),
+    uClean: v("setUClean"),
+    designQ_MW: v("setDesignQ"),
+    rfAdv: v("limRfAdv"),
+    rfAlm: v("limRfAlm"),
+    effAdv: v("limEffAdv"),
+    imbAdv: v("limImbAdv"),
+    appMin: v("limAppMin"),
+    dutyAdv: v("limDutyAdv"),
+    dutyAlm: v("limDutyAlm")
+  };
+}
 
 // ═══════════════════════════════════════════════════════
-// WIRING
-// ═══════════════════════════════════════════════════════
-
-// Tabs
-document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click",()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".tab-panel").forEach(x=>x.classList.remove("active"));t.classList.add("active");document.getElementById("panel-"+t.dataset.tab).classList.add("active");}));
-
-// CSV upload
-document.getElementById("csvInput").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;document.getElementById("upStatus").textContent="Parsing...";Papa.parse(f,{header:true,skipEmptyLines:true,complete:r=>{currentRows=r.data;document.getElementById("upStatus").textContent=f.name+" · "+currentRows.length+" rows";runProcess();}});});
-
-// Demo button
-document.getElementById("loadDemoBtn").addEventListener("click",()=>{currentRows=DEMO_SERIES;document.getElementById("upStatus").textContent="Demo loaded · "+DEMO_SERIES.length+" rows";runProcess();});
-
-// Recalculate
-document.getElementById("recalcBtn").addEventListener("click",runProcess);
-document.getElementById("setTEMA").addEventListener("change",applyTEMA);
-document.getElementById("restoreDefaultsBtn").addEventListener("click",function(){document.getElementById("setArea").value="250.0";
-document.getElementById("setTEMA").value="1-2";
-document.getElementById("setF").value="0.90";
-document.getElementById("fHint").textContent="1-2 shell: F = 0.85 - 0.95";
-document.getElementById("setUClean").value="400.0";
-document.getElementById("limRfClean").value="1.0";
-document.getElementById("limApproach").value="5.0";
-document.getElementById("limShellDP").value="0.55";
-document.getElementById("limTubeDP").value="0.45";runProcess();});
-document.querySelectorAll(".config-input").forEach(inp=>inp.addEventListener("change",runProcess));
-
-// Export
-document.getElementById("btnExport").addEventListener("click",()=>{if(!currentBatch||!currentBatch.processed.length)return;const hdrs=["Timestamp","U_W/m2K","Rf_1e-4","Q_kW","LMTD_C","Imb_%","HotApp_C","ColdApp_C","ShellDP_bar","TubeDP_bar","Status"];const rows=currentBatch.processed.map(r=>{const ts=r.timestamp;return[`${ts.getFullYear()}-${String(ts.getMonth()+1).padStart(2,"0")}-${String(ts.getDate()).padStart(2,"0")} ${String(ts.getHours()).padStart(2,"0")}:${String(ts.getMinutes()).padStart(2,"0")}`,fmt(r.U,0),fmt(r.rfE4,2),fmt(r.Qavg,1),fmt(r.lm,2),fmt(r.imb,1),fmt(r.hotApp,2),fmt(r.coldApp,2),fmt(r.sdp,3),fmt(r.tdp,3),r.status].join(",");});const csv=hdrs.join(",")+"\n"+rows.join("\n");const blob=new Blob([csv],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="shell-tube-exchanger-export.csv";a.click();});
-
-// Manual panel
-document.getElementById("btnManual").addEventListener("click",()=>{document.getElementById("manualPanel").classList.add("open");document.getElementById("manualOverlay").style.display="block";});
-document.getElementById("manualClose").addEventListener("click",()=>{document.getElementById("manualPanel").classList.remove("open");document.getElementById("manualOverlay").style.display="none";});
-document.getElementById("manualOverlay").addEventListener("click",()=>{document.getElementById("manualPanel").classList.remove("open");document.getElementById("manualOverlay").style.display="none";});
-
-// Auto-load demo
-currentRows=DEMO_SERIES;document.getElementById("upStatus").textContent="Demo auto-loaded · "+DEMO_SERIES.length+" rows";runProcess();
-
-document.getElementById("manualPdf").addEventListener("click",function(){
-  var body=document.querySelector(".manual-panel-body").innerHTML;
-  var win=window.open("","_blank");
-  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Engineering Manual - Shell & Tube Exchanger</title>'+
-    '<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">'+
-    '<style>body{font-family:\'IBM Plex Sans\',-apple-system,sans-serif;font-size:13px;line-height:1.7;color:#32302F;max-width:700px;margin:40px auto;padding:0 24px}'+
-    'h1{font-size:20px;font-weight:700;color:#463B33;border-bottom:2px solid #E29C57;padding-bottom:8px;margin-bottom:24px}'+
-    'h3{font-size:14px;font-weight:600;color:#763D16;margin:20px 0 8px}'+
-    'p{margin-bottom:10px}'+
-    'code{background:#F7F6F2;padding:2px 6px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:12px}'+
-    'strong{color:#463B33}'+
-    '@media print{body{margin:20px}@page{margin:1.5cm}}</style></head><body>'+
-    '<h1>Engineering Manual - Shell & Tube Exchanger</h1>'+body+'</body></html>');
-  win.document.close();
-  setTimeout(function(){win.print();},400);
-});
-</script>
-
-<div class="kbd-overlay" id="kbdOverlay">
-  <div class="kbd-modal">
-    <h3>Keyboard Shortcuts <button class="kbd-close" onclick="toggleKbd()">\u00d7</button></h3>
-    <div class="kbd-group">
-      <h4>Navigation</h4>
-      <div class="kbd-row"><span>Go to Home</span><div class="kbd-keys"><kbd>G</kbd><kbd>H</kbd></div></div>
-      <div class="kbd-row"><span>Go to Dashboards</span><div class="kbd-keys"><kbd>G</kbd><kbd>D</kbd></div></div>
-      <div class="kbd-row"><span>Go to Settings</span><div class="kbd-keys"><kbd>G</kbd><kbd>S</kbd></div></div>
-      <div class="kbd-row"><span>Go to Alerts</span><div class="kbd-keys"><kbd>G</kbd><kbd>A</kbd></div></div>
-    </div>
-    <div class="kbd-group">
-      <h4>Actions</h4>
-      <div class="kbd-row"><span>Show shortcuts</span><div class="kbd-keys"><kbd>?</kbd></div></div>
-      <div class="kbd-row"><span>Close modal</span><div class="kbd-keys"><kbd>Esc</kbd></div></div>
-    </div>
-  </div>
-</div>
-<script>
-// ═══════════════════════════════════════════════════════
-// STANDARD UI WIRING (shared across all dashboards)
+// CALCULATION ENGINE - ports Rev9.py / Rev9.html verbatim
 // ═══════════════════════════════════════════════════════
 
-// Tab switching
-document.querySelectorAll(".tab").forEach(function(t){
-  t.addEventListener("click",function(){
-    document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("active")});
-    document.querySelectorAll(".tab-panel").forEach(function(x){x.classList.remove("active")});
-    t.classList.add("active");
-    var panel=document.getElementById("panel-"+t.dataset.tab);
-    if(panel) panel.classList.add("active");
+// LMTD correction F (TEMA general N-shell formula, cheguide.com)
+// Returns null on temperature crossover or numerical breakdown.
+function calcF(P, R, N) {
+  try {
+    if (P >= 1.0 || (P * R) >= 1.0) return null;
+    N = parseInt(N, 10);
+    if (N <= 0) return null;
+
+    // Special case R = 1 (balanced flow)
+    if (Math.abs(R - 1.0) < EPSILON) {
+      const P1den = N - P * (N - 1);
+      if (Math.abs(P1den) < EPSILON) return null;
+      const P1 = P / P1den;
+      const S = (P1 * Math.sqrt(2)) / (2 - P1);
+      if (Math.abs(S) >= 1) return null;
+      const atanhS = 0.5 * Math.log((1 + S) / (1 - S));
+      if (Math.abs(atanhS) < EPSILON) return 1.0;
+      return (P1 * Math.sqrt(2)) / ((2 - P1) * atanhS);
+    }
+
+    // General case R != 1
+    const Xbase = (1 - P * R) / (1 - P);
+    if (Xbase < 0) return null;
+    const X = Math.pow(Xbase, 1.0 / N);
+    const P1den2 = R - X;
+    if (Math.abs(P1den2) < EPSILON) return null;
+    const P1 = (1 - X) / P1den2;
+    const A = Math.sqrt(R * R + 1);
+    const Bln_arg = (1 - P1) / (1 - P1 * R);
+    if (Bln_arg <= 0) return null;
+    const Bln = Math.log(Bln_arg);
+    const Cnum = 2 - P1 * (R + 1 - A);
+    const Cden = 2 - P1 * (R + 1 + A);
+    if (Cnum <= 0 || Cden <= 0) return null;
+    const Cln = Math.log(Cnum / Cden);
+    if (Math.abs(Cln) < EPSILON) return 1.0;
+    return (A * Bln) / ((R - 1) * Cln);
+  } catch (e) {
+    return null;
+  }
+}
+
+// Per-row exchanger calc. Returns object with all derived values plus
+// a `crossover` flag and per-row `null`s for fields that could not be
+// computed (does not abort the batch).
+function calcRow(r, cfg) {
+  const out = {
+    timestamp: r.timestamp,
+    t_hot_in_c: r.t_hot_in_c, t_hot_out_c: r.t_hot_out_c,
+    t_cold_in_c: r.t_cold_in_c, t_cold_out_c: r.t_cold_out_c,
+    m_hot_kghr: r.m_hot_kghr, cp_hot: r.cp_hot,
+    m_cold_kghr: r.m_cold_kghr, cp_cold: r.cp_cold,
+    Q_hot_kw: null, Q_cold_kw: null, Q_avg_kw: null, Q_avg_MW: null,
+    imbalance_pct: null,
+    LMTD_c: null, LMTD_eff_c: null,
+    P_ratio: null, R_ratio: null, F_factor: null,
+    U_dirty: null, Rf_e4: null, eff_pct: null,
+    approach_hot: null, approach_cold: null,
+    duty_dev_pct: null,
+    crossover: false
+  };
+
+  const Th_in = r.t_hot_in_c, Th_out = r.t_hot_out_c;
+  const Tc_in = r.t_cold_in_c, Tc_out = r.t_cold_out_c;
+  const mh = r.m_hot_kghr, cph = r.cp_hot;
+  const mc = r.m_cold_kghr, cpc = r.cp_cold;
+
+  if ([Th_in, Th_out, Tc_in, Tc_out, mh, cph, mc, cpc].some(x => x === null || isNaN(x))) {
+    return out;
+  }
+
+  // Heat duties (kW)
+  out.Q_hot_kw = mh * cph * (Th_in - Th_out) / 3600;
+  out.Q_cold_kw = mc * cpc * (Tc_out - Tc_in) / 3600;
+  out.Q_avg_kw = (out.Q_hot_kw + out.Q_cold_kw) / 2;
+  out.Q_avg_MW = out.Q_avg_kw / 1000;
+
+  // Imbalance %
+  if (Math.abs(out.Q_avg_kw) > EPSILON) {
+    out.imbalance_pct = Math.abs(out.Q_hot_kw - out.Q_cold_kw) / Math.abs(out.Q_avg_kw) * 100;
+  }
+
+  // Effectiveness
+  const C_hot = mh * cph / 3600;
+  const C_cold = mc * cpc / 3600;
+  const C_min = Math.min(C_hot, C_cold);
+  const dT_max = Th_in - Tc_in;
+  if (dT_max > 0 && C_min > 0) {
+    const Q_max = C_min * dT_max;
+    out.eff_pct = (out.Q_avg_kw / Q_max) * 100;
+  }
+
+  // Approaches
+  out.approach_hot = Th_in - Tc_out;
+  out.approach_cold = Th_out - Tc_in;
+
+  // LMTD
+  const dT1 = Th_in - Tc_out;
+  const dT2 = Th_out - Tc_in;
+  if (dT1 <= 0 || dT2 <= 0) {
+    out.crossover = true;
+    return out;
+  }
+  out.LMTD_c = Math.abs(dT1 - dT2) > EPSILON
+    ? (dT1 - dT2) / Math.log(dT1 / dT2)
+    : dT1;
+
+  // P, R, F
+  const Rden = Tc_out - Tc_in;
+  const Pden = Th_in - Tc_in;
+  out.R_ratio = Math.abs(Rden) > EPSILON ? (Th_in - Th_out) / Rden : null;
+  out.P_ratio = Math.abs(Pden) > EPSILON ? (Tc_out - Tc_in) / Pden : null;
+  if (out.P_ratio !== null && out.R_ratio !== null) {
+    out.F_factor = calcF(out.P_ratio, out.R_ratio, cfg.nShell);
+  }
+  if (out.F_factor === null) {
+    out.crossover = true;
+    return out;
+  }
+  out.LMTD_eff_c = out.LMTD_c * out.F_factor;
+
+  // U_dirty
+  const denom = cfg.area * out.F_factor * out.LMTD_c;
+  if (Math.abs(denom) > EPSILON) {
+    out.U_dirty = (out.Q_avg_kw * 1000) / denom;
+  }
+
+  // R_f (× 10⁴, signed)
+  if (out.U_dirty !== null && out.U_dirty > 0 && cfg.uClean > 0) {
+    const Rf = (1 / out.U_dirty) - (1 / cfg.uClean);
+    out.Rf_e4 = Rf * 1e4;
+  }
+
+  // Duty vs design
+  if (cfg.designQ_MW !== 0) {
+    out.duty_dev_pct = (out.Q_avg_MW - cfg.designQ_MW) / cfg.designQ_MW * 100;
+  }
+
+  return out;
+}
+
+// ═══════════════════════════════════════════════════════
+// BATCH PROCESSING
+// ═══════════════════════════════════════════════════════
+let currentRows = [];
+let processedRows = [];
+let charts = {};
+
+function rowsFromArray(arr) {
+  return arr.map(r => ({
+    timestamp: r[0],
+    t_hot_in_c: r[1], t_hot_out_c: r[2],
+    m_hot_kghr: r[3], cp_hot: r[4],
+    t_cold_in_c: r[5], t_cold_out_c: r[6],
+    m_cold_kghr: r[7], cp_cold: r[8]
+  }));
+}
+
+function rowsFromCsv(rawArr) {
+  return rawArr.map(r => ({
+    timestamp: lookup(r, "timestamp"),
+    t_hot_in_c: num(lookup(r, "t_hot_in_c")),
+    t_hot_out_c: num(lookup(r, "t_hot_out_c")),
+    m_hot_kghr: num(lookup(r, "m_hot_kghr")),
+    cp_hot: num(lookup(r, "cp_hot")),
+    t_cold_in_c: num(lookup(r, "t_cold_in_c")),
+    t_cold_out_c: num(lookup(r, "t_cold_out_c")),
+    m_cold_kghr: num(lookup(r, "m_cold_kghr")),
+    cp_cold: num(lookup(r, "cp_cold"))
+  }));
+}
+
+function processBatch(rows, cfg) {
+  rows.sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
+  return rows.map(r => calcRow(r, cfg));
+}
+
+function avgOf(arr, key) {
+  const xs = arr.map(r => r[key]).filter(x => x !== null && x !== undefined && !isNaN(x));
+  if (xs.length === 0) return null;
+  return xs.reduce((s, x) => s + x, 0) / xs.length;
+}
+
+// ═══════════════════════════════════════════════════════
+// TIME RANGE HELPERS
+// ═══════════════════════════════════════════════════════
+function parseRange(range) {
+  if (range && typeof range === "object" && range.custom) {
+    return { amount: range.amount, unit: range.unit };
+  }
+  const m = String(range || "").match(/^(\d+)([smhd])$/);
+  return m ? { amount: parseInt(m[1]), unit: m[2] } : { amount: 30, unit: "d" };
+}
+
+const UNIT_NAMES = { s: "second", m: "minute", h: "hour", d: "day" };
+function rangeLabel(range) {
+  const { amount, unit } = parseRange(range);
+  const name = UNIT_NAMES[unit] || "day";
+  return "last " + amount + " " + name + (amount === 1 ? "" : "s");
+}
+
+function getActiveRange() {
+  const amtStr = document.getElementById("customAmount").value;
+  const unit = document.getElementById("customUnit").value;
+  const amt = parseFloat(amtStr);
+  if (amtStr !== "" && !isNaN(amt) && amt > 0 && unit) {
+    return { custom: true, amount: amt, unit: unit };
+  }
+  const pill = document.querySelector(".time-pill.active");
+  return pill ? pill.dataset.range : "30d";
+}
+
+function stepDate(d, n, unit) {
+  if (unit === "s") d.setSeconds(d.getSeconds() + n);
+  else if (unit === "m") d.setMinutes(d.getMinutes() + n);
+  else if (unit === "h") d.setHours(d.getHours() + n);
+  else d.setDate(d.getDate() + n);
+}
+
+function truncateToUnit(ts, unit) {
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return null;
+  const pad = n => String(n).padStart(2, "0");
+  const ymd = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  if (unit === "d") return ymd;
+  if (unit === "h") return ymd + " " + pad(d.getHours());
+  if (unit === "m") return ymd + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  return ymd + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+}
+
+function formatLabel(d, unit) {
+  const pad = n => String(n).padStart(2, "0");
+  const ymd = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  if (unit === "d") return ymd;
+  if (unit === "h") return ymd + " " + pad(d.getHours()) + ":00";
+  if (unit === "m") return ymd + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  return ymd + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+}
+
+function nullProcessedRow(label) {
+  return {
+    timestamp: label,
+    Q_hot_kw: null, Q_cold_kw: null, Q_avg_kw: null, Q_avg_MW: null,
+    imbalance_pct: null, LMTD_c: null, LMTD_eff_c: null,
+    P_ratio: null, R_ratio: null, F_factor: null,
+    U_dirty: null, Rf_e4: null, eff_pct: null,
+    approach_hot: null, approach_cold: null, duty_dev_pct: null,
+    crossover: false
+  };
+}
+
+function buildAxis(rows, range) {
+  if (rows.length === 0) return { labels: [], alignedRows: [] };
+  const { amount, unit } = parseRange(range);
+  const last = new Date(rows[rows.length - 1].timestamp);
+  const start = new Date(last);
+  stepDate(start, -amount, unit);
+  const labels = [];
+  for (let i = 0; i <= amount; i++) {
+    const t = new Date(start);
+    stepDate(t, i, unit);
+    labels.push(formatLabel(t, unit));
+  }
+  const byKey = {};
+  rows.forEach(r => {
+    const k = truncateToUnit(r.timestamp, unit);
+    if (k) byKey[k] = r;
   });
-});
+  const alignedRows = labels.map(label => {
+    const k = truncateToUnit(label, unit);
+    return byKey[k] || nullProcessedRow(label);
+  });
+  return { labels, alignedRows };
+}
 
-// Time range pills - filter displayed chart data
-(function(){
-  var allRows=null;
-  document.querySelectorAll(".time-pill").forEach(function(pill){
-    pill.addEventListener("click",function(){
-      document.querySelectorAll(".time-pill").forEach(function(p){p.classList.remove("active")});
-      pill.classList.add("active");
-      if(!currentRows||!currentRows.length) return;
-      var range=pill.dataset.range;
-      if(!allRows) allRows=currentRows.slice();
-      var ms={"1h":3600000,"24h":86400000,"7d":7*86400000,"30d":30*86400000};
-      var span=ms[range];
-      if(!span){currentRows=allRows;runProcess();return;}
-      var tsKey=null;
-      var tsNames=["Timestamp","timestamp","Date","DateTime","Time"];
-      for(var i=0;i<tsNames.length;i++){if(allRows[0][tsNames[i]]!==undefined){tsKey=tsNames[i];break;}}
-      if(!tsKey){currentRows=allRows;runProcess();return;}
-      var maxT=0;
-      allRows.forEach(function(r){var d=parseTs(r[tsKey]);if(d&&d.getTime()>maxT)maxT=d.getTime();});
-      if(!maxT){currentRows=allRows;runProcess();return;}
-      var cutoff=maxT-span;
-      currentRows=allRows.filter(function(r){var d=parseTs(r[tsKey]);return d&&d.getTime()>=cutoff;});
-      if(!currentRows.length) currentRows=allRows;
+function filterByRange(rows, range) {
+  if (rows.length === 0) return rows.slice();
+  const { amount, unit } = parseRange(range);
+  const last = new Date(rows[rows.length - 1].timestamp);
+  const cutoff = new Date(last);
+  stepDate(cutoff, -amount, unit);
+  const win = rows.filter(r => new Date(r.timestamp) >= cutoff);
+  return win.length > 0 ? win : [rows[rows.length - 1]];
+}
+
+// ═══════════════════════════════════════════════════════
+// KPI RENDERING
+// ═══════════════════════════════════════════════════════
+function setKpiDiff(elId, actualPct, advLim, almLim) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (actualPct === null || actualPct === undefined || isNaN(actualPct)) {
+    el.textContent = "—"; el.className = "kpi-diff"; return;
+  }
+  const sign = actualPct >= 0 ? "+" : "";
+  el.textContent = sign + actualPct.toFixed(2) + " %";
+  const abs = Math.abs(actualPct);
+  if (abs >= almLim) el.className = "kpi-diff down";
+  else if (abs >= advLim) el.className = "kpi-diff warn";
+  else el.className = "kpi-diff up";
+}
+
+function setUDiff(elId, U, Uclean) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (U === null || U === undefined || isNaN(U)) {
+    el.textContent = "—"; el.className = "kpi-diff"; return;
+  }
+  const dev = (U - Uclean) / Uclean * 100;
+  const sign = dev >= 0 ? "+" : "";
+  el.textContent = sign + dev.toFixed(1) + " %";
+  if (dev >= -5) el.className = "kpi-diff up";
+  else if (dev >= -25) el.className = "kpi-diff warn";
+  else el.className = "kpi-diff down";
+}
+
+function updateKPIs(latest, avgRows, cfg) {
+  // Targets / sublabels
+  document.getElementById("kCurUClean").textContent = Math.round(cfg.uClean);
+  document.getElementById("kAvgUClean").textContent = Math.round(cfg.uClean);
+  document.getElementById("kCurQDesign").textContent = cfg.designQ_MW.toFixed(2) + " MW";
+  document.getElementById("kAvgQDesign").textContent = cfg.designQ_MW.toFixed(2) + " MW";
+  document.getElementById("kCurRfAdv").textContent = cfg.rfAdv.toFixed(1);
+  document.getElementById("kCurRfAlm").textContent = cfg.rfAlm.toFixed(1);
+  document.getElementById("kAvgRfAdv").textContent = cfg.rfAdv.toFixed(1);
+  document.getElementById("kAvgRfAlm").textContent = cfg.rfAlm.toFixed(1);
+  document.getElementById("kCurEffAdv").textContent = cfg.effAdv.toFixed(0) + " %";
+  document.getElementById("kAvgEffAdv").textContent = cfg.effAdv.toFixed(0) + " %";
+  document.getElementById("kCurImbAdv").textContent = cfg.imbAdv.toFixed(0) + " %";
+  document.getElementById("kAvgImbAdv").textContent = cfg.imbAdv.toFixed(0) + " %";
+
+  // CURRENT VALUES (latest reading)
+  document.getElementById("currentDateLabel").textContent = "(as of " + latest.timestamp + ")";
+
+  document.getElementById("kCurRf").textContent = fmt(latest.Rf_e4, 2);
+  document.getElementById("kCurU").textContent = fmt(latest.U_dirty, 1);
+  setUDiff("kCurUDiff", latest.U_dirty, cfg.uClean);
+  document.getElementById("kCurLMTDeff").textContent = fmt(latest.LMTD_eff_c, 2);
+  document.getElementById("kCurF").textContent = latest.F_factor !== null ? latest.F_factor.toFixed(3) : "—";
+  document.getElementById("kCurEff").textContent = fmt(latest.eff_pct, 1);
+  document.getElementById("kCurQ").textContent = fmt(latest.Q_avg_MW, 3);
+  setKpiDiff("kCurQDiff", latest.duty_dev_pct, cfg.dutyAdv, cfg.dutyAlm);
+  document.getElementById("kCurImb").textContent = fmt(latest.imbalance_pct, 2);
+
+  // AVERAGES
+  const avgRf = avgOf(avgRows, "Rf_e4");
+  const avgU = avgOf(avgRows, "U_dirty");
+  const avgLMTDeff = avgOf(avgRows, "LMTD_eff_c");
+  const avgF = avgOf(avgRows, "F_factor");
+  const avgEff = avgOf(avgRows, "eff_pct");
+  const avgQ_MW = avgOf(avgRows, "Q_avg_MW");
+  const avgDutyDev = avgOf(avgRows, "duty_dev_pct");
+  const avgImb = avgOf(avgRows, "imbalance_pct");
+
+  document.getElementById("kAvgRf").textContent = fmt(avgRf, 2);
+  document.getElementById("kAvgU").textContent = fmt(avgU, 1);
+  setUDiff("kAvgUDiff", avgU, cfg.uClean);
+  document.getElementById("kAvgLMTDeff").textContent = fmt(avgLMTDeff, 2);
+  document.getElementById("kAvgF").textContent = avgF !== null ? avgF.toFixed(3) : "—";
+  document.getElementById("kAvgEff").textContent = fmt(avgEff, 1);
+  document.getElementById("kAvgQ").textContent = fmt(avgQ_MW, 3);
+  setKpiDiff("kAvgQDiff", avgDutyDev, cfg.dutyAdv, cfg.dutyAlm);
+  document.getElementById("kAvgImb").textContent = fmt(avgImb, 2);
+}
+
+// ═══════════════════════════════════════════════════════
+// STATUS BANNER
+// ═══════════════════════════════════════════════════════
+function buildAlerts(latest, cfg) {
+  const a = [];
+  if (latest.crossover) {
+    a.push({severity:"alarm", message:"Temperature crossover detected (F-factor undefined). Check sensor labels and inlet/outlet swap.", source:"LMTD / F-factor"});
+  }
+  if (latest.Rf_e4 !== null && latest.Rf_e4 >= cfg.rfAlm) {
+    a.push({severity:"alarm", message:"Fouling R_f " + latest.Rf_e4.toFixed(2) + "×10⁻⁴ at or above alarm " + cfg.rfAlm.toFixed(1) + " - schedule clean.", source:"fouling"});
+  } else if (latest.Rf_e4 !== null && latest.Rf_e4 >= cfg.rfAdv) {
+    a.push({severity:"advisory", message:"Fouling R_f " + latest.Rf_e4.toFixed(2) + "×10⁻⁴ above advisory " + cfg.rfAdv.toFixed(1) + ".", source:"fouling"});
+  }
+  if (latest.duty_dev_pct !== null) {
+    const abs = Math.abs(latest.duty_dev_pct);
+    if (abs >= cfg.dutyAlm) {
+      a.push({severity:"alarm", message:"Duty deviation " + latest.duty_dev_pct.toFixed(2) + " % at or above alarm ±" + cfg.dutyAlm.toFixed(0) + " %.", source:"duty vs design"});
+    } else if (abs >= cfg.dutyAdv) {
+      a.push({severity:"advisory", message:"Duty deviation " + latest.duty_dev_pct.toFixed(2) + " % above advisory ±" + cfg.dutyAdv.toFixed(0) + " %.", source:"duty vs design"});
+    }
+  }
+  if (latest.eff_pct !== null && latest.eff_pct < cfg.effAdv) {
+    a.push({severity:"advisory", message:"Effectiveness ε " + latest.eff_pct.toFixed(1) + " % below advisory " + cfg.effAdv.toFixed(0) + " %.", source:"effectiveness"});
+  }
+  if (latest.imbalance_pct !== null && latest.imbalance_pct > cfg.imbAdv) {
+    a.push({severity:"advisory", message:"Q imbalance " + latest.imbalance_pct.toFixed(2) + " % above advisory " + cfg.imbAdv.toFixed(0) + " %.", source:"energy balance"});
+  }
+  if (latest.approach_hot !== null && latest.approach_hot < cfg.appMin) {
+    a.push({severity:"advisory", message:"Hot end approach " + latest.approach_hot.toFixed(1) + " °C below minimum " + cfg.appMin.toFixed(0) + " °C.", source:"approach"});
+  }
+  if (latest.approach_cold !== null && latest.approach_cold < cfg.appMin) {
+    a.push({severity:"advisory", message:"Cold end approach " + latest.approach_cold.toFixed(1) + " °C below minimum " + cfg.appMin.toFixed(0) + " °C.", source:"approach"});
+  }
+  return a;
+}
+
+function rollupSeverity(alerts) {
+  if (alerts.some(a => a.severity === "alarm")) return "alarm";
+  if (alerts.some(a => a.severity === "advisory")) return "advisory";
+  return "ok";
+}
+
+function updateStatusBanner(latest, cfg) {
+  const alerts = buildAlerts(latest, cfg);
+  const sev = rollupSeverity(alerts);
+  const banner = document.getElementById("statusBanner");
+  banner.className = "banner status-" + sev;
+  document.getElementById("statusText").textContent = sev === "ok" ? "OK" : (sev === "advisory" ? "ADVISORY" : "ALARM");
+  document.getElementById("statusDetail").textContent = alerts.length === 0 ? "All metrics within bounds." : alerts.length + " active alert" + (alerts.length === 1 ? "" : "s") + ".";
+  const list = document.getElementById("alertList");
+  list.innerHTML = "";
+  alerts.forEach(a => {
+    const div = document.createElement("div");
+    div.className = "alert-item severity-" + a.severity;
+    div.innerHTML = '<span class="dot"></span><span>' + a.message + '</span><span class="src">' + a.source + '</span>';
+    list.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════
+function isToggleOn(chartKey, idx) {
+  const cb = document.querySelector('input[data-chart="' + chartKey + '"][data-idx="' + idx + '"]');
+  return cb ? cb.checked : true;
+}
+
+function initCharts() {
+  Chart.defaults.font.family = "'IBM Plex Sans',sans-serif";
+  Chart.defaults.color = "#615E5C";
+  const baseOpts = {
+    responsive: true, maintainAspectRatio: false, spanGaps: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => {
+            const v = ctx.parsed.y;
+            if (v === null || v === undefined) return ctx.dataset.label + ": —";
+            return ctx.dataset.label + ": " + v.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+          }
+        }
+      }
+    },
+    elements: { line: { tension: 0.2, borderWidth: 2 }, point: { radius: 0, hitRadius: 10, hoverRadius: 5 } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 } },
+      y: { grid: { color: "#F0EDE8" }, ticks: { font: { size: 10 } } }
+    },
+    interaction: { mode: "index", intersect: false }
+  };
+
+  charts.rf = new Chart(document.getElementById("chartRf"), {
+    type: "line", data: { labels: [], datasets: [] }, options: JSON.parse(JSON.stringify(baseOpts))
+  });
+  charts.u = new Chart(document.getElementById("chartU"), {
+    type: "line", data: { labels: [], datasets: [] }, options: JSON.parse(JSON.stringify(baseOpts))
+  });
+  charts.q = new Chart(document.getElementById("chartQ"), {
+    type: "line", data: { labels: [], datasets: [] }, options: JSON.parse(JSON.stringify(baseOpts))
+  });
+  charts.app = new Chart(document.getElementById("chartApp"), {
+    type: "line", data: { labels: [], datasets: [] }, options: JSON.parse(JSON.stringify(baseOpts))
+  });
+  charts.eff = new Chart(document.getElementById("chartEff"), {
+    type: "line", data: { labels: [], datasets: [] }, options: JSON.parse(JSON.stringify(baseOpts))
+  });
+}
+
+function updateCharts(rows, cfg) {
+  const labels = rows.map(r => r.timestamp);
+
+  charts.rf.data.labels = labels;
+  charts.rf.data.datasets = [
+    { label: "R_f measured", data: rows.map(r => r.Rf_e4), borderColor: "#2F6F9F", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("rf", 0) },
+    { label: "Advisory", data: labels.map(() => cfg.rfAdv), borderColor: "#C4890E", borderDash: [5, 5], borderWidth: 1, pointRadius: 0, hidden: !isToggleOn("rf", 1) },
+    { label: "Alarm", data: labels.map(() => cfg.rfAlm), borderColor: "#D4432A", borderDash: [3, 3], borderWidth: 1, pointRadius: 0, hidden: !isToggleOn("rf", 2) }
+  ];
+  charts.rf.update();
+
+  charts.u.data.labels = labels;
+  charts.u.data.datasets = [
+    { label: "U_dirty", data: rows.map(r => r.U_dirty), borderColor: "#2F6F9F", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("u", 0) },
+    { label: "U_clean baseline", data: labels.map(() => cfg.uClean), borderColor: "#888", borderDash: [5, 5], borderWidth: 1, pointRadius: 0, hidden: !isToggleOn("u", 1) }
+  ];
+  charts.u.update();
+
+  charts.q.data.labels = labels;
+  charts.q.data.datasets = [
+    { label: "Q hot", data: rows.map(r => r.Q_hot_kw), borderColor: "#2F6F9F", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("q", 0) },
+    { label: "Q cold", data: rows.map(r => r.Q_cold_kw), borderColor: "#2F7F7A", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("q", 1) },
+    { label: "Q avg", data: rows.map(r => r.Q_avg_kw), borderColor: "#667085", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("q", 2) },
+    { label: "Design Q", data: labels.map(() => cfg.designQ_MW * 1000), borderColor: "#888", borderDash: [5, 5], borderWidth: 1, pointRadius: 0, hidden: !isToggleOn("q", 3) }
+  ];
+  charts.q.update();
+
+  charts.app.data.labels = labels;
+  charts.app.data.datasets = [
+    { label: "Hot end approach", data: rows.map(r => r.approach_hot), borderColor: "#2F6F9F", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("app", 0) },
+    { label: "Cold end approach", data: rows.map(r => r.approach_cold), borderColor: "#2F7F7A", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("app", 1) },
+    { label: "Min approach", data: labels.map(() => cfg.appMin), borderColor: "#C4890E", borderDash: [5, 5], borderWidth: 1, pointRadius: 0, hidden: !isToggleOn("app", 2) }
+  ];
+  charts.app.update();
+
+  charts.eff.data.labels = labels;
+  charts.eff.data.datasets = [
+    { label: "Effectiveness ε (%)", data: rows.map(r => r.eff_pct), borderColor: "#2F6F9F", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("eff", 0) },
+    { label: "F-factor × 100", data: rows.map(r => r.F_factor !== null ? r.F_factor * 100 : null), borderColor: "#667085", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("eff", 1) }
+  ];
+  charts.eff.update();
+}
+
+function updateScale(chartKey) {
+  const chart = charts[chartKey];
+  if (!chart) return;
+  const minV = document.getElementById(chartKey + "Min").value;
+  const maxV = document.getElementById(chartKey + "Max").value;
+  chart.options.scales.y.min = minV !== "" ? parseFloat(minV) : undefined;
+  chart.options.scales.y.max = maxV !== "" ? parseFloat(maxV) : undefined;
+  chart.update();
+}
+
+// ═══════════════════════════════════════════════════════
+// DATA & LOG TAB
+// ═══════════════════════════════════════════════════════
+function statusForRow(r, cfg) {
+  if (r.crossover) return "alarm";
+  if (r.Rf_e4 !== null && r.Rf_e4 >= cfg.rfAlm) return "alarm";
+  if (r.duty_dev_pct !== null && Math.abs(r.duty_dev_pct) >= cfg.dutyAlm) return "alarm";
+  if (r.Rf_e4 !== null && r.Rf_e4 >= cfg.rfAdv) return "advisory";
+  if (r.duty_dev_pct !== null && Math.abs(r.duty_dev_pct) >= cfg.dutyAdv) return "advisory";
+  if (r.eff_pct !== null && r.eff_pct < cfg.effAdv) return "advisory";
+  if (r.imbalance_pct !== null && r.imbalance_pct > cfg.imbAdv) return "advisory";
+  if (r.approach_hot !== null && r.approach_hot < cfg.appMin) return "advisory";
+  if (r.approach_cold !== null && r.approach_cold < cfg.appMin) return "advisory";
+  return "ok";
+}
+
+function updateDataLog(rows, cfg) {
+  const tbody = document.querySelector("#resultTable tbody");
+  tbody.innerHTML = "";
+  const recent = rows.slice(-50).reverse();
+  recent.forEach(r => {
+    const sev = statusForRow(r, cfg);
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>" + r.timestamp + "</td>" +
+      "<td class='num'>" + fmtInt(r.Q_hot_kw) + "</td>" +
+      "<td class='num'>" + fmtInt(r.Q_cold_kw) + "</td>" +
+      "<td class='num'>" + fmtInt(r.Q_avg_kw) + "</td>" +
+      "<td class='num'>" + fmt(r.LMTD_c, 2) + "</td>" +
+      "<td class='num'>" + (r.F_factor !== null ? r.F_factor.toFixed(3) : "—") + "</td>" +
+      "<td class='num'>" + fmt(r.U_dirty, 1) + "</td>" +
+      "<td class='num'>" + fmt(r.Rf_e4, 2) + "</td>" +
+      "<td class='num'>" + fmt(r.eff_pct, 1) + "</td>" +
+      "<td class='num'>" + fmt(r.imbalance_pct, 2) + "</td>" +
+      "<td class='num'>" + (r.P_ratio !== null ? r.P_ratio.toFixed(3) : "—") + "</td>" +
+      "<td class='num'>" + (r.R_ratio !== null ? r.R_ratio.toFixed(3) : "—") + "</td>" +
+      "<td class='num'>" + fmt(r.approach_hot, 1) + "</td>" +
+      "<td class='num'>" + fmt(r.approach_cold, 1) + "</td>" +
+      "<td><span class='status-pill " + sev + "'><span class='marker'></span>" + sev + "</span></td>";
+    tbody.appendChild(tr);
+  });
+
+  const okCount = rows.filter(r => statusForRow(r, cfg) === "ok").length;
+  const advCount = rows.filter(r => statusForRow(r, cfg) === "advisory").length;
+  const almCount = rows.filter(r => statusForRow(r, cfg) === "alarm").length;
+  document.getElementById("batchSummary").innerHTML =
+    "<div class='stat'>Rows: <strong>" + rows.length + "</strong></div>" +
+    "<div class='stat'>OK: <strong>" + okCount + "</strong></div>" +
+    "<div class='stat'>Advisory: <strong>" + advCount + "</strong></div>" +
+    "<div class='stat'>Alarm: <strong>" + almCount + "</strong></div>" +
+    "<div class='stat'>Latest: <strong>" + (rows.length ? rows[rows.length - 1].timestamp : "—") + "</strong></div>";
+}
+
+// ═══════════════════════════════════════════════════════
+// MAIN PROCESS PIPELINE
+// ═══════════════════════════════════════════════════════
+function runProcess() {
+  if (currentRows.length === 0) {
+    document.getElementById("statusArea").style.display = "block";
+    document.getElementById("kpiArea").style.display = "none";
+    return;
+  }
+  const cfg = getCfg();
+  const rows = JSON.parse(JSON.stringify(currentRows));
+  processedRows = processBatch(rows, cfg);
+  if (processedRows.length === 0) return;
+
+  document.getElementById("statusArea").style.display = "none";
+  document.getElementById("kpiArea").style.display = "block";
+
+  const latest = processedRows[processedRows.length - 1];
+  const range = getActiveRange();
+  document.getElementById("avgPeriodLabel").textContent = "(" + rangeLabel(range) + ")";
+  const windowRows = filterByRange(processedRows, range);
+  const axis = buildAxis(processedRows, range);
+
+  updateKPIs(latest, windowRows, cfg);
+  updateStatusBanner(latest, cfg);
+  updateCharts(axis.alignedRows, cfg);
+  updateDataLog(processedRows, cfg);
+}
+
+// ═══════════════════════════════════════════════════════
+// EVENT WIRING
+// ═══════════════════════════════════════════════════════
+function loadDemo() {
+  currentRows = rowsFromArray(DEMO_DATA);
+  document.getElementById("upStatus").textContent = "Demo loaded · " + DEMO_DATA.length + " rows";
+  runProcess();
+}
+
+function exportCSV() {
+  if (processedRows.length === 0) { alert("No data to export."); return; }
+  let csv = "Date,Q hot (kW),Q cold (kW),Q avg (kW),LMTD (C),F factor,U dirty (W/m2K),R_f (x10-4 m2K/W),Effectiveness (%),Q imbalance (%),P ratio,R ratio,Hot approach (C),Cold approach (C),Duty dev (%),Status\n";
+  const cfg = getCfg();
+  processedRows.forEach(r => {
+    csv += [
+      r.timestamp,
+      r.Q_hot_kw !== null ? r.Q_hot_kw.toFixed(2) : "",
+      r.Q_cold_kw !== null ? r.Q_cold_kw.toFixed(2) : "",
+      r.Q_avg_kw !== null ? r.Q_avg_kw.toFixed(2) : "",
+      r.LMTD_c !== null ? r.LMTD_c.toFixed(3) : "",
+      r.F_factor !== null ? r.F_factor.toFixed(4) : "",
+      r.U_dirty !== null ? r.U_dirty.toFixed(2) : "",
+      r.Rf_e4 !== null ? r.Rf_e4.toFixed(3) : "",
+      r.eff_pct !== null ? r.eff_pct.toFixed(2) : "",
+      r.imbalance_pct !== null ? r.imbalance_pct.toFixed(3) : "",
+      r.P_ratio !== null ? r.P_ratio.toFixed(4) : "",
+      r.R_ratio !== null ? r.R_ratio.toFixed(4) : "",
+      r.approach_hot !== null ? r.approach_hot.toFixed(2) : "",
+      r.approach_cold !== null ? r.approach_cold.toFixed(2) : "",
+      r.duty_dev_pct !== null ? r.duty_dev_pct.toFixed(3) : "",
+      statusForRow(r, cfg)
+    ].join(",") + "\n";
+  });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "shell_tube_performance.csv";
+  link.click();
+}
+
+function restoreDefaults() {
+  for (const k in DEFAULTS) {
+    const el = document.getElementById(k);
+    if (el) el.value = DEFAULTS[k];
+  }
+  // Clear all chart axis inputs
+  ["rf", "u", "q", "app", "eff"].forEach(key => {
+    const lo = document.getElementById(key + "Min");
+    const hi = document.getElementById(key + "Max");
+    if (lo) lo.value = "";
+    if (hi) hi.value = "";
+  });
+  // Reset time range to 30D pill, clear any custom range
+  document.querySelectorAll(".time-pill").forEach(p => p.classList.remove("active"));
+  const def = document.querySelector('.time-pill[data-range="30d"]');
+  if (def) def.classList.add("active");
+  document.getElementById("customAmount").value = "";
+  document.getElementById("customUnit").value = "d";
+  document.getElementById("timeRangeBar").classList.remove("custom-active");
+  ["rf", "u", "q", "app", "eff"].forEach(updateScale);
+  runProcess();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initCharts();
+
+  // Tab switching
+  document.querySelectorAll(".tab").forEach(t => {
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      t.classList.add("active");
+      document.getElementById("panel-" + t.dataset.tab).classList.add("active");
+    });
+  });
+
+  // Config bar collapse
+  document.getElementById("configHeader").addEventListener("click", () => {
+    const body = document.getElementById("configBody");
+    body.classList.toggle("collapsed");
+    document.getElementById("configToggle").textContent = body.classList.contains("collapsed") ? "▾" : "▴";
+  });
+
+  // Buttons
+  document.getElementById("loadDemoBtn").addEventListener("click", loadDemo);
+  document.getElementById("recalcBtn").addEventListener("click", runProcess);
+  document.getElementById("restoreDefaultsBtn").addEventListener("click", restoreDefaults);
+  document.getElementById("btnExport").addEventListener("click", exportCSV);
+
+  // CSV upload
+  document.getElementById("csvInput").addEventListener("change", e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    document.getElementById("upStatus").textContent = "Parsing...";
+    Papa.parse(f, {
+      header: true, skipEmptyLines: true,
+      complete: r => {
+        currentRows = rowsFromCsv(r.data);
+        document.getElementById("upStatus").textContent = f.name + " · " + currentRows.length + " rows";
+        runProcess();
+      }
+    });
+  });
+
+  // Manual panel
+  const overlay = document.getElementById("manualOverlay");
+  const panel = document.getElementById("manualPanel");
+  document.getElementById("btnManual").addEventListener("click", () => {
+    overlay.style.display = "block"; panel.classList.add("open");
+  });
+  document.getElementById("manualClose").addEventListener("click", () => {
+    overlay.style.display = "none"; panel.classList.remove("open");
+  });
+  overlay.addEventListener("click", () => {
+    overlay.style.display = "none"; panel.classList.remove("open");
+  });
+
+  // Live recalc on config input change
+  document.querySelectorAll(".config-input").forEach(el => {
+    el.addEventListener("change", runProcess);
+  });
+
+  // Time-range pills
+  document.querySelectorAll(".time-pill").forEach(p => {
+    p.addEventListener("click", () => {
+      document.querySelectorAll(".time-pill").forEach(x => x.classList.remove("active"));
+      p.classList.add("active");
+      document.getElementById("customAmount").value = "";
+      document.getElementById("timeRangeBar").classList.remove("custom-active");
       runProcess();
     });
   });
-})();
 
-// Config bar toggle
-(function(){
-  var header=document.querySelector(".config-bar-header");
-  var body=document.getElementById("configBody");
-  var toggle=document.getElementById("configToggle");
-  if(header&&body){
-    header.addEventListener("click",function(){
-      body.classList.toggle("collapsed");
-      if(toggle) toggle.textContent=body.classList.contains("collapsed")?"\u25be":"\u25b4";
+  function applyCustom() {
+    const amtEl = document.getElementById("customAmount");
+    const bar = document.getElementById("timeRangeBar");
+    const v = amtEl.value;
+    if (v !== "" && parseFloat(v) > 0) {
+      bar.classList.add("custom-active");
+    } else {
+      bar.classList.remove("custom-active");
+    }
+    runProcess();
+  }
+  document.getElementById("customAmount").addEventListener("input", applyCustom);
+  document.getElementById("customUnit").addEventListener("change", applyCustom);
+
+  // Chart toggles
+  document.querySelectorAll('input[type="checkbox"][data-chart]').forEach(cb => {
+    cb.addEventListener("change", () => {
+      const k = cb.dataset.chart;
+      const idx = parseInt(cb.dataset.idx);
+      if (charts[k]) {
+        charts[k].setDatasetVisibility(idx, cb.checked);
+        charts[k].update();
+      }
     });
-  }
-})();
-
-// Keyboard shortcuts
-function toggleKbd(){document.getElementById("kbdOverlay").classList.toggle("open")}
-(function(){
-  var g=false,t=null;
-  document.addEventListener("keydown",function(e){
-    if(e.target.tagName==="INPUT"||e.target.tagName==="SELECT"||e.target.tagName==="TEXTAREA") return;
-    var k=e.key.toLowerCase();
-    if(k==="?"&&!g){e.preventDefault();toggleKbd();return}
-    if(k==="escape"){
-      document.getElementById("kbdOverlay").classList.remove("open");
-      var mp=document.querySelector(".manual-panel");if(mp)mp.classList.remove("open");
-      var mo=document.querySelector(".manual-overlay");if(mo)mo.style.display="none";
-      return;
-    }
-    if(k==="g"&&!g){g=true;t=setTimeout(function(){g=false},800);return}
-    if(g){g=false;clearTimeout(t);
-      if(k==="h")location.href="welcome-home.html";
-      else if(k==="s")location.href="settings.html";
-      else if(k==="a")location.href="alerts.html";
-      else if(k==="d")location.href="dashboards.html";
-    }
   });
-})();
 
-// Auto-open manual if ?manual=1 in URL
-(function(){
-  if(window.location.search.indexOf("manual=1")!==-1){
-    var mp=document.getElementById("manualPanel");
-    var mo=document.getElementById("manualOverlay");
-    if(mp){mp.classList.add("open")}
-    if(mo){mo.style.display="block"}
-  }
-})();
+  // Y-axis scale inputs
+  ["rf", "u", "q", "app", "eff"].forEach(key => {
+    ["Min", "Max"].forEach(suffix => {
+      const el = document.getElementById(key + suffix.toLowerCase());
+      if (el) el.addEventListener("change", () => updateScale(key));
+    });
+  });
+
+  // Auto-load demo
+  loadDemo();
+});
 </script>
 </body>
 </html>

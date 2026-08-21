@@ -183,6 +183,7 @@ const equipment = [
   {name:'Shell & Tube Exchanger',unit:'TEMA RCB Crude Preheater',desc:'LMTD effectiveness, fouling resistance tracking, overall heat transfer coefficient, shell and tube ΔP monitoring.',icon:'HX',href:'shell-tube-exchanger.html',std:'TEMA · ASME PTC 12.5'},
   {name:'Membrane Analyzer',unit:'H₂ Recovery Module M-301',desc:'H₂ permeance tracking, recovery and purity calculations, selectivity monitoring, differential pressure analysis.',icon:'MA',href:'membrane-analyzer.html',std:'Custom model'},
   {name:'Furnace Skin Temp',unit:'Radiant Section F-201',desc:'Tube metal temperature prediction, residual drift detection, decoking trigger classification, TMT limit monitoring.',icon:'FT',href:'furnace-skin-temp.html',std:'API 560 · ASME PTC 4'},
+  {name:'Crude to Profit',unit:'Five-Crude Refinery Margin Model',desc:'Crude blend, primary distillation, LC-Fining and SimDist split, hydrocracker/hydrotreater, and gross margin at a low and high price case, with live Alberta and EIA pricing.',icon:'CP',href:'crude-to-profit.html',std:'Margin screening tool'},
 ];
 const grid=document.getElementById('dashGrid');
 equipment.forEach(eq=>{grid.innerHTML+=`<a class="dash-card" href="${eq.href}"><div class="dash-icon">${eq.icon}</div><div class="dash-name">${eq.name}</div><div class="dash-unit">${eq.unit}</div><div class="dash-desc">${eq.desc}</div><div class="dash-footer"><span class="dash-std">${eq.std}</span><span class="dash-arrow">→</span></div></a>`;});

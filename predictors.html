@@ -3,36 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ferriq - Activity Log</title>
+<title>Ferriq - Predictors</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="theme.css">
 <style>
-/* Box reset stays here; :root tokens come from theme.css (Sprint 1 Batch B, 2026-05-03). */
-/* This page uses --status-normal/critical naming; theme.css aliases those to --status-ok/alarm. */
-/* Batch B minimum wire-up: chrome rules below kept in place; token cascade alone gets Path C palette. */
+/* Box reset stays here; :root tokens come from theme.css (Sprint 1, 2026-05-03). */
+/* predictors.html landing uses --status-normal/critical naming; theme.css aliases those to --status-ok/alarm. */
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
-body{font-family:var(--font-ui);background:var(--surface-page);color:var(--text-primary);overflow:hidden;height:100vh}
-.shell{display:grid;grid-template-columns:var(--sidebar-width) 1fr;grid-template-rows:var(--topbar-height) 1fr;height:100vh}
-.sidebar{grid-row:1/-1;background:var(--surface-sidebar);box-shadow:var(--shadow-sidebar);display:flex;flex-direction:column;padding-top:16px;z-index:10}
-.sidebar-header{display:flex;align-items:center;gap:10px;padding:0 16px;margin-bottom:24px}
-.sidebar-logo{width:36px;height:36px;flex-shrink:0;text-decoration:none;display:flex;align-items:center}
-.sidebar-title{font-size:15px;font-weight:600;color:#FFF;letter-spacing:0.3px}
-.nav-section-label{font-size:10px;font-weight:500;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:1.2px;padding:0 16px;margin-bottom:4px;margin-top:12px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:7px 16px;border-radius:var(--radius-nav);margin:1px 8px;cursor:pointer;transition:background 0.15s;text-decoration:none;color:rgba(255,255,255,0.55);font-size:13px;font-weight:500}
-.nav-item:hover{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.85)}
-.nav-item.active{background:rgba(255,255,255,0.12);color:#FFF}
-.nav-icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.nav-icon svg{width:18px;height:18px}
-.sidebar-spacer{flex:1}
+/* Sprint 1 cleanup: shared rules removed; theme.css covers shell, sidebar, topbar (incl. topbar-btn), time-pill, breadcrumb, content, brand-name/env, avatar. Below: predictor-landing-specific only. */
 
-.sidebar-divider{height:1px;background:rgba(255,255,255,0.08);margin:8px 16px}
+/* Sidebar nav-badge (NEW marker on Predictors active item) */
 .nav-badge{margin-left:auto;font-size:9px;font-weight:600;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.6)}
-.sidebar-user{display:flex;align-items:center;gap:10px;padding:12px 16px;margin:8px 8px 12px 8px;border-radius:var(--radius-nav);background:rgba(255,255,255,0.06)}
-.user-avatar{width:28px;height:28px;border-radius:50%;background:var(--gold-600);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#FFF;flex-shrink:0}
-.user-info{overflow:hidden}
-.user-name{font-size:12px;font-weight:500;color:rgba(255,255,255,0.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.user-role{font-size:10px;color:rgba(255,255,255,0.4)}
+
 /* Keyboard shortcut modal */
 .kbd-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center}
 .kbd-overlay.open{display:flex}
@@ -45,41 +28,18 @@ body{font-family:var(--font-ui);background:var(--surface-page);color:var(--text-
 .kbd-keys{display:flex;gap:4px}
 kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius:4px;padding:2px 8px;font-family:var(--font-data);font-size:11px;color:var(--text-secondary)}
 
-.topbar{background:var(--surface-card);box-shadow:var(--shadow-topbar);display:flex;align-items:center;padding:0 var(--content-margin);justify-content:space-between;z-index:5}
-.breadcrumb{font-size:13px;color:var(--text-secondary)}
-.breadcrumb a{color:var(--text-secondary);text-decoration:none}
-.breadcrumb a:hover{color:var(--gold-600)}
-.breadcrumb span{margin:0 6px;opacity:0.4}
-.brand-name{font-size:16px;font-weight:600;color:var(--text-primary)}
-.brand-env{font-size:13px;color:var(--text-secondary)}
-
-.topbar-left{display:flex;align-items:baseline;gap:10px}
-.topbar-right{display:flex;align-items:center;gap:12px}
-.topbar-btn{background:none;border:1px solid var(--border-card);border-radius:6px;padding:6px;cursor:pointer;display:flex;align-items:center;color:var(--text-secondary);transition:border-color 0.15s,color 0.15s}
-.topbar-btn:hover{border-color:var(--gold-500);color:var(--gold-600)}
-.time-range-bar{display:flex;gap:2px;background:var(--gold-100);border-radius:8px;padding:2px}
-.time-pill{background:none;border:none;padding:5px 10px;font-size:11px;font-weight:500;cursor:pointer;border-radius:6px;color:var(--text-secondary);font-family:var(--font-ui);transition:all 0.15s}
-.time-pill:hover{color:var(--text-primary)}
-.time-pill.active{background:var(--surface-card);box-shadow:0 1px 3px rgba(0,0,0,0.08);color:var(--text-primary)}
-.avatar{width:32px;height:32px;border-radius:50%;background:var(--gold-600);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#FFF}
-
-.content{padding:var(--content-margin);overflow-y:auto}
-
-.wip-container{max-width:520px;margin:80px auto;text-align:center}
-.wip-icon-large{width:64px;height:64px;margin:0 auto 20px auto;color:var(--gold-500);display:flex;align-items:center;justify-content:center}
-.wip-icon-large svg{width:48px;height:48px}
-.wip-title{font-size:24px;font-weight:700;margin-bottom:8px}
-.wip-desc{font-size:14px;color:var(--text-secondary);line-height:1.6;margin-bottom:20px}
-.wip-badge{display:inline-block;background:var(--gold-300);color:var(--gold-700);font-size:12px;font-weight:600;padding:6px 16px;border-radius:var(--radius-pill);margin-bottom:32px}
-.wip-features{text-align:left;background:var(--surface-card);border:1px solid var(--border-card);border-radius:var(--radius-card);padding:20px 24px;margin-bottom:24px}
-.wip-feat-heading{font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-secondary);margin-bottom:16px}
-.wip-feature{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-card)}
-.wip-feature:last-child{border-bottom:none}
-.wip-feat-icon{width:20px;height:20px;color:var(--gold-500);flex-shrink:0;margin-top:1px}
-.wip-feat-icon svg{width:18px;height:18px}
-.wip-feat-text{font-size:13px;line-height:1.5;color:var(--text-primary)}
-.wip-back{display:inline-block;font-size:13px;color:var(--gold-600);text-decoration:none;font-weight:500}
-.wip-back:hover{text-decoration:underline}
+/* Predictor directory grid + dash-card (page-specific layout, visual style preserved as-is for Sprint 1; can be aligned to theme.css 8 px / single-shadow card primitive in a follow-up if desired) */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.dash-card{background:var(--surface-card);border:1px solid var(--border-card);border-radius:8px;box-shadow:var(--shadow-card);padding:24px;display:flex;flex-direction:column;text-decoration:none;color:inherit;transition:border-color 0.15s,transform 0.2s,box-shadow 0.2s;min-height:180px}
+.dash-card:hover{border-color:#E29C57;transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,0.08)}
+.dash-icon{width:44px;height:44px;border-radius:12px;background:#FCEEE5;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#763D16;margin-bottom:14px}
+.dash-name{font-size:15px;font-weight:600;margin-bottom:4px}
+.dash-unit{font-size:12px;color:#615E5C;margin-bottom:8px}
+.dash-desc{font-size:12px;color:#615E5C;line-height:1.5;flex:1}
+.dash-footer{display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid #E9E3DE}
+.dash-std{font-size:10px;color:#615E5C}
+.dash-arrow{font-size:14px;color:#E9E3DE;transition:color 0.15s,transform 0.15s}
+.dash-card:hover .dash-arrow{color:#BB6E3D;transform:translateX(3px)}
 
 </style>
 </head>
@@ -101,7 +61,7 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
       Dashboards
     </a>
 
-    <a class="nav-item" href="predictors.html">
+    <a class="nav-item active" href="predictors.html">
       <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 13 6 9 9 11 14 5"/><polyline points="11 5 14 5 14 8"/></svg></span>
       Predictors
     </a>
@@ -110,7 +70,7 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
       <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2a5 5 0 00-5 5v2.5L2.5 12.5h13L14 9.5V7a5 5 0 00-5-5z"/><path d="M7 13a2 2 0 004 0"/><line x1="9" y1="1" x2="9" y2="2"/></svg></span>
       Alerts
     </a>
-    <a class="nav-item active" href="activity-log.html">
+    <a class="nav-item" href="activity-log.html">
       <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 4.5 10 10.5 7 7.5 2 12.5"/><polyline points="12 4.5 16 4.5 16 8.5"/></svg></span>
       Activity Log
     </a>
@@ -144,6 +104,7 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
       Settings
     </a>
 
+    <div class="planned-modules"><strong>Planned modules</strong>Alerts · Activity Log · Data Export · Reports · Help · Changelog · Settings</div>
     <div class="sidebar-user">
       <div class="user-avatar">VP</div>
       <div class="user-info">
@@ -154,7 +115,7 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
   </nav>
   <header class="topbar">
     <div class="topbar-left">
-      <div class="breadcrumb"><a href="welcome-home.html">Home</a><span>/</span>Activity Log</div>
+      <div class="breadcrumb"><a href="welcome-home.html">Home</a><span>/</span>Predictors</div>
     </div>
     <div class="topbar-right">
       
@@ -165,23 +126,19 @@ kbd{background:var(--gold-100);border:1px solid var(--border-card);border-radius
     </div>
   </header>
   <main class="content">
-    <div class="wip-container">
-      <div class="wip-icon-large"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 4.5 10 10.5 7 7.5 2 12.5"/><polyline points="12 4.5 16 4.5 16 8.5"/></svg></div>
-      <h1 class="wip-title">Activity Log</h1>
-      <p class="wip-desc">Timestamped system and user events. Track data uploads, configuration changes, alarm acknowledgments, and system health checks.</p>
-      <div class="wip-badge">Coming Soon</div>
-      <div class="wip-features">
-        <h3 class="wip-feat-heading">Planned Features</h3>
-        <div class="wip-feature"><div class="wip-feat-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 4.5 10 10.5 7 7.5 2 12.5"/><polyline points="12 4.5 16 4.5 16 8.5"/></svg></div><div class="wip-feat-text">Chronological event feed with source attribution (user vs. system)</div></div>
-        <div class="wip-feature"><div class="wip-feat-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 4.5 10 10.5 7 7.5 2 12.5"/><polyline points="12 4.5 16 4.5 16 8.5"/></svg></div><div class="wip-feat-text">Filter by event type - data upload, config change, alarm, system check</div></div>
-        <div class="wip-feature"><div class="wip-feat-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 4.5 10 10.5 7 7.5 2 12.5"/><polyline points="12 4.5 16 4.5 16 8.5"/></svg></div><div class="wip-feat-text">Full-text search across event descriptions</div></div>
-        <div class="wip-feature"><div class="wip-feat-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 4.5 10 10.5 7 7.5 2 12.5"/><polyline points="12 4.5 16 4.5 16 8.5"/></svg></div><div class="wip-feat-text">Session timeline visualization showing active usage periods</div></div>
-        <div class="wip-feature"><div class="wip-feat-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 4.5 10 10.5 7 7.5 2 12.5"/><polyline points="12 4.5 16 4.5 16 8.5"/></svg></div><div class="wip-feat-text">Audit trail export for regulatory compliance</div></div>
-      </div>
-      <a href="welcome-home.html" class="wip-back">Back to Home</a>
-    </div>
+    <h1 style="font-size:22px;font-weight:700;margin-bottom:4px">Predictors</h1>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:24px">Forward-looking ML tools that forecast equipment behaviour from historical operating data.</p>
+    <div class="dash-grid" id="dashGrid"></div>
   </main>
 </div>
+
+<script>
+const equipment = [
+  {name:'Furnace Skin TI',unit:'Three multi-pass fired heaters',desc:'Forecasts hours-to-475 °C per radiant pass using XGBoost trained on historical operating data. Includes what-if panel for flow and box-temperature scenarios.',icon:'FT',href:'predictors/furnace-skin-temp.html',std:'API 530 · API 560 · NACE SP0170'},
+];
+const grid=document.getElementById('dashGrid');
+equipment.forEach(eq=>{grid.innerHTML+=`<a class="dash-card" href="${eq.href}"><div class="dash-icon">${eq.icon}</div><div class="dash-name">${eq.name}</div><div class="dash-unit">${eq.unit}</div><div class="dash-desc">${eq.desc}</div><div class="dash-footer"><span class="dash-std">${eq.std}</span><span class="dash-arrow">→</span></div></a>`;});
+</script>
 
 <div class="kbd-overlay" id="kbdOverlay">
   <div class="kbd-modal">
@@ -230,4 +187,4 @@ function toggleKbd(){document.getElementById('kbdOverlay').classList.toggle('ope
 
 
 </body>
-</html>
+</html>                                                                                                                                                                                                                                                          
