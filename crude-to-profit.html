@@ -17,6 +17,9 @@
 @media(max-width:1400px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:700px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
 .kpi-tile{min-height:92px}
+.kpi-tile.kpi-market{border-color:var(--neutral-600,#6b6b6b);box-shadow:inset 3px 0 0 var(--neutral-600,#6b6b6b)}
+.kpi-tile.kpi-market .kpi-label{color:var(--text-primary)}
+.kpi-tile.kpi-market.kpi-pending .kpi-value{color:var(--text-secondary)}
 
 .page-head{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:16px;flex-wrap:wrap}
 .page-head h1{font-size:22px;font-weight:700}
@@ -49,6 +52,16 @@ table.edit td,table.edit th{padding:6px 8px}
 .card-body h4.sub:first-child{margin-top:0}
 .flow-upload{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .about-p{font-size:13px;line-height:1.65;color:var(--text-primary);margin-bottom:12px}
+.formula-block{background:var(--surface-page);border:1px solid var(--border-card);border-radius:8px;padding:14px 16px;margin-bottom:14px}
+.formula-line{font-family:var(--font-data);font-size:12.5px;line-height:1.9;color:var(--text-primary);display:flex;gap:10px;align-items:baseline}
+.formula-step{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:var(--neutral-600,#6b6b6b);color:#fff;font-family:var(--font-ui,inherit);font-size:10px;flex:none}
+.worked{background:var(--surface-page);border:1px solid var(--border-card);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+.worked h5{font-size:12px;margin:0 0 8px;color:var(--text-primary);letter-spacing:.02em;text-transform:uppercase}
+.worked .calc{font-family:var(--font-data);font-size:12.5px;line-height:1.9;color:var(--text-primary)}
+.worked .calc .res{font-weight:600}
+.worked .sub{font-size:11px;color:var(--text-secondary);margin-top:8px;line-height:1.55}
+.pos-inside{color:#2f6b3f}.pos-below,.pos-above{color:#9a5b1e}
+.gap-note{background:var(--gold-100);border:1px solid var(--border-card);border-radius:8px;padding:12px 14px;font-size:12px;line-height:1.6;color:var(--text-secondary);margin-top:12px}
 .about-h{font-size:15px;font-weight:600;color:var(--neutral-700);margin:18px 0 8px 0}
 .about-h:first-child{margin-top:0}
 .table-scroll{overflow-x:auto}
@@ -142,7 +155,7 @@ table.edit td,table.edit th{padding:6px 8px}
     <div class="page-head">
       <div>
         <h1>Crude to Profit - Refinery Blend Margin</h1>
-        <p>Five-crude blend &middot; primary distillation, LC-Fining, SimDist split, hydrocracker/hydrotreater, and gross margin. Margin screening tool, not a blend optimizer.</p>
+        <p>Five-crude blend &middot; primary distillation, Residue Hydrocracker, SimDist split, hydrocracker/hydrotreater, and gross margin. Margin screening tool, not a blend optimizer.</p>
       </div>
       <button class="btn btn-sm btn-outline" id="restoreDefaultsBtn">Restore Defaults</button>
     </div>
@@ -150,6 +163,7 @@ table.edit td,table.edit th{padding:6px 8px}
     <div class="tabs">
       <button class="tab active" data-tab="dashboard">Dashboard</button>
       <button class="tab" data-tab="data">Data &amp; Log</button>
+      <button class="tab" data-tab="sources">Sources &amp; Formulas</button>
       <button class="tab" data-tab="about">About</button>
     </div>
 
@@ -159,6 +173,11 @@ table.edit td,table.edit th{padding:6px 8px}
     <section class="tab-panel active" id="panel-dashboard">
 
       <div class="kpi-grid">
+        <div class="kpi-tile kpi-market">
+          <div class="kpi-label">Gross Margin, At Market</div>
+          <div class="kpi-value" id="kMarginMarketHr">&mdash;</div>
+          <div class="kpi-sub" id="kMarginMarketHrSub">C$/hr &middot; today's prices</div>
+        </div>
         <div class="kpi-tile">
           <div class="kpi-label">Gross Margin, Low Case</div>
           <div class="kpi-value" id="kMarginLowHr">&mdash;</div>
@@ -168,6 +187,11 @@ table.edit td,table.edit th{padding:6px 8px}
           <div class="kpi-label">Gross Margin, High Case</div>
           <div class="kpi-value" id="kMarginHighHr">&mdash;</div>
           <div class="kpi-sub">C$/hr</div>
+        </div>
+        <div class="kpi-tile kpi-market">
+          <div class="kpi-label">Annualised Margin, At Market</div>
+          <div class="kpi-value" id="kMarginMarketYr">&mdash;</div>
+          <div class="kpi-sub" id="kMarginMarketYrSub">million C$/yr &middot; today's prices</div>
         </div>
         <div class="kpi-tile">
           <div class="kpi-label">Annualised Margin, Low Case</div>
@@ -191,21 +215,35 @@ table.edit td,table.edit th{padding:6px 8px}
         </div>
       </div>
 
+      <!-- THREE CASES -->
+      <div class="card">
+        <div class="card-header">Margin, Three Cases<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">C$/hr, priced through the same product slate</span></div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table class="data">
+              <thead><tr><th>&nbsp;</th><th>Low case</th><th>High case</th><th>At market</th></tr></thead>
+              <tbody id="threeCaseBody"></tbody>
+            </table>
+          </div>
+          <p style="font-size:11px;color:var(--text-secondary);margin-top:10px;line-height:1.6">Low and high are the fixed price assumptions in the Data &amp; Log tab, a cheap market against an expensive one. <strong>At market</strong> prices the same slate at today's estimated prices. None of the three replaces the others, and no assumed price is changed to produce the market column. The market column appears only when a live price is available for every crude and every product. <span id="threeCaseNote"></span></p>
+        </div>
+      </div>
+
       <!-- LIVE PRICE PANEL -->
       <div class="card">
-        <div class="card-header">Live Price Panel<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">Alberta, EIA, and USD/CAD all fetched live, directly from this browser</span></div>
+        <div class="card-header">Live Price Panel<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">Benchmark prices and exchange rate, with the date each was published</span></div>
         <div class="card-body">
           <div class="note-box">
-            Differentials default to zero. Calibrate them in the Data &amp; Log tab &mdash; at zero, LPG and naphtha sit furthest off the fixed reference price.
+            Prices below are estimates built from public benchmarks, shown with the date of each source. The model runs on the fixed reference prices unless you choose to apply the live ones.
           </div>
           <div class="price-grid">
             <div class="price-col">
-              <h4>Alberta Economic Data (no key, live)</h4>
+              <h4>Alberta Economic Data</h4>
               <div id="albertaStatus">Fetching...</div>
               <div class="price-row"><span>Derived WCS estimate</span><span class="cad" id="wcsStatus">&mdash;</span></div>
             </div>
             <div class="price-col">
-              <h4>EIA Open Data (live)</h4>
+              <h4>U.S. Energy Information Administration</h4>
               <div style="font-size:11px;color:var(--text-secondary);margin-bottom:6px" id="eiaGenerated">Fetching...</div>
               <div id="eiaStatus"></div>
             </div>
@@ -220,13 +258,13 @@ table.edit td,table.edit th{padding:6px 8px}
               <div id="liveCrudePrices"></div>
             </div>
             <div class="price-col">
-              <h4>Derived Product Prices (C$/m&sup3;)</h4>
+              <h4>Estimated Refinery Product Market Values (C$/m&sup3;)</h4>
               <div id="livePricesProducts"></div>
             </div>
           </div>
           <div style="margin-top:12px">
             <button class="btn btn-sm" id="applyLiveBtn">Apply live prices to low case</button>
-            <span style="font-size:11px;color:var(--text-secondary);margin-left:8px">Overwrites the low-case price cells in Data &amp; Log with the derived values above where available. High case is left as the fixed reference. Fixed reference prices are always used unless you apply live prices.</span>
+            <span style="font-size:11px;color:var(--text-secondary);margin-left:8px">Optional, and not needed to see today's margin &mdash; that is the <strong>At market</strong> column above, which is always live. This button overwrites the low case with the prices above, for building a what-if scenario on top of them. Nothing changes unless you press it.</span>
           </div>
         </div>
       </div>
@@ -262,7 +300,7 @@ table.edit td,table.edit th{padding:6px 8px}
       </div>
 
       <div class="card">
-        <div class="card-header">Crude Cost Against Product Revenue<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">C$/hr, low and high price case</span></div>
+        <div class="card-header">Crude Cost Against Product Revenue<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">C$/hr, all three price cases</span></div>
         <div class="card-body">
           <div class="chart-canvas-wrap" style="height:260px"><canvas id="chart-econ"></canvas></div>
         </div>
@@ -288,7 +326,7 @@ table.edit td,table.edit th{padding:6px 8px}
           </div>
           <div class="table-scroll">
             <table class="data edit">
-              <thead><tr><th>Crude</th><th>Name</th><th>Benchmark</th><th>Flow (m&sup3;/hr)</th><th>Blend %</th><th>Density (kg/m&sup3;)</th><th>Sulfur (wt%)</th></tr></thead>
+              <thead><tr><th>Crude</th><th>Name</th><th>Pricing anchor</th><th>Flow (m&sup3;/hr)</th><th>Blend %</th><th>Density (kg/m&sup3;)</th><th>Sulfur (wt%)</th></tr></thead>
               <tbody id="tblCrudeFlowsBody"></tbody>
             </table>
           </div>
@@ -308,12 +346,12 @@ table.edit td,table.edit th{padding:6px 8px}
       </div>
 
       <div class="card">
-        <div class="card-header">LC-Fining Yield<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">wt % of vacuum residue feed</span></div>
+        <div class="card-header">Residue Hydrocracker Yield<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">wt % of vacuum residue feed</span></div>
         <div class="card-body">
           <div class="table-scroll">
             <table class="data edit">
-              <thead><tr><th>LCF Naphtha</th><th>Diesel</th><th>LCF LVGO</th><th>LCF MVGO</th><th>LCF HVGO</th><th>CRVR + BC</th></tr></thead>
-              <tbody id="tblLcfBody"></tbody>
+              <thead><tr><th>RHC Naphtha</th><th>Diesel</th><th>RHC LVGO</th><th>RHC MVGO</th><th>RHC HVGO</th><th>Unconverted Residue</th></tr></thead>
+              <tbody id="tblRhcBody"></tbody>
             </table>
           </div>
         </div>
@@ -349,7 +387,7 @@ table.edit td,table.edit th{padding:6px 8px}
           <h4 class="sub">Crude prices (C$/m&sup3;)</h4>
           <div class="table-scroll">
             <table class="data edit">
-              <thead><tr><th>Crude</th><th>Low case</th><th>High case</th><th>Live differential</th></tr></thead>
+              <thead><tr><th>Crude</th><th>Low case<br><span style="font-weight:400;font-size:11px">C$/m&sup3;</span></th><th>High case<br><span style="font-weight:400;font-size:11px">C$/m&sup3;</span></th><th>Grade diff<br><span style="font-weight:400;font-size:11px">US$/bbl vs WCS</span></th><th>Adjustment<br><span style="font-weight:400;font-size:11px">US$/bbl</span></th></tr></thead>
               <tbody id="tblPriceCrudeBody"></tbody>
             </table>
           </div>
@@ -366,31 +404,117 @@ table.edit td,table.edit th{padding:6px 8px}
     </section>
 
     <!-- ============================================================= -->
+    <!-- SOURCES & FORMULAS TAB                                         -->
+    <!-- ============================================================= -->
+    <section class="tab-panel" id="panel-sources">
+
+      <div class="card">
+        <div class="card-header">Where Every Price Comes From<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">publisher, what is published, and how often it changes</span></div>
+        <div class="card-body">
+          <div class="note-box">
+            Every price on this dashboard is either published by a government agency or calculated from prices that are. Nothing is a private assessment and nothing is bought. The table below names each publisher and says how current its figures are.
+          </div>
+          <div class="table-scroll">
+            <table class="data">
+              <thead><tr><th>Source</th><th>What it publishes</th><th>Units</th><th>Updated</th><th>Used for</th></tr></thead>
+              <tbody id="srcPublishers"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">How Each Product Is Valued<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">the formula behind every number in the price panel</span></div>
+        <div class="card-body">
+          <p class="about-p">Products fall into four groups. Two have a real traded benchmark. Two are anchored on an Alberta price and moved daily. Three have no external price at all, because their value depends on where the refinery sends them.</p>
+          <div class="table-scroll">
+            <table class="data">
+              <thead><tr><th>Product</th><th>Method</th><th>Formula</th><th>Today</th></tr></thead>
+              <tbody id="srcFormulas"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Worked Example: LPG and Naphtha<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">the full arithmetic, checkable by hand</span></div>
+        <div class="card-body">
+          <p class="about-p">These two products are priced in two stages. The Government of Alberta publishes a reference price each month, in Canadian dollars per cubic metre, which sets the level. That figure lags about two months, so it is rolled forward to today using a daily US benchmark: the Alberta price is scaled by how far that benchmark has moved since the Alberta month's own average.</p>
+          <p class="about-p">No exchange rate appears anywhere in this calculation. The Alberta price is already Canadian, and the daily benchmark enters as a ratio of two US prices, which cancels out. Applying a rate to either would count it twice.</p>
+          <div id="srcWorked"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">How the Crude Feed Is Priced<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">two stages, kept separate on purpose</span></div>
+        <div class="card-body">
+          <div class="formula-block">
+            <div class="formula-line"><span class="formula-step">1</span> WCS = WTI + the WCS&ndash;WTI differential</div>
+            <div class="formula-line"><span class="formula-step">2</span> feed price = WCS + that feed's grade differential</div>
+            <div class="formula-line"><span class="formula-step">3</span> C$/m&sup3; = US$/bbl &times; exchange rate &times; 6.28981077</div>
+          </div>
+          <p class="about-p">Alberta publishes the differential monthly and as a positive discount; the model takes it as negative, since WCS trades below WTI. WTI itself is a daily price, so the pair together give a daily WCS estimate rather than a month-old one. The exchange rate is applied once, at the very end, and never inside the differential arithmetic.</p>
+          <p class="about-p">Grade differentials are a calibration snapshot rather than market assessments. One feed matches a named published stream exactly; the rest are proxies. The Data &amp; Log tab shows which is which for each feed.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Estimates Against the Model's Fixed Prices<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">shown side by side, never reconciled</span></div>
+        <div class="card-body">
+          <p class="about-p">The margin on the Dashboard tab is calculated from the fixed low and high prices in the Data &amp; Log tab, not from the live estimates. The table below compares the two. Where they disagree, both are shown as they are: no factor is fitted, scaled, or calibrated to bring a market estimate into line with an assumed price. A disagreement is a result worth looking at, not an error to remove.</p>
+          <div class="table-scroll">
+            <table class="data">
+              <thead><tr><th>Product</th><th>Market estimate</th><th>Model low</th><th>Model high</th><th>Position</th></tr></thead>
+              <tbody id="srcComparison"></tbody>
+            </table>
+          </div>
+          <div id="srcGapNote"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Known Limitations<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">what these prices are not</span></div>
+        <div class="card-body">
+          <p class="about-p"><strong>These are bulk values at the refinery gate.</strong> No pump prices, no consumer fuel tax, no retail margin. The model represents the economics of the refinery, not of the fuel retail chain.</p>
+          <p class="about-p"><strong>The US benchmarks are Gulf Coast prices.</strong> This refinery is in Western Canada, so a real basis difference exists between the two markets. No basis adjustment is applied, because there is no defensible figure to apply. The two Alberta-anchored products avoid this, since their anchor is already an Alberta price.</p>
+          <p class="about-p"><strong>Butane has no daily published price.</strong> Its Alberta anchor is real, but the daily movement borrows the gasoline benchmark. That is the weakest link in the product pricing and it affects LPG.</p>
+          <p class="about-p"><strong>Pentanes plus is condensate, not a refinery naphtha cut.</strong> It remains a proxy for naphtha, though a much closer one than finished gasoline, which is a blended consumer fuel and trades well above a blendstock.</p>
+          <p class="about-p"><strong>Unconverted oil has no live price at all.</strong> The US stopped publishing residual fuel oil prices in 2022, so it is valued as a fraction of the heavy crude price. That fraction is the first thing to revisit if a heavy-product assessment becomes available.</p>
+          <p class="about-p"><strong>Every figure here is an estimate.</strong> None of it is a market assessment, and none of it should be used to settle a transaction.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================= -->
     <!-- ABOUT TAB                                                      -->
     <!-- ============================================================= -->
     <section class="tab-panel" id="panel-about">
       <div class="card"><div class="card-body">
 
         <h3 class="about-h">What this model computes</h3>
-        <p class="about-p">Crude to Profit prices a five-crude refinery blend from feedstock to finished product. Five Canadian crude streams blend into one feed, split on a per-crude assay yield into primary distillation cuts, and the two heavy cuts convert further: vacuum residue through an LC-Fining resid hydrocracker, and the leftover unconverted oil through a hydrocracker/hydrotreater. The resulting seven-product slate is priced against the crude feed cost at a low and a high price case, in C$/hr and million C$/yr.</p>
+        <p class="about-p">Crude to Profit prices a five-crude refinery blend from feedstock to finished product. Five Canadian crude streams blend into one feed, split on a per-crude assay yield into primary distillation cuts, and the two heavy cuts convert further: vacuum residue through a residue hydrocracker, and the leftover unconverted oil through a hydrocracker/hydrotreater. The resulting seven-product slate is priced against the crude feed cost at a low and a high price case, in C$/hr and million C$/yr.</p>
         <p class="about-p">This is a margin screening tool. It does not optimize the blend, respect unit capacity limits, or check that a product meets specification. It answers what this blend earns at these prices for a fixed configuration, not what blend to buy.</p>
 
         <h3 class="about-h">Calculation chain</h3>
-        <p class="about-p">Six stages run in order. Crude blend combines the five feeds and reports each crude's share, sulfur load, and flow in barrels. Primary distillation applies each crude's assay yield table to split it into naphtha, AGO, VGO, vacuum residue, and the three VGO sub-cuts (LVGO, MVGO, HVGO). LC-Fining converts the vacuum residue into naphtha, a diesel cut, three VGO grades, and an unconverted bottoms stream, on a mass balance basis at a fixed feed and product density. Each intermediate stream then splits into the seven finished cuts on its own per-stream split table. The unconverted oil left over from that split becomes the hydrocracker/hydrotreater feed and splits again on its own yield table, where LPG is the C3 plus iC4 plus nC4 roll-up. Economics sums crude cost and product revenue at a low and a high price case and reports the difference as gross margin, annualised at 24 hours a day and 330 operating days a year.</p>
+        <p class="about-p">Six stages run in order. Crude blend combines the five feeds and reports each crude's share, sulfur load, and flow in barrels. Primary distillation applies each crude's assay yield table to split it into naphtha, AGO, VGO, vacuum residue, and the three VGO sub-cuts (LVGO, MVGO, HVGO). Residue Hydrocracker converts the vacuum residue into naphtha, a diesel cut, three VGO grades, and an unconverted bottoms stream, on a mass balance basis at a fixed feed and product density. Each intermediate stream then splits into the seven finished cuts on its own per-stream split table. The unconverted oil left over from that split becomes the hydrocracker/hydrotreater feed and splits again on its own yield table, where LPG is the C3 plus iC4 plus nC4 roll-up. Economics sums crude cost and product revenue at a low and a high price case and reports the difference as gross margin, annualised at 24 hours a day and 330 operating days a year.</p>
 
         <h3 class="about-h">Cut point: a diagnostic, not a driver</h3>
         <p class="about-p">The dashboard reports a cut point of 367&deg;C as a fixed, read-only figure. In the source model this number only feeds a display column. It does not change the product slate; the finished-product volumes come entirely from the per-stream split tables in the Data &amp; Log tab. Treat the cut point as a reference for how well the split assumption matches a real distillation curve, not as a control that shifts output.</p>
 
-        <h3 class="about-h">Why these numbers run about 39% above the source spreadsheet</h3>
-        <p class="about-p">The workbook this model was ported from has a cell reference error in its naphtha split: it reads the naphtha stream's LPG share instead of its naphtha share, which drops 88.59 m&sup3;/hr of naphtha from the output, 16.5% of everything fed to that step. That gap matches the workbook's own unexplained volume balance exactly. This dashboard fixes the reference and computes the naphtha split correctly, so margin runs about 39% above the original spreadsheet. Anyone comparing this dashboard's output against the source file should expect that gap and treat it as a correction, not a porting error.</p>
+        <h3 class="about-h">Difference against the original spreadsheet</h3>
+        <p class="about-p">This model routes the naphtha stream differently from the spreadsheet it was built from, which lifts the margin by roughly 39 %. The volume balance closes exactly here: everything fed into the product split comes back out. Worth walking through together before the figures are used.</p>
 
         <h3 class="about-h">Live prices and data sources</h3>
-        <p class="about-p">Three feeds load directly from this page, no server involved: Alberta's economic data service (WCS, WTI, WCS-WTI differential, monthly, no key), the EIA (daily crude and product spot prices), and Frankfurter (daily USD/CAD). If the EIA call fails, prices fall back to a snapshot file (<code>fetch_prices.py</code>), then to fixed reference prices.</p>
-        <p class="about-p">Daily WCS is estimated as EIA's daily WTI minus Alberta's monthly WCS-WTI differential, since the differential moves slowly while the outright price tracks WTI day to day. Four of the seven products (LPG, naphtha, kerosene, diesel) have a public benchmark; the rest stay on the fixed reference price. Naphtha prices off finished gasoline, a blendstock proxy, not the same product. Diesel prices off US Gulf Coast ULSD, not the Alberta benchmark.</p>
-        <p class="about-p">All differentials default to zero. At zero, live benchmark prices sit well off the fixed reference: LPG runs at roughly a third of it, naphtha roughly half again above it. Calibrate the differential fields in the Data &amp; Log tab before treating a live price as more than indicative.</p>
+        <p class="about-p">Crude and product prices come from two public sources, and the panel on the Dashboard tab shows the publication date of every figure it uses. The Government of Alberta publishes Western Canadian Select, WTI, and the spread between them. The U.S. Energy Information Administration publishes daily spot prices for crude and refined products. The exchange rate is fetched daily.</p>
+        <p class="about-p">Crude is priced in two steps. A daily WCS is estimated first, from WTI and the published WCS-WTI spread, because the spread moves slowly while the outright price tracks WTI day to day. Each feed is then priced as WCS plus a differential for its grade, and the result converts to Canadian dollars per cubic metre once, at the end. The crude table lists the grade each feed is priced against.</p>
+        <p class="about-p">Products are valued four ways. Kerosene and diesel have real traded benchmarks, against Gulf Coast jet fuel and ULSD. LPG and naphtha are anchored on the Government of Alberta&rsquo;s monthly NGL reference prices, which are Alberta prices already quoted in Canadian dollars per cubic metre, and rolled forward to today by a daily US benchmark. The two swing cuts and unconverted oil have no external price at all and are calculated instead. The Sources &amp; Formulas tab shows the arithmetic for each.</p>
+        <p class="about-p">A swing cut is worth whatever pool it is sent to, so its value is derived rather than looked up. The 128 to 145 C cut is valued between the naphtha and kerosene pools, and the 340 to 385 C cut between unconverted oil and the diesel pool. The split between destinations is a model setting. Unconverted oil is valued as a fraction of the heavy crude price, because no live heavy-product benchmark is published any more.</p>
+        <p class="about-p">Every figure is a bulk value at the refinery gate. None of it includes consumer fuel tax, retail markup, or station margin, and no pump prices are used anywhere. The model represents the economics of the refinery, not of the fuel-retail chain. The benchmarks are US market prices while the refinery is in Western Canada, so a real basis difference remains and is deliberately left at zero rather than guessed at.</p>
+        <p class="about-p">All of these are estimates drawn from benchmarks, not assessed prices for these specific streams. The model runs on the fixed reference prices in the Data and Log tab unless live prices are applied deliberately, so the headline margin does not move on its own.</p>
 
         <h3 class="about-h">Scope and limitations</h3>
-        <p class="about-p">This engine prices one blend at one set of yields. It is volumetrically additive with no shrinkage correction on blending, and the LC-Fining step converts every product on a single generic density (862 kg/m&sup3;) rather than a per-product one, matching the source workbook's own simplification. Utilities, hydrogen, catalyst, labour, and capital charges sit outside the boundary; the reported figure is a gross crude-to-product margin, not a net cash margin. The 330 operating days a year is an availability assumption, not a measurement. Crude density and sulfur are fixed reference values from assay data, not live feeds.</p>
+        <p class="about-p">This engine prices one blend at one set of yields. It is volumetrically additive with no shrinkage correction on blending, and the Residue Hydrocracker step converts every product on a single generic density (862 kg/m&sup3;) rather than a per-product one, matching the source workbook's own simplification. Utilities, hydrogen, catalyst, labour, and capital charges sit outside the boundary; the reported figure is a gross crude-to-product margin, not a net cash margin. The 330 operating days a year is an availability assumption, not a measurement. Crude density and sulfur are fixed reference values from assay data, not live feeds.</p>
 
       </div></div>
     </section>
@@ -409,7 +533,7 @@ table.edit td,table.edit th{padding:6px 8px}
 // ---- Engine constants (mirrors engine.py section 1-2) ----------------
 const CRUDES = ["OSH", "SHD", "AWB", "SCO", "FRB"];
 const PRIMARY_CUTS = ["naphtha", "ago", "vgo", "vr", "lvgo", "mvgo", "hvgo"];
-const LCF_PRODUCTS = ["lcf_naphtha", "diesel", "lcf_lvgo", "lcf_mvgo", "lcf_hvgo", "crvr_bc"];
+const RHC_PRODUCTS = ["rhc_naphtha", "diesel", "rhc_lvgo", "rhc_mvgo", "rhc_hvgo", "unconverted_residue"];
 const PRODUCTS = ["lpg", "naphtha", "swing_naphtha", "kerosene", "diesel", "swing_diesel", "uco"];
 const PRODUCT_LABELS = {
   lpg: "LPG",
@@ -434,8 +558,8 @@ const DEFAULT_CONFIG = {
     SCO: { naphtha: 16.2, ago: 35.11, vgo: 40.54, vr: 5.29, lvgo: 10.18, mvgo: 18.31, hvgo: 12.05 },
     FRB: { naphtha: 22.0, ago: 12.20, vgo: 25.10, vr: 40.40, lvgo: 4.10, mvgo: 10.60, hvgo: 10.40 },
   },
-  lcf_yield_wtpct: {
-    lcf_naphtha: 14.13, diesel: 23.95, lcf_lvgo: 12.32, lcf_mvgo: 9.78, lcf_hvgo: 2.44, crvr_bc: 25.39,
+  rhc_yield_wtpct: {
+    rhc_naphtha: 14.13, diesel: 23.95, rhc_lvgo: 12.32, rhc_mvgo: 9.78, rhc_hvgo: 2.44, unconverted_residue: 25.39,
   },
   hcht_yield_volpct: {
     c3: 1.55, ic4: 2.96, nc4: 1.49, naphtha: 18.94, swing_naphtha: 5.41,
@@ -459,14 +583,53 @@ const DEFAULT_CONFIG = {
   crude_price_high_cad_m3: { OSH: 640, SHD: 570, AWB: 580, SCO: 680, FRB: 570 },
   product_price_low_cad_m3:  { lpg: 650, naphtha: 720, swing_naphtha: 760, kerosene: 1150, diesel: 1100, swing_diesel: 1000, uco: 520 },
   product_price_high_cad_m3: { lpg: 780, naphtha: 810, swing_naphtha: 850, kerosene: 1300, diesel: 1280, swing_diesel: 1150, uco: 650 },
-  crude_benchmark: { OSH: "WTI", SCO: "WTI", SHD: "WCS", AWB: "WCS", FRB: "WCS" },
-  crude_differential_cad_m3: { OSH: 0.0, SHD: 0.0, AWB: 0.0, SCO: 0.0, FRB: 0.0 },
-  product_benchmark: {
-    lpg: "propane_usd_gal", naphtha: "gasoline_usd_gal", swing_naphtha: null,
-    kerosene: "jetfuel_usd_gal", diesel: "ulsd_gc_usd_gal", swing_diesel: null, uco: null,
+  // Canadian crude pricing. All five feeds price off WCS, in USD/bbl, then
+  // convert once to C$/m3. Mirrors models/crude-to-profit/canadian_crude_pricing.py.
+  crude_grade_differential_usd_bbl: { OSH: 11.85, SHD: 11.45, AWB: 11.45, SCO: 8.85, FRB: 11.45 },
+  // How each product is valued when live prices are used. Three kinds:
+  //   direct_market_benchmark  a real traded benchmark exists
+  //   market_proxy             priced off a related commodity
+  //   opportunity_value        no external price; worth what its destination
+  //                            is worth. The swing cuts and UCO.
+  // Bulk values at the refinery gate: no pump prices, no consumer fuel tax,
+  // no retail margin.
+  product_pricing: {
+    lpg:           { mode: "regional_anchor",          benchmark: "propane_usd_gal",  label: "Alberta NGL price, moved daily" },
+    naphtha:       { mode: "regional_anchor",          benchmark: "gasoline_usd_gal", label: "Alberta NGL price, moved daily" },
+    kerosene:      { mode: "direct_market_benchmark", benchmark: "jetfuel_usd_gal",  label: "EIA jet-fuel benchmark" },
+    diesel:        { mode: "direct_market_benchmark", benchmark: "ulsd_gc_usd_gal",  label: "EIA ULSD benchmark" },
+    swing_naphtha: { mode: "opportunity_value", low: "naphtha", high: "kerosene", label: "Model-derived opportunity value" },
+    swing_diesel:  { mode: "opportunity_value", low: "uco",     high: "diesel",   label: "Model-derived opportunity value" },
+    uco:           { mode: "opportunity_value_proxy", anchor: "WCS", factor: 0.825, label: "Heavy-product opportunity-value proxy" },
   },
+  // Where each swing cut goes. 0 sends it all to the lower-value pool, 1 all
+  // to the higher. UCO has no live benchmark - EIA stopped publishing
+  // residual fuel oil prices in March 2022 - so it is valued as a fraction of
+  // the live heavy crude price.
+  swing_naphtha_to_kerosene: 0.5,
+  swing_diesel_to_diesel: 0.5,
+  // LPG stream composition, volume fractions of C3 against C4. Alberta
+  // publishes one butanes price covering both iC4 and nC4.
+  lpg_c3_fraction: 0.258,
+  lpg_c4_fraction: 0.742,
   product_differential_cad_m3: Object.fromEntries(PRODUCTS.map(p => [p, 0.0])),
 };
+
+// Per-feed pricing provenance. AWB is a named-stream match; the rest are proxies.
+// Confidence 0 is strongest. Mirrors canadian_crude_pricing.price_provenance().
+const CRUDE_PRICING_META = {
+  AWB: { anchor: "Access Western Blend",   type: "exact", conf: 0, label: "Exact grade mapping",
+         wording: "Estimated from WCS + Access Western Blend differential" },
+  SCO: { anchor: "Syncrude Sweet Premium", type: "proxy", conf: 1, label: "Strong synthetic proxy",
+         wording: "Estimated from WCS + Syncrude Sweet Premium proxy differential" },
+  SHD: { anchor: "Access Western Blend",   type: "proxy", conf: 2, label: "Good heavy-dilbit proxy",
+         wording: "Estimated using Access Western Blend as a comparable heavy-dilbit proxy" },
+  FRB: { anchor: "Access Western Blend",   type: "proxy", conf: 3, label: "Heavy-dilbit proxy, weaker",
+         wording: "Estimated using Access Western Blend as a comparable heavy-dilbit proxy" },
+  OSH: { anchor: "Albian Heavy Synthetic", type: "proxy", conf: 4, label: "Approximate heavy-synthetic proxy",
+         wording: "Estimated from WCS + Albian Heavy Synthetic proxy differential" },
+};
+const CRUDE_PRICING_CALIBRATED = "2026-08-24";
 
 const CRUDE_PROPERTIES = {
   OSH: { density_kg_m3: 935.7, sulfur_wtpct: 2.88 },
@@ -476,11 +639,12 @@ const CRUDE_PROPERTIES = {
   FRB: { density_kg_m3: 922.4, sulfur_wtpct: 3.75 },
 };
 
-const M3_TO_BBL = 6.290123456790123;
+const M3_TO_BBL = 6.290123456790123;        // workbook value, volume calcs, ties out to the sheet
+const BBL_PER_M3_PRICE = 6.28981077;        // exact definition, price conversion only - do not merge these two
 const OPERATING_DAYS_PER_YEAR = 330;
 const HOURS_PER_DAY = 24;
-const LCF_FEED_DENSITY_KG_M3 = 996.8;
-const LCF_PRODUCT_DENSITY_KG_M3 = 862.0;
+const RHC_FEED_DENSITY_KG_M3 = 996.8;
+const RHC_PRODUCT_DENSITY_KG_M3 = 862.0;
 const DEFAULT_CRUDE_FLOWS_M3HR = { OSH: 100.0, SHD: 87.0, AWB: 150.0, SCO: 15.0, FRB: 249.66666666666666 };
 
 function zeroSlate() { const z = {}; for (const p of PRODUCTS) z[p] = 0.0; return z; }
@@ -529,22 +693,22 @@ function primarySplit(crudeFlows, cfg) {
   };
 }
 
-// -- 5.3 LC-Fining --------------------------------------------------------
-function lcfSplit(vrM3hr, cfg) {
-  const table = cfg.lcf_yield_wtpct;
-  const factor = vrM3hr * LCF_FEED_DENSITY_KG_M3 / LCF_PRODUCT_DENSITY_KG_M3;
+// -- 5.3 Residue Hydrocracker --------------------------------------------------------
+function rhcSplit(vrM3hr, cfg) {
+  const table = cfg.rhc_yield_wtpct;
+  const factor = vrM3hr * RHC_FEED_DENSITY_KG_M3 / RHC_PRODUCT_DENSITY_KG_M3;
   const out = {};
-  for (const p of LCF_PRODUCTS) out[p] = factor * table[p] / 100.0;
+  for (const p of RHC_PRODUCTS) out[p] = factor * table[p] / 100.0;
   return out;
 }
 
-function simdistStreamFeeds(primaryTotals, lcfProducts) {
+function simdistStreamFeeds(primaryTotals, rhcProducts) {
   return {
     srvr: 0.0,
-    diesel: lcfProducts.diesel,
-    naphtha: primaryTotals.naphtha + primaryTotals.ago + lcfProducts.lcf_naphtha,
-    lvgo: primaryTotals.lvgo + lcfProducts.lcf_lvgo,
-    mvgo: primaryTotals.mvgo + lcfProducts.lcf_mvgo,
+    diesel: rhcProducts.diesel,
+    naphtha: primaryTotals.naphtha + primaryTotals.ago + rhcProducts.rhc_naphtha,
+    lvgo: primaryTotals.lvgo + rhcProducts.rhc_lvgo,
+    mvgo: primaryTotals.mvgo + rhcProducts.rhc_mvgo,
     hvgo: primaryTotals.hvgo,
     crvr: 0.0,
   };
@@ -584,7 +748,14 @@ function finalProductSlate(directTotals, hcProducts) {
 }
 
 // -- 5.6 Economics --------------------------------------------------------
-function economics(crudeFlows, productSlate, cfg) {
+// Three cases, answering different questions.
+//   low, high  the fixed price assumptions in the Data & Log tab. These always
+//              run, need no network, and are what the model ties out on.
+//   market     today's estimated prices. Present only when a live price
+//              exists for EVERY crude and EVERY product, so a partial fetch
+//              produces no market case rather than a misleading one. It sits
+//              beside low and high; neither is overwritten to produce it.
+function economics(crudeFlows, productSlate, cfg, marketCrude, marketProduct) {
   function crudeCost(prices) { let s = 0; for (const c of CRUDES) s += (crudeFlows[c] || 0.0) * prices[c]; return s; }
   function revenue(prices) { let s = 0; for (const p of PRODUCTS) s += (productSlate[p] || 0.0) * prices[p]; return s; }
   const costLow = crudeCost(cfg.crude_price_low_cad_m3);
@@ -594,24 +765,41 @@ function economics(crudeFlows, productSlate, cfg) {
   const marginLow = revLow - costLow;
   const marginHigh = revHigh - costHigh;
   const annual = HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR / 1e6;
-  return {
+  const out = {
     crude_cost_low_cad_hr: costLow, crude_cost_high_cad_hr: costHigh,
     revenue_low_cad_hr: revLow, revenue_high_cad_hr: revHigh,
     margin_low_cad_hr: marginLow, margin_high_cad_hr: marginHigh,
     margin_low_mcad_yr: marginLow * annual, margin_high_mcad_yr: marginHigh * annual,
+    has_market_case: false,
   };
+  const haveAll = marketCrude && marketProduct
+    && CRUDES.every(c => marketCrude[c] != null)
+    && PRODUCTS.every(p => marketProduct[p] != null);
+  if (haveAll) {
+    const costMarket = crudeCost(marketCrude);
+    const revMarket = revenue(marketProduct);
+    const marginMarket = revMarket - costMarket;
+    Object.assign(out, {
+      crude_cost_market_cad_hr: costMarket,
+      revenue_market_cad_hr: revMarket,
+      margin_market_cad_hr: marginMarket,
+      margin_market_mcad_yr: marginMarket * annual,
+      has_market_case: true,
+    });
+  }
+  return out;
 }
 
-function runModel(crudeFlows, cfg) {
+function runModel(crudeFlows, cfg, marketCrude, marketProduct) {
   const blend = blendCrudes(crudeFlows);
   const primary = primarySplit(crudeFlows, cfg);
-  const lcf = lcfSplit(primary.totals_m3hr.vr, cfg);
-  const feeds = simdistStreamFeeds(primary.totals_m3hr, lcf);
+  const rhc = rhcSplit(primary.totals_m3hr.vr, cfg);
+  const feeds = simdistStreamFeeds(primary.totals_m3hr, rhc);
   const direct = simdistDirectProducts(feeds, cfg);
   const hc = hchtSplit(direct.totals_m3hr.uco, cfg);
   const slate = finalProductSlate(direct.totals_m3hr, hc);
-  const econ = economics(crudeFlows, slate, cfg);
-  return { blend, primary, lcf_products_m3hr: lcf, simdist_stream_feeds_m3hr: feeds, direct_products: direct, hc_reactor_products_m3hr: hc, product_slate_m3hr: slate, economics: econ };
+  const econ = economics(crudeFlows, slate, cfg, marketCrude, marketProduct);
+  return { blend, primary, rhc_products_m3hr: rhc, simdist_stream_feeds_m3hr: feeds, direct_products: direct, hc_reactor_products_m3hr: hc, product_slate_m3hr: slate, economics: econ };
 }
 
 // ---- DOM helpers --------------------------------------------------------
@@ -632,10 +820,11 @@ function readCrudeFlows() {
 }
 
 const HCHT_KEYS = ["c3", "ic4", "nc4", "naphtha", "swing_naphtha", "kerosene", "diesel", "swing_diesel", "uco"];
-const PRICED_PRODUCTS = ["lpg", "naphtha", "kerosene", "diesel"]; // the four with a public benchmark
+const BENCHMARKED_PRODUCTS = ["lpg", "naphtha", "kerosene", "diesel"]; // the four with an external benchmark
+const PRICED_PRODUCTS = PRODUCTS; // all seven now carry a live value
 
 function readConfig() {
-  const cfg = { cut_point_c: DEFAULT_CONFIG.cut_point_c, crude_benchmark: DEFAULT_CONFIG.crude_benchmark, product_benchmark: DEFAULT_CONFIG.product_benchmark, hcht_yield_wtpct: DEFAULT_CONFIG.hcht_yield_wtpct };
+  const cfg = { cut_point_c: DEFAULT_CONFIG.cut_point_c, product_pricing: DEFAULT_CONFIG.product_pricing, hcht_yield_wtpct: DEFAULT_CONFIG.hcht_yield_wtpct };
 
   cfg.primary_yield_volpct = {};
   for (const c of CRUDES) {
@@ -645,8 +834,8 @@ function readConfig() {
     cfg.primary_yield_volpct[c] = row;
   }
 
-  cfg.lcf_yield_wtpct = {};
-  for (const p of LCF_PRODUCTS) cfg.lcf_yield_wtpct[p] = num("lcf_" + p, DEFAULT_CONFIG.lcf_yield_wtpct[p]);
+  cfg.rhc_yield_wtpct = {};
+  for (const p of RHC_PRODUCTS) cfg.rhc_yield_wtpct[p] = num("rhc_" + p, DEFAULT_CONFIG.rhc_yield_wtpct[p]);
 
   cfg.hcht_yield_volpct = {};
   for (const k of HCHT_KEYS) cfg.hcht_yield_volpct[k] = num("hcht_" + k, DEFAULT_CONFIG.hcht_yield_volpct[k]);
@@ -677,7 +866,7 @@ function buildTables() {
     <tr>
       <td><strong>${c}</strong></td>
       <td>${CRUDE_NAMES[c]}</td>
-      <td>${DEFAULT_CONFIG.crude_benchmark[c]}</td>
+      <td title="${CRUDE_PRICING_META[c].wording}">${CRUDE_PRICING_META[c].anchor}<br><span style="color:var(--text-secondary);font-size:11px">WCS ${DEFAULT_CONFIG.crude_grade_differential_usd_bbl[c] >= 0 ? "+" : ""}${DEFAULT_CONFIG.crude_grade_differential_usd_bbl[c].toFixed(2)} US$/bbl</span></td>
       <td><input type="number" step="0.1" class="config-input" id="flow_${c}" value="${DEFAULT_CRUDE_FLOWS_M3HR[c]}"></td>
       <td class="num" id="blendpct_${c}">&mdash;</td>
       <td class="num">${CRUDE_PROPERTIES[c].density_kg_m3}</td>
@@ -697,8 +886,8 @@ function buildTables() {
     </tr>`;
   }).join("");
 
-  document.getElementById("tblLcfBody").innerHTML = "<tr>" + LCF_PRODUCTS.map(p =>
-    `<td><input type="number" step="0.01" class="config-input" id="lcf_${p}" value="${DEFAULT_CONFIG.lcf_yield_wtpct[p]}"></td>`
+  document.getElementById("tblRhcBody").innerHTML = "<tr>" + RHC_PRODUCTS.map(p =>
+    `<td><input type="number" step="0.01" class="config-input" id="rhc_${p}" value="${DEFAULT_CONFIG.rhc_yield_wtpct[p]}"></td>`
   ).join("") + "</tr>";
 
   document.getElementById("tblHchtBody").innerHTML = HCHT_KEYS.map(k => `
@@ -717,15 +906,16 @@ function buildTables() {
     <tr><td><strong>${c}</strong></td>
     <td><input type="number" step="1" class="config-input" id="cpl_${c}" value="${DEFAULT_CONFIG.crude_price_low_cad_m3[c]}"></td>
     <td><input type="number" step="1" class="config-input" id="cph_${c}" value="${DEFAULT_CONFIG.crude_price_high_cad_m3[c]}"></td>
-    <td><input type="number" step="1" class="config-input" id="cd_${c}" value="0"></td>
+    <td class="num" title="${CRUDE_PRICING_META[c].wording}">${DEFAULT_CONFIG.crude_grade_differential_usd_bbl[c] >= 0 ? "+" : ""}${DEFAULT_CONFIG.crude_grade_differential_usd_bbl[c].toFixed(2)}</td>
+    <td><input type="number" step="0.05" class="config-input" id="cd_${c}" value="0"></td>
     </tr>`).join("");
 
   document.getElementById("tblPriceProductBody").innerHTML = PRODUCTS.map(p => {
-    const hasBench = PRICED_PRODUCTS.includes(p);
+    const hasBench = BENCHMARKED_PRODUCTS.includes(p);
     return `<tr><td>${PRODUCT_LABELS[p]}</td>
     <td><input type="number" step="1" class="config-input" id="ppl_${p}" value="${DEFAULT_CONFIG.product_price_low_cad_m3[p]}"></td>
     <td><input type="number" step="1" class="config-input" id="pph_${p}" value="${DEFAULT_CONFIG.product_price_high_cad_m3[p]}"></td>
-    <td>${hasBench ? `<input type="number" step="1" class="config-input" id="pd_${p}" value="0">` : '<span style="color:var(--text-secondary);font-size:11px">no public benchmark</span>'}</td>
+    <td>${hasBench ? `<input type="number" step="1" class="config-input" id="pd_${p}" value="0">` : '<span style="color:var(--text-secondary);font-size:11px">model-derived</span>'}</td>
     </tr>`;
   }).join("");
 }
@@ -736,12 +926,12 @@ function restoreDefaults() {
     const y = DEFAULT_CONFIG.primary_yield_volpct[c];
     for (const cut of ["naphtha", "ago", "vr", "lvgo", "mvgo", "hvgo"]) setVal("py_" + c + "_" + cut, y[cut]);
   }
-  for (const p of LCF_PRODUCTS) setVal("lcf_" + p, DEFAULT_CONFIG.lcf_yield_wtpct[p]);
+  for (const p of RHC_PRODUCTS) setVal("rhc_" + p, DEFAULT_CONFIG.rhc_yield_wtpct[p]);
   for (const k of HCHT_KEYS) setVal("hcht_" + k, DEFAULT_CONFIG.hcht_yield_volpct[k]);
   for (const s of SIMDIST_STREAMS) for (const p of PRODUCTS) setVal("sd_" + s + "_" + p, DEFAULT_CONFIG.simdist_split_volpct[s][p]);
   for (const c of CRUDES) { setVal("cpl_" + c, DEFAULT_CONFIG.crude_price_low_cad_m3[c]); setVal("cph_" + c, DEFAULT_CONFIG.crude_price_high_cad_m3[c]); setVal("cd_" + c, 0); }
   for (const p of PRODUCTS) { setVal("ppl_" + p, DEFAULT_CONFIG.product_price_low_cad_m3[p]); setVal("pph_" + p, DEFAULT_CONFIG.product_price_high_cad_m3[p]); }
-  for (const p of PRICED_PRODUCTS) setVal("pd_" + p, 0);
+  for (const p of BENCHMARKED_PRODUCTS) setVal("pd_" + p, 0);
   setVal("fxRate", "");
   fetchUsdCad();
   document.getElementById("flowUpStatus").textContent = "Workbook defaults";
@@ -765,10 +955,10 @@ function initCharts() {
   charts.econ = new Chart(document.getElementById("chart-econ").getContext("2d"), {
     type: "bar",
     data: {
-      labels: ["Low case", "High case"],
+      labels: ["Low case", "High case", "At market"],
       datasets: [
-        { label: "Crude cost (C$/hr)", data: [0, 0], backgroundColor: "#667085", borderRadius: 4 },
-        { label: "Product revenue (C$/hr)", data: [0, 0], backgroundColor: "#2F7F7A", borderRadius: 4 },
+        { label: "Crude cost (C$/hr)", data: [0, 0, 0], backgroundColor: "#667085", borderRadius: 4 },
+        { label: "Product revenue (C$/hr)", data: [0, 0, 0], backgroundColor: "#2F7F7A", borderRadius: 4 },
       ],
     },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 12, font: { size: 11 } } } }, scales: { y: { beginAtZero: true } } },
@@ -781,14 +971,44 @@ function updateCharts(res) {
   charts.slate.update();
   charts.blend.data.datasets[0].data = CRUDES.map(c => res.blend.per_crude[c].flow_m3hr);
   charts.blend.update();
-  charts.econ.data.datasets[0].data = [res.economics.crude_cost_low_cad_hr, res.economics.crude_cost_high_cad_hr];
-  charts.econ.data.datasets[1].data = [res.economics.revenue_low_cad_hr, res.economics.revenue_high_cad_hr];
+  // The market bars stay null, not zero, when there is no market case. A zero
+  // would draw as a real bar showing no crude cost and no revenue.
+  const e = res.economics;
+  const mk = e.has_market_case;
+  charts.econ.data.datasets[0].data = [e.crude_cost_low_cad_hr, e.crude_cost_high_cad_hr,
+                                       mk ? e.crude_cost_market_cad_hr : null];
+  charts.econ.data.datasets[1].data = [e.revenue_low_cad_hr, e.revenue_high_cad_hr,
+                                       mk ? e.revenue_market_cad_hr : null];
   charts.econ.update();
 }
 
 // ---- Render outputs ---------------------------------------------------------
 function updateKPIs(res) {
   const econ = res.economics;
+
+  // Market case. Shown as an em dash with a reason when it is not available,
+  // never as a zero and never quietly borrowing a fixed-price number.
+  const mkHr = document.getElementById("kMarginMarketHr");
+  const mkYr = document.getElementById("kMarginMarketYr");
+  const mkHrSub = document.getElementById("kMarginMarketHrSub");
+  const mkYrSub = document.getElementById("kMarginMarketYrSub");
+  if (econ.has_market_case) {
+    mkHr.textContent = fmtNum(econ.margin_market_cad_hr, 0);
+    mkYr.textContent = fmtNum(econ.margin_market_mcad_yr, 1);
+    mkHrSub.innerHTML = "C$/hr &middot; today's prices";
+    mkYrSub.innerHTML = "million C$/yr &middot; today's prices";
+    mkHr.closest(".kpi-tile").classList.remove("kpi-pending");
+    mkYr.closest(".kpi-tile").classList.remove("kpi-pending");
+  } else {
+    mkHr.innerHTML = "&mdash;";
+    mkYr.innerHTML = "&mdash;";
+    mkHrSub.textContent = "waiting on live prices";
+    mkYrSub.textContent = "waiting on live prices";
+    mkHr.closest(".kpi-tile").classList.add("kpi-pending");
+    mkYr.closest(".kpi-tile").classList.add("kpi-pending");
+  }
+  updateThreeCaseTable(econ);
+
   document.getElementById("kMarginLowHr").textContent = fmtNum(econ.margin_low_cad_hr, 0);
   document.getElementById("kMarginHighHr").textContent = fmtNum(econ.margin_high_cad_hr, 0);
   document.getElementById("kMarginLowYr").textContent = fmtNum(econ.margin_low_mcad_yr, 1);
@@ -796,6 +1016,29 @@ function updateKPIs(res) {
   document.getElementById("kBlendRate").textContent = fmtNum(res.blend.total_flow_m3hr, 1);
   let totalProduct = 0; for (const p of PRODUCTS) totalProduct += res.product_slate_m3hr[p];
   document.getElementById("kProductVolume").textContent = fmtNum(totalProduct, 1);
+}
+
+function updateThreeCaseTable(econ) {
+  const body = document.getElementById("threeCaseBody");
+  if (!body) return;
+  const has = econ.has_market_case;
+  const cell = (v, d) => has ? fmtNum(v, d) : "&mdash;";
+  const rows = [
+    ["Crude cost, C$/hr", econ.crude_cost_low_cad_hr, econ.crude_cost_high_cad_hr, econ.crude_cost_market_cad_hr, 0],
+    ["Revenue, C$/hr", econ.revenue_low_cad_hr, econ.revenue_high_cad_hr, econ.revenue_market_cad_hr, 0],
+    ["Gross margin, C$/hr", econ.margin_low_cad_hr, econ.margin_high_cad_hr, econ.margin_market_cad_hr, 0],
+    ["Annualised, million C$/yr", econ.margin_low_mcad_yr, econ.margin_high_mcad_yr, econ.margin_market_mcad_yr, 1],
+  ];
+  body.innerHTML = rows.map(([label, lo, hi, mk, d]) =>
+    `<tr><td>${label}</td><td class="num">${fmtNum(lo, d)}</td>
+     <td class="num">${fmtNum(hi, d)}</td>
+     <td class="num">${cell(mk, d)}</td></tr>`).join("");
+
+  const note = document.getElementById("threeCaseNote");
+  if (note) {
+    note.innerHTML = has ? "" :
+      "Right now it is blank because at least one live price has not arrived.";
+  }
 }
 
 function updateDerivedDisplays(res) {
@@ -832,6 +1075,40 @@ function updateSlateTable(res) {
   rows += `<tr><td><strong>Total</strong></td><td class="num"><strong>${fmtNum(total, 2)}</strong></td><td class="num"><strong>${fmtNum(total * M3_TO_BBL, 1)}</strong></td></tr>`;
   document.getElementById("slateBody").innerHTML = rows;
 }
+
+// ---- Alberta NGL reference prices ---------------------------------------
+// The Government of Alberta publishes a monthly reference price for propane,
+// butanes and pentanes plus, in Canadian dollars per cubic metre. That is the
+// right market and the right unit for this refinery's LPG and naphtha.
+//
+// Unlike the other sources on this page, these cannot be read by the browser
+// directly: Alberta's open data service does not permit cross-site requests,
+// and the figures are published as PDFs. So the latest published set is
+// carried here, with the month it belongs to, and is refreshed whenever the
+// Python engine is run. The page then rolls it forward to today using the
+// daily US benchmarks, which the browser CAN read live.
+//
+// The month averages are the mean of every daily observation in the anchor
+// month, taken from the same US series that supply today's price. Averaging
+// the dailies rather than reading a published monthly figure keeps both legs
+// on the same footing.
+const ALBERTA_NGL = {
+  month: "2026-06",
+  published: "Government of Alberta, Monthly Reference Price Calculations",
+  propane: 173.00,          // Propane Spec Reference Price, C$/m3
+  butanes: 231.64,          // Butanes Spec Reference Price, C$/m3
+  pentanes_plus: 709.05,    // Pentanes Plus Spec Reference Price, C$/m3
+  driver_month_average: {   // US$/gal, mean of that month's daily prices
+    gasoline: 3.011904761904762,
+    propane: 0.7550952380952379,
+  },
+};
+
+// Filled in when prices are calculated, so the Sources tab can show the
+// arithmetic rather than just the answer.
+let naphthaAnchorDetail = null;
+let lpgAnchorDetail = null;
+const anchorUsed = { lpg: false, naphtha: false };
 
 // ---- Live price panel ---------------------------------------------------
 let albertaResult = null;
@@ -887,7 +1164,9 @@ async function fetchEiaLive() {
   // If every live call failed, leave eiaSnapshot as whatever fetchEiaSnapshot()
   // already found (the fallback JSON file), or null - never clobber a good
   // fallback with an all-failed live attempt.
-  renderPricePanel();
+  // A fetch landed. Re-run so the market case moves with it, not just the
+  // price list. runProcess() re-renders this panel itself.
+  runProcess();
 }
 
 async function fetchAlberta() {
@@ -910,7 +1189,9 @@ async function fetchAlberta() {
   } catch (e) {
     albertaResult = { ok: false, value: null };
   }
-  renderPricePanel();
+  // A fetch landed. Re-run so the market case moves with it, not just the
+  // price list. runProcess() re-renders this panel itself.
+  runProcess();
 }
 
 async function fetchUsdCad() {
@@ -926,7 +1207,9 @@ async function fetchUsdCad() {
   } catch (e) {
     statusEl.textContent = "(live fetch failed - enter current rate manually)";
   }
-  renderPricePanel();
+  // A fetch landed. Re-run so the market case moves with it, not just the
+  // price list. runProcess() re-renders this panel itself.
+  runProcess();
   runProcess();
 }
 
@@ -938,7 +1221,9 @@ async function fetchEiaSnapshot() {
   } catch (e) {
     eiaSnapshot = null;
   }
-  renderPricePanel();
+  // A fetch landed. Re-run so the market case moves with it, not just the
+  // price list. runProcess() re-renders this panel itself.
+  runProcess();
 }
 
 function eiaSeries(key) {
@@ -951,7 +1236,7 @@ function getFx() { const v = num("fxRate", null); return v; }
 
 function toCadPerM3(value, unit, fx) {
   if (value == null || fx == null) return null;
-  if (unit === "usd_bbl") return value * M3_TO_BBL * fx;
+  if (unit === "usd_bbl") return value * BBL_PER_M3_PRICE * fx;
   if (unit === "usd_gal") return value * 264.172052 * fx;
   return null;
 }
@@ -986,12 +1271,12 @@ function renderPricePanel() {
   const eiaEl = document.getElementById("eiaStatus");
   const genEl = document.getElementById("eiaGenerated");
   if (!eiaSnapshot) {
-    genEl.textContent = "Live call failed and no fallback snapshot found. Run: python models/crude-to-profit/fetch_prices.py";
-    eiaEl.innerHTML = '<div class="price-row"><span>EIA prices unavailable.</span></div>';
+    genEl.textContent = "Product benchmark prices are unavailable right now. The model is using the reference prices.";
+    eiaEl.innerHTML = '<div class="price-row"><span>Unavailable, using reference prices</span></div>';
   } else {
     genEl.textContent = eiaSnapshot.source === "live"
-      ? "Fetched live just now, directly from this page."
-      : "Live call failed - falling back to snapshot generated " + (eiaSnapshot.generated_at || "unknown time") + ".";
+      ? "Retrieved just now. Publication date shown against each price."
+      : "Last retrieved " + (eiaSnapshot.generated_at || "earlier") + ". Publication date shown against each price.";
     eiaEl.innerHTML = Object.keys(EIA_LABELS).map(k => {
       const r = eiaSnapshot.prices ? eiaSnapshot.prices[k] : null;
       if (!r || !r.ok) return `<div class="price-row"><span>${EIA_LABELS[k]}</span><span class="native">unavailable</span></div>`;
@@ -1003,32 +1288,234 @@ function renderPricePanel() {
   const wcs = computeWcs();
   document.getElementById("wcsStatus").textContent = wcs.value != null ? `${wcs.value.toFixed(2)} US$/bbl - ${wcs.detail}` : "unavailable";
 
-  const wtiRow = eiaSeries("wti_usd_bbl");
-  const wtiVal = wtiRow ? wtiRow.value : null;
+  // Every feed prices off WCS. Grade differential is applied in USD/bbl, then
+  // the whole thing converts to C$/m3 once. Currency never enters the
+  // differential arithmetic.
   document.getElementById("liveCrudePrices").innerHTML = CRUDES.map(c => {
-    const bench = DEFAULT_CONFIG.crude_benchmark[c];
-    const anchorUsd = bench === "WTI" ? wtiVal : wcs.value;
-    const cad = toCadPerM3(anchorUsd, "usd_bbl", fx);
-    const diff = num("cd_" + c, 0);
-    const total = cad != null ? cad + diff : null;
+    const gradeDiff = DEFAULT_CONFIG.crude_grade_differential_usd_bbl[c];
+    const adj = num("cd_" + c, 0);                       // user adjustment, USD/bbl
+    const usdBbl = wcs.value != null ? wcs.value + gradeDiff + adj : null;
+    const total = toCadPerM3(usdBbl, "usd_bbl", fx);
     liveCrudePrices[c] = total;
-    return `<div class="price-row"><span>${c} (${bench})</span><span class="cad">${total != null ? fmtNum(total, 0) + " C$/m3" : "—"}</span></div>`;
+    const m = CRUDE_PRICING_META[c];
+    return `<div class="price-row" title="${m.wording}">
+      <span>${c} <span style="color:var(--text-secondary);font-size:11px">priced off ${m.anchor}</span></span>
+      <span class="cad">${total != null ? fmtNum(total, 0) + " C$/m3" : "—"}${usdBbl != null ? `<span style="color:var(--text-secondary);font-size:11px"> (${usdBbl.toFixed(2)} US$/bbl)</span>` : ""}</span>
+    </div>`;
   }).join("");
 
-  document.getElementById("livePricesProducts").innerHTML = PRICED_PRODUCTS.map(p => {
-    const seriesKey = DEFAULT_CONFIG.product_benchmark[p];
-    const row = eiaSeries(seriesKey);
+  // Order matters. LPG and naphtha anchor on the Alberta reference prices,
+  // then kerosene and diesel take their own benchmark, then UCO off the heavy
+  // crude price, then the swing cuts from wherever they are sent.
+  const PP = DEFAULT_CONFIG.product_pricing;
+
+  // LPG and naphtha: an Alberta price for the anchor month, scaled by how far
+  // the daily benchmark has moved since that month's own average. The Alberta
+  // figure is already in C$/m3 and the driver enters as a ratio, so no
+  // exchange rate is applied to either. Applying one would count it twice.
+  // Written as a factor times today's price rather than the anchor times a
+  // ratio. Same arithmetic, but floating point is not associative and this is
+  // the order the Python engine uses, so the two agree exactly.
+  const anchorPrice = (albertaCadM3, monthAverage, todayValue) =>
+    (albertaCadM3 && monthAverage && todayValue)
+      ? (albertaCadM3 / monthAverage) * todayValue : null;
+
+  const gasNow = (eiaSeries("gasoline_usd_gal") || {}).value;
+  const proNow = (eiaSeries("propane_usd_gal") || {}).value;
+  const A = ALBERTA_NGL;
+  naphthaAnchorDetail = {
+    anchor: A.pentanes_plus, month: A.month,
+    monthAverage: A.driver_month_average.gasoline, today: gasNow,
+    movement: (gasNow && A.driver_month_average.gasoline)
+      ? gasNow / A.driver_month_average.gasoline : null,
+  };
+  const c3 = anchorPrice(A.propane, A.driver_month_average.propane, proNow);
+  const c4 = anchorPrice(A.butanes, A.driver_month_average.gasoline, gasNow);
+  lpgAnchorDetail = {
+    month: A.month,
+    c3: { anchor: A.propane, today: proNow, price: c3,
+          driver: "US propane", monthAverage: A.driver_month_average.propane },
+    c4: { anchor: A.butanes, today: gasNow, price: c4,
+          driver: "US gasoline", monthAverage: A.driver_month_average.gasoline },
+  };
+
+  const anchored = {
+    naphtha: anchorPrice(A.pentanes_plus, A.driver_month_average.gasoline, gasNow),
+    lpg: (c3 != null && c4 != null)
+      ? DEFAULT_CONFIG.lpg_c3_fraction * c3 + DEFAULT_CONFIG.lpg_c4_fraction * c4
+      : null,
+  };
+
+  for (const p of ["lpg", "naphtha"]) {
+    // Fall back to the plain US benchmark if the anchor is missing, and say
+    // so, rather than showing a proxy as though it were an anchored price.
+    let base = anchored[p];
+    anchorUsed[p] = base != null;
+    if (base == null) {
+      const row = eiaSeries(PP[p].benchmark);
+      base = row ? toCadPerM3(row.value, row.unit, fx) : null;
+    }
+    liveProductPrices[p] = base != null ? base + num("pd_" + p, 0) : null;
+  }
+
+  for (const p of ["kerosene", "diesel"]) {
+    const row = eiaSeries(PP[p].benchmark);
     const cad = row ? toCadPerM3(row.value, row.unit, fx) : null;
-    const diff = num("pd_" + p, 0);
-    const total = cad != null ? cad + diff : null;
-    liveProductPrices[p] = total;
-    return `<div class="price-row"><span>${PRODUCT_LABELS[p]}</span><span class="cad">${total != null ? fmtNum(total, 0) + " C$/m3" : "—"}</span></div>`;
+    liveProductPrices[p] = cad != null ? cad + num("pd_" + p, 0) : null;
+  }
+  // UCO: EIA stopped publishing residual fuel oil prices in 2022, so this is
+  // a fraction of the live heavy crude price rather than a product benchmark.
+  liveProductPrices.uco = wcs.value != null
+    ? toCadPerM3(wcs.value, "usd_bbl", fx) * PP.uco.factor : null;
+
+  const blend = (lowName, highName, toHigh) => {
+    const lo = liveProductPrices[lowName], hi = liveProductPrices[highName];
+    return (lo == null || hi == null) ? null : (1 - toHigh) * lo + toHigh * hi;
+  };
+  liveProductPrices.swing_naphtha = blend("naphtha", "kerosene", DEFAULT_CONFIG.swing_naphtha_to_kerosene);
+  liveProductPrices.swing_diesel  = blend("uco", "diesel", DEFAULT_CONFIG.swing_diesel_to_diesel);
+
+  document.getElementById("livePricesProducts").innerHTML = PRODUCTS.map(p => {
+    const total = liveProductPrices[p];
+    let label = PP[p].label;
+    if ((p === "lpg" || p === "naphtha") && !anchorUsed[p]) {
+      label = "US benchmark proxy, Alberta price unavailable";
+    }
+    return `<div class="price-row" title="${label}">
+      <span>${PRODUCT_LABELS[p]} <span style="color:var(--text-secondary);font-size:11px">${label}</span></span>
+      <span class="cad">${total != null ? fmtNum(total, 0) + " C$/m3" : "—"}</span>
+    </div>`;
   }).join("");
+
+  renderSources(fx);
+}
+
+// ---- Sources & Formulas tab ---------------------------------------------
+// Everything here is rendered from the same values the price panel used, so
+// the tab can never drift out of step with the numbers it explains.
+
+const PUBLISHERS = [
+  { name: "Government of Alberta, Monthly Reference Price Calculations",
+    what: "Reference prices for propane, butanes and pentanes plus",
+    units: "C$/m&sup3;", freq: "Monthly, about two months behind",
+    used: "LPG and naphtha anchor" },
+  { name: "Government of Alberta, oil price series",
+    what: "WCS, WTI and the WCS&ndash;WTI differential",
+    units: "US$/bbl", freq: "Monthly",
+    used: "Crude feed pricing" },
+  { name: "U.S. Energy Information Administration",
+    what: "Spot prices for WTI, gasoline, propane, jet fuel and diesel",
+    units: "US$/bbl and US$/gal", freq: "Daily, business days",
+    used: "Daily movement, kerosene and diesel" },
+  { name: "Live exchange rate",
+    what: "US dollar to Canadian dollar",
+    units: "rate", freq: "Daily",
+    used: "Converting US prices to C$/m&sup3;" },
+];
+
+const FORMULA_ROWS = {
+  lpg: { method: "Alberta anchor, moved daily",
+         formula: "0.258 &times; propane leg + 0.742 &times; butanes leg" },
+  naphtha: { method: "Alberta anchor, moved daily",
+         formula: "Alberta pentanes plus &times; (gasoline today &divide; gasoline that month)" },
+  swing_naphtha: { method: "Opportunity value",
+         formula: "half to the naphtha pool, half to the kerosene pool" },
+  kerosene: { method: "Traded benchmark",
+         formula: "US jet fuel US$/gal &times; 264.172052 &times; exchange rate" },
+  diesel: { method: "Traded benchmark",
+         formula: "US diesel US$/gal &times; 264.172052 &times; exchange rate" },
+  swing_diesel: { method: "Opportunity value",
+         formula: "half to the diesel pool, half to unconverted oil" },
+  uco: { method: "Heavy-product proxy",
+         formula: "0.825 &times; WCS US$/bbl &times; 6.28981077 &times; exchange rate" },
+};
+
+function renderSources(fx) {
+  const t = (id) => document.getElementById(id);
+  if (!t("srcPublishers")) return;
+
+  t("srcPublishers").innerHTML = PUBLISHERS.map(p =>
+    `<tr><td>${p.name}</td><td>${p.what}</td><td>${p.units}</td><td>${p.freq}</td><td>${p.used}</td></tr>`
+  ).join("");
+
+  t("srcFormulas").innerHTML = PRODUCTS.map(p => {
+    const row = FORMULA_ROWS[p];
+    const v = liveProductPrices[p];
+    let method = row.method;
+    if ((p === "lpg" || p === "naphtha") && !anchorUsed[p]) {
+      method = "US benchmark proxy (Alberta price unavailable)";
+    }
+    return `<tr><td>${PRODUCT_LABELS[p]}</td><td>${method}</td>
+      <td style="font-family:var(--font-data);font-size:11.5px">${row.formula}</td>
+      <td class="num">${v != null ? fmtNum(v, 0) + " C$/m&sup3;" : "&mdash;"}</td></tr>`;
+  }).join("");
+
+  // Worked example, only when the anchors were actually used.
+  const A = ALBERTA_NGL;
+  const monthName = new Date(A.month + "-01T00:00:00").toLocaleDateString(
+    "en-CA", { year: "numeric", month: "long" });
+  let worked = "";
+  const nd = naphthaAnchorDetail, ld = lpgAnchorDetail;
+
+  if (anchorUsed.naphtha && nd && nd.today) {
+    worked += `<div class="worked"><h5>Naphtha</h5><div class="calc">
+      Alberta pentanes plus, ${monthName} &nbsp;=&nbsp; ${nd.anchor.toFixed(2)} C$/m&sup3;<br>
+      US gasoline, average that month &nbsp;=&nbsp; ${nd.monthAverage.toFixed(4)} US$/gal<br>
+      US gasoline today &nbsp;=&nbsp; ${nd.today.toFixed(4)} US$/gal<br>
+      movement &nbsp;=&nbsp; ${nd.today.toFixed(4)} &divide; ${nd.monthAverage.toFixed(4)} = ${nd.movement.toFixed(4)}<br>
+      <span class="res">naphtha today = ${nd.anchor.toFixed(2)} &times; ${nd.movement.toFixed(4)} = ${fmtNum(liveProductPrices.naphtha, 2)} C$/m&sup3;</span>
+    </div><div class="sub">Pentanes plus is condensate rather than a refinery naphtha cut, so this stays a proxy. It is a far closer one than finished gasoline, which is a blended consumer fuel.</div></div>`;
+  }
+
+  if (anchorUsed.lpg && ld && ld.c3.price != null) {
+    const c = DEFAULT_CONFIG;
+    worked += `<div class="worked"><h5>LPG</h5><div class="calc">
+      propane leg &nbsp;=&nbsp; ${ld.c3.anchor.toFixed(2)} &times; (${ld.c3.today.toFixed(4)} &divide; ${ld.c3.monthAverage.toFixed(4)}) = ${ld.c3.price.toFixed(2)} C$/m&sup3;<br>
+      butanes leg &nbsp;=&nbsp; ${ld.c4.anchor.toFixed(2)} &times; (${ld.c4.today.toFixed(4)} &divide; ${ld.c4.monthAverage.toFixed(4)}) = ${ld.c4.price.toFixed(2)} C$/m&sup3;<br>
+      <span class="res">LPG = ${c.lpg_c3_fraction} &times; ${ld.c3.price.toFixed(2)} + ${c.lpg_c4_fraction} &times; ${ld.c4.price.toFixed(2)} = ${fmtNum(liveProductPrices.lpg, 2)} C$/m&sup3;</span>
+    </div><div class="sub">The stream is propane plus butanes, so it is weighted by composition rather than priced as pure propane. Alberta publishes one butanes price covering both butane isomers. Butane has no daily published price, so its movement borrows the gasoline benchmark.</div></div>`;
+  }
+
+  if (!worked) {
+    worked = `<div class="worked"><div class="sub">The Alberta reference prices could not be applied, so LPG and naphtha are showing a US benchmark proxy instead. The worked example returns once the anchor is available.</div></div>`;
+  }
+  t("srcWorked").innerHTML = worked;
+
+  // Estimate against the model's own fixed prices.
+  let biggestGap = null;
+  t("srcComparison").innerHTML = PRODUCTS.map(p => {
+    const v = liveProductPrices[p];
+    const lo = num("ppl_" + p, null), hi = num("pph_" + p, null);
+    let position = "&mdash;", cls = "";
+    if (v != null && lo != null && hi != null) {
+      if (v < lo) { position = "below"; cls = "pos-below"; }
+      else if (v > hi) { position = "above"; cls = "pos-above"; }
+      else { position = "inside"; cls = "pos-inside"; }
+      if (v < lo * 0.8 && (!biggestGap || v / lo < biggestGap.ratio)) {
+        biggestGap = { product: PRODUCT_LABELS[p], v, lo, hi, ratio: v / lo };
+      }
+    }
+    return `<tr><td>${PRODUCT_LABELS[p]}</td>
+      <td class="num">${v != null ? fmtNum(v, 0) : "&mdash;"}</td>
+      <td class="num">${lo != null ? fmtNum(lo, 0) : "&mdash;"}</td>
+      <td class="num">${hi != null ? fmtNum(hi, 0) : "&mdash;"}</td>
+      <td class="${cls}">${position}</td></tr>`;
+  }).join("");
+
+  t("srcGapNote").innerHTML = biggestGap
+    ? `<div class="gap-note"><strong>${biggestGap.product}</strong> estimates at
+       ${fmtNum(biggestGap.v, 0)} C$/m&sup3; against an assumed
+       ${fmtNum(biggestGap.lo, 0)} to ${fmtNum(biggestGap.hi, 0)}. That is a
+       real gap and it is left visible rather than adjusted away. It is worth
+       establishing which figure describes the price this refinery actually
+       realises: the published Alberta reference price is a plant-gate
+       valuation, while a delivered or rack price would sit higher.</div>`
+    : "";
 }
 
 function applyLivePrices() {
   for (const c of CRUDES) if (liveCrudePrices[c] != null) setVal("cpl_" + c, liveCrudePrices[c].toFixed(2));
-  for (const p of PRICED_PRODUCTS) if (liveProductPrices[p] != null) setVal("ppl_" + p, liveProductPrices[p].toFixed(2));
+  for (const p of PRODUCTS) if (liveProductPrices[p] != null) setVal("ppl_" + p, liveProductPrices[p].toFixed(2));
   runProcess();
 }
 
@@ -1060,14 +1547,17 @@ function exportResults() {
 function runProcess() {
   const flows = readCrudeFlows();
   const cfg = readConfig();
-  const res = runModel(flows, cfg);
+  // Price the panel first: the market case needs those numbers before the
+  // model runs, so today's margin appears with the other two rather than
+  // one render behind them.
+  renderPricePanel();
+  const res = runModel(flows, cfg, liveCrudePrices, liveProductPrices);
   lastResult = res;
   updateKPIs(res);
   updateDerivedDisplays(res);
   updateBlendTable(res);
   updateSlateTable(res);
   updateCharts(res);
-  renderPricePanel();
 }
 
 // ---- CSV upload for crude flows ---------------------------------------------
