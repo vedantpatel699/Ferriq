@@ -52,6 +52,19 @@ table.edit td,table.edit th{padding:6px 8px}
 .card-body h4.sub:first-child{margin-top:0}
 .flow-upload{display:flex;align-items:center;gap:10px;margin-bottom:12px}
 .about-p{font-size:13px;line-height:1.65;color:var(--text-primary);margin-bottom:12px}
+table.data th.num{text-align:right}
+.unit-group{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);margin:16px 0 8px;font-weight:600}
+.unit-group:first-of-type{margin-top:4px}
+.unit-picker{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.unit-btn{flex:1 1 180px;text-align:left;padding:10px 12px;border:1px solid var(--border-card);border-radius:8px;background:var(--surface-page);cursor:pointer;font:inherit;color:var(--text-primary)}
+.unit-btn:hover{border-color:var(--neutral-600,#6b6b6b)}
+.unit-btn.active{border-color:var(--neutral-600,#6b6b6b);box-shadow:inset 3px 0 0 var(--neutral-600,#6b6b6b)}
+.unit-btn .ub-name{display:block;font-weight:600;font-size:12.5px;margin-bottom:3px}
+.unit-btn .ub-sub{display:block;font-size:11px;color:var(--text-secondary);line-height:1.45}
+.ccr-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary)}
+.ccr-row label{font-weight:600;color:var(--text-primary)}
+.ccr-note{flex:1 1 320px;font-size:11px;line-height:1.5}
+.unit-warn{background:var(--gold-100);border:1px solid var(--border-card);border-radius:8px;padding:12px 14px;font-size:12px;line-height:1.6;color:var(--text-secondary);margin-top:12px}
 .formula-block{background:var(--surface-page);border:1px solid var(--border-card);border-radius:8px;padding:14px 16px;margin-bottom:14px}
 .formula-line{font-family:var(--font-data);font-size:12.5px;line-height:1.9;color:var(--text-primary);display:flex;gap:10px;align-items:baseline}
 .formula-step{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:50%;background:var(--neutral-600,#6b6b6b);color:#fff;font-family:var(--font-ui,inherit);font-size:10px;flex:none}
@@ -155,7 +168,7 @@ table.edit td,table.edit th{padding:6px 8px}
     <div class="page-head">
       <div>
         <h1>Crude to Profit - Refinery Blend Margin</h1>
-        <p>Five-crude blend &middot; primary distillation, Residue Hydrocracker, SimDist split, hydrocracker/hydrotreater, and gross margin. Margin screening tool, not a blend optimizer.</p>
+        <p>Five-crude blend &middot; primary distillation, a selectable residue conversion unit, SimDist split, hydrocracker/hydrotreater, and gross margin. Margin screening tool, not a blend optimizer.</p>
       </div>
       <button class="btn btn-sm btn-outline" id="restoreDefaultsBtn">Restore Defaults</button>
     </div>
@@ -212,6 +225,43 @@ table.edit td,table.edit th{padding:6px 8px}
           <div class="kpi-label">Total Product Volume</div>
           <div class="kpi-value" id="kProductVolume">&mdash;</div>
           <div class="kpi-sub">m&sup3;/hr finished slate</div>
+        </div>
+      </div>
+
+      <!-- PROCESS CONFIGURATION -->
+      <div class="card">
+        <div class="card-header">Process Configuration<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">two conversion units, chosen separately</span></div>
+        <div class="card-body">
+          <div class="note-box">
+            The vacuum residue and the gas oil are converted in two different units, so they are two separate choices. Catalytic cracking runs on gas oil, not on vacuum residue, which is why it appears on the second row rather than the first.
+          </div>
+
+          <h4 class="unit-group">Residue conversion &mdash; what happens to the vacuum residue</h4>
+          <div class="unit-picker" id="unitPicker"></div>
+          <div class="ccr-row" id="ccrRow">
+            <label for="cokerCcr">Feed carbon residue, wt%</label>
+            <input type="number" step="0.5" min="5" max="35" class="config-input" id="cokerCcr" value="15">
+            <span class="ccr-note">One number sets the whole coker slate. Published vacuum residues run 15 to 30 wt%, higher for bitumen-derived feeds. A lab result for this feed should replace it.</span>
+          </div>
+
+          <h4 class="unit-group">Gas oil conversion &mdash; what happens to the unconverted oil</h4>
+          <div class="unit-picker" id="gasOilPicker"></div>
+          <p style="font-size:11px;color:var(--text-secondary);line-height:1.6;margin:0 0 4px">
+            The unconverted oil leaving the split is <strong>99.7% vacuum gas oil</strong>, which is the feed catalytic cracking actually runs on. Hydrocracking and catalytic cracking are the two competing routes for converting it, and they pull the slate in opposite directions.
+          </p>
+          <div class="table-scroll" style="margin-top:12px">
+            <table class="data">
+              <thead><tr><th>Stream</th><th class="num">LC Finer</th><th class="num">Delayed coker</th></tr></thead>
+              <tbody id="unitYieldBody"></tbody>
+            </table>
+          </div>
+          <div class="table-scroll" style="margin-top:12px">
+            <table class="data">
+              <thead><tr><th>Gas oil unit yield, vol% of feed</th><th class="num">Hydrocracker</th><th class="num">FCC</th></tr></thead>
+              <tbody id="gasOilYieldBody"></tbody>
+            </table>
+          </div>
+          <div id="unitNote"></div>
         </div>
       </div>
 
@@ -473,6 +523,36 @@ table.edit td,table.edit th{padding:6px 8px}
       </div>
 
       <div class="card">
+        <div class="card-header">Process Yield Data<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">where each residue unit's yields come from</span></div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table class="data">
+              <thead><tr><th>Unit</th><th>Source</th><th>How the slate is built</th></tr></thead>
+              <tbody>
+                <tr><td>LC Finer <span style="color:var(--text-secondary);font-size:11px">residue</span></td><td>The source costing spreadsheet</td><td>Measured point values for this feed.</td></tr>
+                <tr><td>Delayed coker <span style="color:var(--text-secondary);font-size:11px">residue</span></td><td>Published refining literature</td><td>Computed from carbon-residue correlations, so the slate follows from one measurable feed property instead of seven typed numbers.</td></tr>
+                <tr><td>Hydrocracker <span style="color:var(--text-secondary);font-size:11px">gas oil</span></td><td>The source costing spreadsheet</td><td>Measured volume yields. With LC Finer, the only configuration that can be checked against the spreadsheet.</td></tr>
+                <tr><td>Fluid catalytic cracking <span style="color:var(--text-secondary);font-size:11px">gas oil</span></td><td>Published refining literature</td><td>Published wt% yields, converted to volume on each product's density, then spread across this model's cuts by boiling range.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="about-p" style="margin-top:12px">The coker correlations take the feed's Conradson carbon residue and return gas, naphtha, coke and gas oil, which sum to 100 wt% by construction. This model then divides the gas oil between diesel, LVGO, MVGO and HVGO using this plant's own proportions rather than the generic split in the literature, because those cut points belong to the fractionator and do not change when the upstream reactor does.</p>
+          <p class="about-p"><strong>Why catalytic cracking sits on the gas oil, not the vacuum residue.</strong> An FCC runs on gas oil. The unconverted oil leaving the SimDist split in this model is 99.7% vacuum gas oil, so that stream, not the vacuum residue, is where the unit belongs. Hydrocracking and catalytic cracking are the two established competing routes for converting gas oil, which is what makes them a genuine either-or: hydrocracking adds hydrogen and favours kerosene and diesel, catalytic cracking rejects carbon and favours gasoline-range material and LPG.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">Open Data Statement<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">nothing here is proprietary or purchased</span></div>
+        <div class="card-body">
+          <div class="note-box">
+            All data used in this model were obtained from open, publicly available sources. No proprietary, licensed or purchased data is used anywhere in it.
+          </div>
+          <p class="about-p">Prices come from Government of Alberta open data and the U.S. Energy Information Administration, both free public services. Process yields come from the source costing spreadsheet and from published refining literature. Crude quality data come from public crude assay information.</p>
+          <p class="about-p">Every figure this model produces is an estimate rather than a market assessment, and none of it should be used to settle a transaction.</p>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="card-header">Known Limitations<span style="font-weight:400;font-size:11px;color:var(--text-secondary)">what these prices are not</span></div>
         <div class="card-body">
           <p class="about-p"><strong>These are bulk values at the refinery gate.</strong> No pump prices, no consumer fuel tax, no retail margin. The model represents the economics of the refinery, not of the fuel retail chain.</p>
@@ -561,6 +641,14 @@ const DEFAULT_CONFIG = {
   rhc_yield_wtpct: {
     rhc_naphtha: 14.13, diesel: 23.95, rhc_lvgo: 12.32, rhc_mvgo: 9.78, rhc_hvgo: 2.44, unconverted_residue: 25.39,
   },
+  // Which unit the vacuum residue goes to: lc_finer | delayed_coker | fcc
+  residue_unit: "lc_finer",
+  // Carbon residue of the vacuum residue feed, wt%. Drives the whole coker
+  // slate through the published correlations. Published vacuum residues run
+  // 15-30 wt%, higher for bitumen-derived feeds.
+  coker_feed_ccr_wtpct: 15.0,
+  // Fraction of the residue unit's LPG/fuel gas stream recovered and sold.
+  lpg_fuel_gas_recovered: 1.0,
   hcht_yield_volpct: {
     c3: 1.55, ic4: 2.96, nc4: 1.49, naphtha: 18.94, swing_naphtha: 5.41,
     kerosene: 43.85, diesel: 20.36, swing_diesel: 9.29, uco: 7.58,
@@ -694,11 +782,158 @@ function primarySplit(crudeFlows, cfg) {
 }
 
 // -- 5.3 Residue Hydrocracker --------------------------------------------------------
-function rhcSplit(vrM3hr, cfg) {
-  const table = cfg.rhc_yield_wtpct;
-  const factor = vrM3hr * RHC_FEED_DENSITY_KG_M3 / RHC_PRODUCT_DENSITY_KG_M3;
+// Which unit is selected on the page. Changed by the picker in the
+// Residue Conversion Unit card.
+let selectedResidueUnit = "lc_finer";
+let selectedGasOilUnit = "hydrocracker";
+
+// ---- Residue conversion options -----------------------------------------
+// Three units can take the vacuum residue. All three slates sum to exactly
+// 100 wt%. The LC Finer column is the workbook's own measured data; the coker
+// and FCC slates come from published refining literature, which is open and
+// freely available.
+
+// Liquid density of the recovered LPG stream, kg/m3. A C3/C4 mix at storage
+// conditions, used only to turn the LPG mass stream into a sellable volume.
+const LPG_LIQUID_DENSITY_KG_M3 = 560.0;
+
+const LC_FINER_YIELD_WTPCT = {
+  rhc_naphtha: 14.13, diesel: 23.95, rhc_lvgo: 12.32, rhc_mvgo: 9.78,
+  rhc_hvgo: 2.44, unconverted_residue: 25.39,
+  lpg_fuel_gas: 11.99,   // added in the revised sheet; closes the column
+  coke: 0.00,            // a hydrocracker makes no coke
+};
+
+// How this fractionator divides gas oil, taken from the LC Finer column. The
+// cut points are a property of the fractionator and do not change when the
+// upstream reactor does, so this is used in place of the literature's generic
+// 64.5/35.5 light-to-heavy split.
+const GAS_OIL_KEYS = ["diesel", "rhc_lvgo", "rhc_mvgo", "rhc_hvgo"];
+const GAS_OIL_TOTAL = GAS_OIL_KEYS.reduce((a, k) => a + LC_FINER_YIELD_WTPCT[k], 0);
+const GAS_OIL_SPLIT = Object.fromEntries(
+  GAS_OIL_KEYS.map(k => [k, LC_FINER_YIELD_WTPCT[k] / GAS_OIL_TOTAL]));
+
+// Delayed coker, from published carbon-residue correlations:
+//   gas = 7.80 + 0.144*CCR ; naphtha = 11.29 + 0.343*CCR ; coke = 1.60*CCR
+//   gas oil = the remainder. Closes to 100 by construction.
+function cokerYieldWtpct(ccr) {
+  const gas = 7.80 + 0.144 * ccr;
+  const naphtha = 11.29 + 0.343 * ccr;
+  const coke = 1.60 * ccr;
+  const gasOil = 100.0 - (gas + naphtha + coke);
+  const out = {
+    rhc_naphtha: naphtha, unconverted_residue: 0.0,  // no liquid bottoms
+    lpg_fuel_gas: gas, coke: coke,
+  };
+  for (const k of GAS_OIL_KEYS) out[k] = gasOil * GAS_OIL_SPLIT[k];
+  return out;
+}
+
+const RESIDUE_UNIT_LABELS = {
+  lc_finer: "LC Finer",
+  delayed_coker: "Delayed coker",
+};
+
+// FCC is deliberately not here. An FCC runs on gas oil, not vacuum residue,
+// so it belongs on the gas oil stream and is selected separately below.
+
+// ---- Gas oil conversion options -----------------------------------------
+// The unconverted oil leaving the SimDist split is 99.7% vacuum gas oil, and
+// gas oil is what an FCC actually runs on. Hydrocracking and catalytic
+// cracking are the two competing routes for converting it, pulling the slate
+// in opposite directions: hydrocracking adds hydrogen and favours middle
+// distillate, catalytic cracking rejects carbon and favours gasoline-range
+// material and LPG.
+//
+// FEED QUALITY. Catalytic cracking is far more sensitive to feed than
+// hydrocracking. Nickel and vanadium poison the catalyst and carbon residue
+// drives coke make, and gas oil from heavy Canadian crude carries both, so
+// the FCC case assumes a hydrotreated feed. That is a real unit and a real
+// capital cost, and it is not modelled here.
+
+const FCC_FEED_DENSITY_KG_M3 = 900.0;
+
+// Published FCC yields, wt% of gas oil feed at about 70% conversion. Every
+// value sits inside its published range and the set sums to exactly 100.
+const FCC_YIELD_WTPCT = {
+  dry_gas: 4.0,    // published 2-7
+  lpg: 12.0,       // published 10-15
+  gasoline: 47.0,  // published 45-55
+  lco: 21.0,       // published 20-25, light cycle oil
+  slurry: 10.0,    // published 8-12, heavy cycle oil / decant
+  coke: 6.0,       // published 5-7
+};
+const FCC_PRODUCT_DENSITY_KG_M3 = { lpg:560.0, gasoline:730.0, lco:950.0, slurry:1050.0 };
+// FCC gasoline is cut at 220 C. Lowering that endpoint moves material out of
+// this model's kerosene cut into naphtha, and the two are priced differently.
+const FCC_PRODUCT_RANGE_C = { gasoline:[36,220], lco:[220,350], slurry:[350,600] };
+const PRODUCT_RANGE_C = {
+  naphtha:[36,128], swing_naphtha:[128,145], kerosene:[145,277],
+  diesel:[277,340], swing_diesel:[340,385], uco:[385,600],
+};
+const GAS_OIL_UNIT_LABELS = {
+  hydrocracker: "Hydrocracker / hydrotreater",
+  fcc: "Fluid catalytic cracking",
+};
+
+// Spread one FCC product across this model's cuts by boiling range overlap.
+// ASSUMES MATERIAL IS EVEN ACROSS A PRODUCT'S BOILING RANGE, which a real
+// distillation curve is not. Good enough to compare processes; replace with a
+// real FCC product curve before quoting any single cut from it.
+function rangeOverlapSplit(lo, hi) {
+  const shares = {};
+  for (const [cut, [a, b]] of Object.entries(PRODUCT_RANGE_C)) {
+    const ov = Math.max(0, Math.min(hi, b) - Math.max(lo, a));
+    if (ov > 0) shares[cut] = ov;
+  }
+  const tot = Object.values(shares).reduce((x, y) => x + y, 0);
+  return Object.fromEntries(Object.entries(shares).map(([k, v]) => [k, v / tot]));
+}
+
+// Published wt% -> vol% on each product's own density -> spread by boiling
+// range. The volume total exceeds 100 because cracking makes lighter, less
+// dense products from a heavier feed. That gain is real.
+function fccGasOilYieldVolpct() {
+  const vol = {};
+  for (const p of ["lpg", "gasoline", "lco", "slurry"])
+    vol[p] = FCC_YIELD_WTPCT[p] * FCC_FEED_DENSITY_KG_M3 / FCC_PRODUCT_DENSITY_KG_M3[p];
+  const slate = Object.fromEntries(Object.keys(PRODUCT_RANGE_C).map(c => [c, 0]));
+  slate.lpg = vol.lpg;
+  for (const p of ["gasoline", "lco", "slurry"])
+    for (const [cut, sh] of Object.entries(rangeOverlapSplit(...FCC_PRODUCT_RANGE_C[p])))
+      slate[cut] += vol[p] * sh;
+  return slate;
+}
+const FCC_GAS_OIL_YIELD_VOLPCT = fccGasOilYieldVolpct();
+
+function residueUnitYieldWtpct(unit, cfg) {
+  if (unit === "lc_finer") return { ...LC_FINER_YIELD_WTPCT };
+  if (unit === "delayed_coker") return cokerYieldWtpct(cfg.coker_feed_ccr_wtpct);
+  throw new Error("unknown residue unit: " + unit);
+}
+
+// Coke is a solid and LPG/fuel gas is a vapour, so neither belongs in a
+// liquid volume balance. Both are carried in mass and returned under
+// `byproducts`, because a coker turns about a quarter of its feed into coke
+// and dropping it would lose a quarter of the feed.
+function rhcSplit(vrM3hr, cfg, unit) {
+  unit = unit || cfg.residue_unit;
+  const table = residueUnitYieldWtpct(unit, cfg);
+  const feedKghr = vrM3hr * RHC_FEED_DENSITY_KG_M3;
+  const factor = feedKghr / RHC_PRODUCT_DENSITY_KG_M3;
   const out = {};
-  for (const p of RHC_PRODUCTS) out[p] = factor * table[p] / 100.0;
+  for (const p of RHC_PRODUCTS) out[p] = factor * (table[p] || 0) / 100.0;
+  const cokePct = table.coke || 0, gasPct = table.lpg_fuel_gas || 0;
+  out.byproducts = {
+    unit, unit_label: RESIDUE_UNIT_LABELS[unit],
+    feed_m3hr: vrM3hr, feed_kghr: feedKghr,
+    coke_kghr: feedKghr * cokePct / 100.0, coke_wtpct: cokePct,
+    lpg_fuel_gas_kghr: feedKghr * gasPct / 100.0, lpg_fuel_gas_wtpct: gasPct,
+    lpg_recovered_m3hr: feedKghr * gasPct / 100.0
+      * cfg.lpg_fuel_gas_recovered / LPG_LIQUID_DENSITY_KG_M3,
+    yield_sum_wtpct: Object.values(table).reduce((a, b) => a + b, 0),
+    yield_wtpct: table,
+  };
   return out;
 }
 
@@ -731,19 +966,47 @@ function simdistDirectProducts(streamFeeds, cfg) {
 }
 
 // -- 5.5 Hydrocracker / hydrotreater on UCO ------------------------------
-function hchtSplit(ucoM3hr, cfg) {
+// The gas oil conversion unit, on the unconverted oil. Either hydrocracking
+// (hydrogen addition, favours middle distillate) or catalytic cracking
+// (carbon rejection, favours gasoline-range material and LPG, makes coke).
+function hchtSplit(ucoM3hr, cfg, unit) {
+  unit = unit || cfg.gas_oil_unit;
+  const out = {};
+
+  if (unit === "fcc") {
+    const table = FCC_GAS_OIL_YIELD_VOLPCT;
+    for (const p of PRODUCTS) out[p] = ucoM3hr * table[p] / 100.0;
+    const feedKghr = ucoM3hr * FCC_FEED_DENSITY_KG_M3;
+    out.byproducts = {
+      unit, unit_label: GAS_OIL_UNIT_LABELS[unit],
+      feed_m3hr: ucoM3hr, feed_kghr: feedKghr,
+      coke_kghr: feedKghr * FCC_YIELD_WTPCT.coke / 100.0,
+      coke_wtpct: FCC_YIELD_WTPCT.coke,
+      dry_gas_kghr: feedKghr * FCC_YIELD_WTPCT.dry_gas / 100.0,
+      dry_gas_wtpct: FCC_YIELD_WTPCT.dry_gas,
+      liquid_volume_yield_volpct: Object.values(table).reduce((a, b) => a + b, 0),
+    };
+    return out;
+  }
+
   const y = cfg.hcht_yield_volpct;
   const lpgPct = y.c3 + y.ic4 + y.nc4;
   const pct = { lpg: lpgPct, naphtha: y.naphtha, swing_naphtha: y.swing_naphtha, kerosene: y.kerosene, diesel: y.diesel, swing_diesel: y.swing_diesel, uco: y.uco };
-  const out = {};
   for (const p of PRODUCTS) out[p] = ucoM3hr * pct[p] / 100.0;
+  out.byproducts = {
+    unit, unit_label: GAS_OIL_UNIT_LABELS[unit],
+    feed_m3hr: ucoM3hr, coke_kghr: 0.0, dry_gas_kghr: 0.0,
+    liquid_volume_yield_volpct: Object.values(pct).reduce((a, b) => a + b, 0),
+  };
   return out;
 }
 
-function finalProductSlate(directTotals, hcProducts) {
+function finalProductSlate(directTotals, hcProducts, residueByproducts) {
   const slate = {};
   for (const p of PRODUCTS) slate[p] = directTotals[p] + hcProducts[p];
   slate.uco = hcProducts.uco; // direct UCO was consumed as HC feed
+  // The residue unit's recovered LPG. Omitted for the workbook comparison.
+  if (residueByproducts) slate.lpg += residueByproducts.lpg_recovered_m3hr || 0;
   return slate;
 }
 
@@ -790,16 +1053,26 @@ function economics(crudeFlows, productSlate, cfg, marketCrude, marketProduct) {
   return out;
 }
 
-function runModel(crudeFlows, cfg, marketCrude, marketProduct) {
+function runModel(crudeFlows, cfg, marketCrude, marketProduct, residueUnit, gasOilUnit) {
   const blend = blendCrudes(crudeFlows);
   const primary = primarySplit(crudeFlows, cfg);
-  const rhc = rhcSplit(primary.totals_m3hr.vr, cfg);
+  const rhc = rhcSplit(primary.totals_m3hr.vr, cfg, residueUnit);
+  const byproducts = rhc.byproducts;
   const feeds = simdistStreamFeeds(primary.totals_m3hr, rhc);
   const direct = simdistDirectProducts(feeds, cfg);
-  const hc = hchtSplit(direct.totals_m3hr.uco, cfg);
-  const slate = finalProductSlate(direct.totals_m3hr, hc);
+  const hc = hchtSplit(direct.totals_m3hr.uco, cfg, gasOilUnit);
+  const gasOilByproducts = hc.byproducts;
+  // workbookSlate leaves out the residue unit's LPG so it stays comparable
+  // with the spreadsheet; slate includes it.
+  const workbookSlate = finalProductSlate(direct.totals_m3hr, hc);
+  const slate = finalProductSlate(direct.totals_m3hr, hc, byproducts);
   const econ = economics(crudeFlows, slate, cfg, marketCrude, marketProduct);
-  return { blend, primary, rhc_products_m3hr: rhc, simdist_stream_feeds_m3hr: feeds, direct_products: direct, hc_reactor_products_m3hr: hc, product_slate_m3hr: slate, economics: econ };
+  return { blend, primary, rhc_products_m3hr: rhc, simdist_stream_feeds_m3hr: feeds,
+           direct_products: direct, hc_reactor_products_m3hr: hc,
+           product_slate_m3hr: slate, workbook_slate_m3hr: workbookSlate,
+           byproducts, residue_unit: byproducts.unit,
+           gas_oil_unit: gasOilByproducts.unit, gas_oil_byproducts: gasOilByproducts,
+           economics: econ };
 }
 
 // ---- DOM helpers --------------------------------------------------------
@@ -825,6 +1098,10 @@ const PRICED_PRODUCTS = PRODUCTS; // all seven now carry a live value
 
 function readConfig() {
   const cfg = { cut_point_c: DEFAULT_CONFIG.cut_point_c, product_pricing: DEFAULT_CONFIG.product_pricing, hcht_yield_wtpct: DEFAULT_CONFIG.hcht_yield_wtpct };
+  cfg.residue_unit = selectedResidueUnit;
+  cfg.gas_oil_unit = selectedGasOilUnit;
+  cfg.coker_feed_ccr_wtpct = num("cokerCcr", DEFAULT_CONFIG.coker_feed_ccr_wtpct);
+  cfg.lpg_fuel_gas_recovered = DEFAULT_CONFIG.lpg_fuel_gas_recovered;
 
   cfg.primary_yield_volpct = {};
   for (const c of CRUDES) {
@@ -1016,6 +1293,111 @@ function updateKPIs(res) {
   document.getElementById("kBlendRate").textContent = fmtNum(res.blend.total_flow_m3hr, 1);
   let totalProduct = 0; for (const p of PRODUCTS) totalProduct += res.product_slate_m3hr[p];
   document.getElementById("kProductVolume").textContent = fmtNum(totalProduct, 1);
+}
+
+// ---- Residue unit picker -------------------------------------------------
+const UNIT_BLURB = {
+  lc_finer: "The workbook's own measured yields. Part of the only configuration that can be checked against the spreadsheet.",
+  delayed_coker: "Yields computed from published carbon-residue correlations. Makes coke, no liquid bottoms.",
+};
+
+const GAS_OIL_BLURB = {
+  hydrocracker: "Hydrogen addition. Favours kerosene and diesel. The workbook's own case.",
+  fcc: "Catalytic cracking. About three times the LPG and half again the naphtha, at the cost of middle distillate. Makes coke.",
+};
+
+const YIELD_ROW_LABELS = {
+  rhc_naphtha: "Naphtha", diesel: "Diesel", rhc_lvgo: "LVGO", rhc_mvgo: "MVGO",
+  rhc_hvgo: "HVGO", unconverted_residue: "Bottoms / slurry",
+  lpg_fuel_gas: "LPG / fuel gas", coke: "Coke (solid)",
+};
+
+function renderUnitPicker() {
+  const picker = document.getElementById("unitPicker");
+  if (!picker) return;
+  picker.innerHTML = Object.keys(RESIDUE_UNIT_LABELS).map(u =>
+    `<button class="unit-btn${u === selectedResidueUnit ? " active" : ""}" data-unit="${u}">
+       <span class="ub-name">${RESIDUE_UNIT_LABELS[u]}</span>
+       <span class="ub-sub">${UNIT_BLURB[u]}</span>
+     </button>`).join("");
+  picker.querySelectorAll(".unit-btn").forEach(b =>
+    b.addEventListener("click", () => {
+      selectedResidueUnit = b.dataset.unit;
+      runProcess();
+    }));
+  const ccrRow = document.getElementById("ccrRow");
+  if (ccrRow) ccrRow.style.display = selectedResidueUnit === "delayed_coker" ? "" : "none";
+
+  const gasPicker = document.getElementById("gasOilPicker");
+  if (!gasPicker) return;
+  gasPicker.innerHTML = Object.keys(GAS_OIL_UNIT_LABELS).map(u =>
+    `<button class="unit-btn${u === selectedGasOilUnit ? " active" : ""}" data-gasunit="${u}">
+       <span class="ub-name">${GAS_OIL_UNIT_LABELS[u]}</span>
+       <span class="ub-sub">${GAS_OIL_BLURB[u]}</span>
+     </button>`).join("");
+  gasPicker.querySelectorAll(".unit-btn").forEach(b =>
+    b.addEventListener("click", () => {
+      selectedGasOilUnit = b.dataset.gasunit;
+      runProcess();
+    }));
+}
+
+function renderUnitYields(cfg) {
+  const body = document.getElementById("unitYieldBody");
+  if (!body) return;
+  const units = Object.keys(RESIDUE_UNIT_LABELS);
+  const tables = Object.fromEntries(units.map(u => [u, residueUnitYieldWtpct(u, cfg)]));
+  const rows = Object.keys(YIELD_ROW_LABELS).map(k =>
+    `<tr><td>${YIELD_ROW_LABELS[k]}</td>` +
+    units.map(u => `<td class="num">${fmtNum(tables[u][k] || 0, 2)}</td>`).join("") +
+    `</tr>`).join("");
+  const sums = units.map(u =>
+    `<td class="num"><strong>${fmtNum(Object.values(tables[u]).reduce((a, b) => a + b, 0), 2)}</strong></td>`).join("");
+  body.innerHTML = rows +
+    `<tr><td><strong>Total, wt% of feed</strong></td>${sums}</tr>`;
+
+  // Gas oil unit comparison, vol% of the unconverted oil fed to it.
+  const gasBody = document.getElementById("gasOilYieldBody");
+  if (gasBody) {
+    const y = cfg.hcht_yield_volpct;
+    const hc = { lpg: y.c3 + y.ic4 + y.nc4, naphtha: y.naphtha,
+                 swing_naphtha: y.swing_naphtha, kerosene: y.kerosene,
+                 diesel: y.diesel, swing_diesel: y.swing_diesel, uco: y.uco };
+    const fc = FCC_GAS_OIL_YIELD_VOLPCT;
+    gasBody.innerHTML = PRODUCTS.map(p =>
+      `<tr><td>${PRODUCT_LABELS[p]}</td>
+        <td class="num">${fmtNum(hc[p], 2)}</td>
+        <td class="num">${fmtNum(fc[p], 2)}</td></tr>`).join("")
+      + `<tr><td><strong>Liquid volume yield, vol% of feed</strong></td>
+         <td class="num"><strong>${fmtNum(Object.values(hc).reduce((a,b)=>a+b,0), 2)}</strong></td>
+         <td class="num"><strong>${fmtNum(Object.values(fc).reduce((a,b)=>a+b,0), 2)}</strong></td></tr>`;
+  }
+
+  const note = document.getElementById("unitNote");
+  if (!note) return;
+  let html = `<p style="font-size:11px;color:var(--text-secondary);margin-top:10px;line-height:1.6">
+    Both residue slates close to exactly 100 wt% of the vacuum residue fed to the unit.
+    Coke is a solid and LPG/fuel gas is a vapour, so both are carried in the mass
+    balance and kept out of the liquid volume balance. Coke earns no revenue in this
+    model. Both gas oil yields exceed 100 vol% because cracking makes lighter, less
+    dense products from a heavier feed; that volume gain is real and is why refiners
+    run these units. LC Finer and hydrocracker values are the workbook's; the coker and
+    FCC come from published refining literature.</p>`;
+  if (selectedGasOilUnit === "fcc") {
+    html += `<div class="unit-warn"><strong>Two things to know about the FCC case.</strong>
+      Catalytic cracking is far more sensitive to feed than hydrocracking: nickel and
+      vanadium poison the catalyst and carbon residue drives coke make. Gas oil from heavy
+      Canadian crude carries both, so this case assumes the feed is hydrotreated first.
+      That is a real unit and a real capital cost, and it is not modelled here.
+      Separately, an FCC reports gasoline, cycle oil and slurry, which do not line up with
+      this model's seven cuts, so each is spread across them by boiling range. That
+      apportionment assumes material is distributed evenly across a product's boiling
+      range, which a real distillation curve is not. It is sound enough to compare
+      processes and should be replaced with a real FCC product curve before any single cut
+      is quoted from it. FCC gasoline is cut at 220&deg;C here, which puts a substantial
+      part of it inside this model's kerosene band.</div>`;
+  }
+  note.innerHTML = html;
 }
 
 function updateThreeCaseTable(econ) {
@@ -1551,8 +1933,11 @@ function runProcess() {
   // model runs, so today's margin appears with the other two rather than
   // one render behind them.
   renderPricePanel();
-  const res = runModel(flows, cfg, liveCrudePrices, liveProductPrices);
+  const res = runModel(flows, cfg, liveCrudePrices, liveProductPrices,
+                       selectedResidueUnit, selectedGasOilUnit);
   lastResult = res;
+  renderUnitPicker();
+  renderUnitYields(cfg);
   updateKPIs(res);
   updateDerivedDisplays(res);
   updateBlendTable(res);
