@@ -1,45 +1,62 @@
-# Ferriq - Chemical Engineering Dashboards
+# Ferriq
 
-A set of proof-of-concept monitoring dashboards for industrial process equipment. Built as self-contained, single-file HTML pages - no server, no database, no build step. Open in any modern browser.
+Industrial engineering surveillance for process equipment — proactive
+monitoring (detecting change and degradation) rather than an operator-style
+alarm screen. Built with Vite, React, and TypeScript.
 
-## Dashboards
+## Architecture
 
-| Equipment | File | Key Metrics |
-|-----------|------|-------------|
-| Welcome / Home | `welcome-home.html` | Equipment grid, time-based greeting |
-| Air Blower | `air-blower.html` | ASME PTC 10 efficiency, ISO 10816 vibration, bearing health |
-| Fired Heater Efficiency | `fired-heater.html` | Direct & indirect efficiency, loss breakdown, excess air |
-| Shell & Tube Exchanger | `shell-tube-exchanger.html` | LMTD effectiveness, fouling tracking, delta-P monitoring |
-| Membrane Analyzer | `membrane-analyzer.html` | H2 permeance tracking, recovery & purity, selectivity |
-| Furnace Skin Temp | `furnace-skin-temp.html` | Tube skin prediction, residual drift, TMT classification |
+Engineering/domain logic is kept separate from presentation and is
+independently testable:
 
-## Live Site
+```
+src/
+  engineering/        pure, framework-free calculation modules
+    blower/           Air Blower — ASME PTC 10 polytropic/isentropic efficiency,
+                       ISO 10816-3 vibration tiering
+    heater/           Fired Heater — 17-component fuel-gas combustion model,
+                       direct/PTC4-indirect efficiency
+    exchanger/        Shell & Tube Exchanger — TEMA LMTD correction factor,
+                       fouling resistance
+    membrane/         Membrane Analyzer — online/lab H2 recovery
+    furnace/          Furnace Skin TI Predictor — XGBoost quantile-tree
+                       forecasting, walks the trained model in public/data/
+    crudeToProfit/    Crude to Profit — full refinery yield/economics model
+    types.ts          shared engineering types (EquipmentState, MetricValue,
+                       Condition, TimeRange, ...)
+  components/         shared UI: AppShell, Sidebar, MetricCard, StatusBadge,
+                       FerriqTrendChart (ECharts), TrendRangeSelector,
+                       CalculationBasisDialog, DataQualityNotice, ...
+  lib/                equipmentRegistry, timeRange (Shift/24H/7D/Custom),
+                       settingsStore (persisted settings)
+  pages/              one file per route (React Router)
+```
 
-Published via GitHub Pages at: `https://vedantpatel699.github.io/Ferriq/`
+Every equipment module was ported from the real production engine (not
+from any design-spec documentation, which had drifted from what actually
+ships) and is covered by golden-value/consistency tests before any UI
+consumes it.
 
-## Design System
+Ferriq's own page-level engineering-state vocabulary — **NORMAL / WATCH /
+INVESTIGATE / DATA ISSUE** — is distinct from the raw physical severity
+tiers (advisory/alarm/trip) that come from underlying standards like ISO
+10816 or API 530. The raw tiers appear as reference facts (health-bar
+zone labels, chart threshold lines); they are never the page-level status
+pill. See the comment block in `engineering/types.ts` for the full
+convention.
 
-- **Typography**: IBM Plex Sans (UI) + IBM Plex Mono (data values)
-- **Style**: HPHMI / ISA-101 gray-default philosophy - color reserved for abnormal states
-- **Layout**: Sidebar (180px) + topbar (56px) + scrollable content area
-- **Cards**: Outlined style with 16px radius, dual-layer drop shadow
-- **Status**: Green (normal), Amber (advisory), Red (critical) - always paired with glyph + text
-- **Charts**: Chart.js 4.4.1 via CDN, Papa Parse 5.4.1 for CSV upload
+## Development
 
-## Features (per model dashboard)
+```
+npm install
+npm run dev          # dev server
+npm run build         # tsc -b && vite build
+npm test               # vitest — engineering-module unit tests
+npm run test:e2e        # playwright — navigation, interactions, a11y (axe-core)
+```
 
-- Full calculation engine (mirrors engine.py)
-- Configurable settings and alert limits in sidebar
-- CSV upload for custom data
-- Export processed results as CSV
-- In-page manual viewer panel
-- 28-row demo dataset auto-loaded
-- 3 tabs: Dashboard, Data & Log, About
+## Fonts
 
-## Usage
-
-Open `index.html` (redirects to the home page) or any individual dashboard file directly in a browser. No install required.
-
-## License
-
-Proprietary - not for redistribution.
+Barlow / Barlow Condensed are self-hosted via `@fontsource` rather than
+fetched from Google Fonts — Ferriq is a plant/industrial tool that may run
+on a restricted or air-gapped network.

@@ -1,60 +1,30 @@
 /* ============================================================================
- * Ferriq theme.css — shared design system
+ * Ferriq — shared design system (global stylesheet)
  * ----------------------------------------------------------------------------
- * Revision: 3  (Industry-derived redesign, engineering-state model)
- * Updated:  2026-09-06
- * Reference: Claude Design handoff bundle "UI improvement and foundation
- * selection" (Industry design system, blended with the original Ferriq
- * copper/bronze brand at the user's direction).
+ * Single source of truth for design tokens and shared component CSS.
+ * Barlow / Barlow Condensed are self-hosted via @fontsource (imported in
+ * main.tsx) rather than fetched from Google Fonts — Ferriq is a plant/
+ * industrial tool that may run on a restricted or air-gapped network.
  *
- * Single source of truth for design tokens and shared component CSS across
- * Ferriq pages. Per the project's no-build-step architecture, every page
- * links to this file directly:
+ * Page-level engineering-state vocabulary (NORMAL / WATCH / INVESTIGATE /
+ * DATA ISSUE) is distinct from the raw physical severity tiers (advisory/
+ * alarm/trip) that come from underlying standards like ISO 10816 or API
+ * 530 — those appear as reference facts (health-bar zone labels, chart
+ * threshold lines), never as this page-level pill:
  *
- *   <page>.html                 ->  <link rel="stylesheet" href="theme.css">
- *   predictors/<page>.html      ->  <link rel="stylesheet" href="../theme.css">
+ *   ok / normal         -> "normal"       quiet, neutral
+ *   advisory            -> "watch"        restrained warm
+ *   alarm / trip        -> "investigate"  stronger warm; headline text and
+ *                                         the health-bar zone call out a
+ *                                         trip-level threshold explicitly
+ *                                         (Ferriq sits upstream of DCS
+ *                                         alarms, not an alarm system)
+ *   data-quality issue  -> "data-issue"   independent axis, can co-occur
+ *                                         with any state above (shown via
+ *                                         .callout, not by overriding the
+ *                                         state pill)
  *
- * ----------------------------------------------------------------------------
- * What changed in Revision 3
- * ----------------------------------------------------------------------------
- * The prior revision (dark graphite sidebar, KPI-tile-grid dashboards,
- * Chart.js) is replaced with:
- *   - A light warm-stone sidebar (was dark graphite) with copper brand
- *     accent, matching the approved Claude Design direction.
- *   - A page-level engineering-state vocabulary — NORMAL / WATCH /
- *     INVESTIGATE / DATA ISSUE — distinct from the raw physical severity
- *     tiers (Advisory/Alarm/Trip) that come from underlying engineering
- *     standards (ISO 10816, API 530, etc). The raw tiers still appear as
- *     reference facts (e.g. health-bar zone labels); they are not the
- *     page-level status pill. See STATES.md convention below.
- *   - A four-metric "Key metrics" layer replacing the old 8-tile KPI grids,
- *     per the progressive-disclosure charter: identify/interpret/compare/
- *     detect-change/trust/investigate, with formulas and standards moved
- *     into a "Calculation basis & references" drawer.
- *   - Chart.js is replaced by a shared ECharts-based trend-chart module
- *     (ferriq-charts.js) — real timestamp axis, zoom/pan, crosshair,
- *     tooltip, measured/baseline/prediction/constraint visual grammar.
- *   - A shared Shift / 24H / 7D / Custom time-range control
- *     (ferriq-charts.js) that recomputes chart data and period deltas
- *     using the configured site timezone and shift boundaries — it does
- *     not just recolor a pill.
- *
- * STATES.md convention (page-level engineering state):
- *   ok / normal            -> "normal"       quiet, neutral
- *   advisory                -> "watch"        restrained warm
- *   alarm                   -> "investigate"  stronger warm, white on copper-red
- *   trip                    -> "investigate"  same pill; headline text and the
- *                                             physical health-bar zone call out
- *                                             the trip-level threshold explicitly
- *                                             (Ferriq is an engineering
- *                                             surveillance layer upstream of
- *                                             DCS alarms, not an alarm system —
- *                                             see PRODUCT-SCOPE note in
- *                                             ferriq-nav.js)
- *   data-quality issue      -> "data-issue"   independent axis; can co-occur
- *                                             with any state above (shown via
- *                                             .callout, not by overriding the
- *                                             state pill)
+ * See engineering/types.ts for the full EquipmentState/RawSeverity doc.
  * ========================================================================== */
 
 /* ----------------------------------------------------------------------------
@@ -182,7 +152,7 @@ h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); font-weight: 600; }
 .navlink:focus-visible { outline: 2px solid var(--copper); outline-offset: -2px; }
 .navlink svg { flex-shrink: 0; }
 .navlink .navtext { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.navlink .watch-tag { font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; color: var(--copper-dark); flex-shrink: 0; }
+.navlink .watch-tag { font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; color: var(--sidebar-text); flex-shrink: 0; } /* was --copper-dark: 4.08:1 on the tinted .current background, failed WCAG AA at this small size */
 .navlink .count-badge { font-size: 10px; font-weight: 700; background: var(--copper); color: #fff; border-radius: 999px; padding: 1px 6px; flex-shrink: 0; }
 
 .sidebar-spacer { flex: 1; }
@@ -522,5 +492,5 @@ table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
 }
 
 /* ----------------------------------------------------------------------------
- * End theme.css
+ * End
  * ========================================================================== */
