@@ -1,72 +1,60 @@
 /* ============================================================================
  * Ferriq theme.css — shared design system
  * ----------------------------------------------------------------------------
- * Revision: 2  (Day 0 prerequisite, Sprint 1 of POC refresh)
- * Updated:  2026-05-03
- * Reference: dashboard-review/POC-build-plan-final.md
+ * Revision: 3  (Industry-derived redesign, engineering-state model)
+ * Updated:  2026-09-06
+ * Reference: Claude Design handoff bundle "UI improvement and foundation
+ * selection" (Industry design system, blended with the original Ferriq
+ * copper/bronze brand at the user's direction).
  *
  * Single source of truth for design tokens and shared component CSS across
- * Ferriq dashboards. Per CLAUDE.md the project has no build step, so HTML
- * pages link to this file directly:
+ * Ferriq pages. Per the project's no-build-step architecture, every page
+ * links to this file directly:
  *
- *   dashboards/<page>.html             ->  <link rel="stylesheet" href="theme.css">
- *   dashboards/predictors/<page>.html  ->  <link rel="stylesheet" href="../theme.css">
- *
- * Page-specific CSS (kpi-grid columns, balance/loss/cap bars, equipment grid,
- * scorecard, comparison overlay, predictor zones, report drawer, etc.)
- * stays in the page's own <style> block. theme.css holds only what every
- * Ferriq page needs.
+ *   <page>.html                 ->  <link rel="stylesheet" href="theme.css">
+ *   predictors/<page>.html      ->  <link rel="stylesheet" href="../theme.css">
  *
  * ----------------------------------------------------------------------------
- * Sprint 1 scope (this file)
+ * What changed in Revision 3
  * ----------------------------------------------------------------------------
- *   - :root tokens at Path C values (COLOR-001).
- *   - Scaffold rules from air-blower.html (the cleanest as-built template).
- *   - Sprint 1 rule changes layered on top, each tagged to its build-plan
- *     ticket: SURFACE-001, KPI-001, CHART-006, STATUS-001, COLOR-003,
- *     A11Y-004 / A11Y-005 / A11Y-006, BRAND-001.
- *   - Sprint 2-5 component primitives (scorecard, compare, predictor zones,
- *     report drawer) intentionally NOT in this file. They land alongside
- *     their HTML changes in their own sprints.
+ * The prior revision (dark graphite sidebar, KPI-tile-grid dashboards,
+ * Chart.js) is replaced with:
+ *   - A light warm-stone sidebar (was dark graphite) with copper brand
+ *     accent, matching the approved Claude Design direction.
+ *   - A page-level engineering-state vocabulary — NORMAL / WATCH /
+ *     INVESTIGATE / DATA ISSUE — distinct from the raw physical severity
+ *     tiers (Advisory/Alarm/Trip) that come from underlying engineering
+ *     standards (ISO 10816, API 530, etc). The raw tiers still appear as
+ *     reference facts (e.g. health-bar zone labels); they are not the
+ *     page-level status pill. See STATES.md convention below.
+ *   - A four-metric "Key metrics" layer replacing the old 8-tile KPI grids,
+ *     per the progressive-disclosure charter: identify/interpret/compare/
+ *     detect-change/trust/investigate, with formulas and standards moved
+ *     into a "Calculation basis & references" drawer.
+ *   - Chart.js is replaced by a shared ECharts-based trend-chart module
+ *     (ferriq-charts.js) — real timestamp axis, zoom/pan, crosshair,
+ *     tooltip, measured/baseline/prediction/constraint visual grammar.
+ *   - A shared Shift / 24H / 7D / Custom time-range control
+ *     (ferriq-charts.js) that recomputes chart data and period deltas
+ *     using the configured site timezone and shift boundaries — it does
+ *     not just recolor a pill.
  *
- * ----------------------------------------------------------------------------
- * Wire-up plan (Sprint 1 sequencing)
- * ----------------------------------------------------------------------------
- *   1. Canary: wire ONE page first — air-blower.html. Add the <link> tag
- *      immediately before the inline <style> block; do NOT delete inline
- *      rules yet. Inline rules win on cascade order, so only token-driven
- *      changes (page bg, border colors, status amber darken) will surface.
- *      That isolates token issues from rule issues.
- *
- *   2. Visual regression sweep on air-blower. Token-level checks first
- *      (page bg #F2F2F0, border #D9D6D0). Rule-level checks (8 px radius,
- *      KPI label 12/400 sentence, severity shape markers, etc.) won't
- *      surface until step 4. If anything regresses, fix this file before
- *      wiring more pages.
- *
- *   3. Wire remaining pages, lowest risk first:
- *        a. fired-heater.html             (closest sibling to air-blower)
- *        b. predictors/furnace-skin-temp.html  (uses ../theme.css)
- *        c. dashboards.html
- *        d. welcome-home.html             (exercises --status-normal alias)
- *
- *   4. Per-page cleanup: delete inline <style> rules now redundant with
- *      theme.css. Keep page-specific rules (kpi-grid columns, balance/loss/
- *      cap bars, composition-table, eq-card, summary-strip, pass-grid).
- *      Visual regression after EACH page — small selector deltas can
- *      surface only on cleanup.
- *
- *   5. PORTFOLIO-001: hide alerts/activity-log/data-export/reports/help/
- *      changelog from public sidebar. Public nav: Home, Dashboards,
- *      Air Blower, Fired Heater, Furnace Skin TI Predictor, Settings (if
- *      functional). Add footer note "Planned modules: Alerts, Reports,
- *      Activity Log, Data Export." (HTML edit only, no theme.css change.)
- *
- *   6. Full visual regression at 1440 px wide across all 5 public pages;
- *      capture screenshots as the Sprint 1 reference for later comparison.
- *
- * If a rule-level fix during steps 2/4 needs a new shared rule or token,
- * add it here, never inline. Anything inline becomes per-page work again.
+ * STATES.md convention (page-level engineering state):
+ *   ok / normal            -> "normal"       quiet, neutral
+ *   advisory                -> "watch"        restrained warm
+ *   alarm                   -> "investigate"  stronger warm, white on copper-red
+ *   trip                    -> "investigate"  same pill; headline text and the
+ *                                             physical health-bar zone call out
+ *                                             the trip-level threshold explicitly
+ *                                             (Ferriq is an engineering
+ *                                             surveillance layer upstream of
+ *                                             DCS alarms, not an alarm system —
+ *                                             see PRODUCT-SCOPE note in
+ *                                             ferriq-nav.js)
+ *   data-quality issue      -> "data-issue"   independent axis; can co-occur
+ *                                             with any state above (shown via
+ *                                             .callout, not by overriding the
+ *                                             state pill)
  * ========================================================================== */
 
 /* ----------------------------------------------------------------------------
@@ -74,1023 +62,465 @@
  * -------------------------------------------------------------------------- */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-
 /* ----------------------------------------------------------------------------
- * Tokens — Path C palette (COLOR-001) + BRAND-001 copper signal rule
- * --------------------------------------------------------------------------
- * Path C swap (was Ferriq legacy → now Path C):
- *   --surface-page   #F7F6F2 → #F2F2F0
- *   --border-card    #E9E3DE → #D9D6D0
- *   --surface-sidebar #463B33 → #463B33  (Path C #38342F deferred per Q7)
- *   --gold-600       #BB6E3D → #BB6E3D  (unchanged, but BRAND-001 restricts use)
- *
- * BRAND-001 copper rule: --gold-600 may appear ONLY in: logo, ONE primary
- * action per page (= Build Report once shipped), selected/focused intent,
- * active chart focus line, 2 px scorecard rail when selected. Strip from
- * active nav fills, tabs, KPI accents, chart series defaults, time-pill
- * active text, secondary buttons, breadcrumb hover.
+ * Tokens
  * -------------------------------------------------------------------------- */
 :root {
-  /* --- Gold / copper palette -------------------------------------------- */
-  --gold-800: #463B33;   /* sidebar bg (Path C #38342F deferred) */
-  --gold-700: #763D16;   /* dark accent — limited use under BRAND-001 */
-  --gold-600: #BB6E3D;   /* copper accent — restricted by BRAND-001 */
-  --gold-500: #E29C57;   /* hover borders, logo */
-  --gold-400: #F9A471;   /* light accent */
-  --gold-300: #FCEEE5;   /* icon bg circles */
-  --gold-200: #E9E3DE;   /* legacy divider tone — being phased out */
-  --gold-100: #F7F6F2;   /* legacy page bg — now used only for tinted strips */
+  /* --- Brand (copper/bronze) --------------------------------------------- */
+  --copper:       #9c6636;
+  --copper-dark:  #7a4f29;
+  --copper-tint:  color-mix(in srgb, var(--copper) 20%, transparent);
 
-  /* --- Sprint 1 neutrals (COLOR-003, A11Y-006) -------------------------- */
-  --neutral-300: #CBD5E1;  /* outline borders (manual button etc.) */
-  --neutral-400: #94A3B8;  /* muted UI lines */
-  --neutral-500: #64748B;  /* secondary outline text */
-  --neutral-600: #4B5563;  /* input focus ring (replaces gold focus) */
-  --neutral-700: #3D3835;  /* warm graphite — outline text + filled btn bg + tab active. Was #374151 slate which read as dark navy on large fills. */
-  --neutral-800: #2A2522;  /* darker warm graphite for filled-btn hover. */
-  --rail-active: #C8906A;  /* 3 px active sidebar rail (A11Y-006) */
+  /* --- Surfaces (light warm theme — Ferriq does not have a dark mode) ---- */
+  --canvas:           #f7f3ea;  /* page background */
+  --surface-card:     #ffffff;
+  --surface-sidebar:  #e4d9c8;  /* warm light stone/taupe */
+  --surface-sidebar-2:#d2c1a8;
+  --border-card:      #e3d8c6;
 
-  /* --- Text ------------------------------------------------------------- */
-  --text-primary:   #32302F;
-  --text-secondary: #615E5C;
+  /* --- Text ---------------------------------------------------------------*/
+  --text-primary:     #241d17;
+  --text-secondary:   #6b5c4a;
+  --sidebar-text:     #2a2119;
+  --sidebar-text-dim: #6b5c4a;
 
-  /* --- Status (ISA-101, A11Y-005 amber darkened) ----------------------- */
-  --status-ok:        #3A7D52;  --status-ok-bg:        #E5F0E8;
-  --status-advisory:  #835300;  --status-advisory-bg:  #FAF0E0;  /* A11Y-005: was #C4890E */
-  --status-alarm:     #D4432A;  --status-alarm-bg:     #FCEBEB;
-  --status-trip:      #7a1d14;  --status-trip-bg:      #f5d5d1;
+  /* --- Page-level engineering states (STATES.md above) -------------------*/
+  --state-normal-text:      #4b4238;
+  --state-normal-bg:        #efece5;
+  --state-watch-text:       color-mix(in srgb, var(--copper) 45%, black);
+  --state-watch-bg:         color-mix(in srgb, var(--copper) 20%, transparent);
+  --state-investigate-text: #ffffff;
+  --state-investigate-bg:   #8a3a26;
+  --state-data-issue-text:  #4b4238;
+  --state-data-issue-bg:    #e3ded3;
+  --state-data-issue-border:#8a7f6d;
 
-  /* DQ severity (Sprint 2 DQ-002) — neutral, NOT amber/red.
-     Tokens defined here so DQ markers in shared chart/table styles can
-     reference them; the marker components themselves arrive in Sprint 2. */
-  --dq-info: #475569;  --dq-info-bg: #F1F5F9;
-  --dq-warn: #6D28D9;  --dq-warn-bg: #F3EEFE;
-  --dq-bad:  #1F2937;  --dq-bad-bg:  #E5E7EB;
+  /* --- Raw physical severity tiers (reference facts only — health-bar
+     zone labels, threshold lines on charts — never the page-level pill) --*/
+  --severity-ok:        #3a7d52;
+  --severity-advisory:  #8a5a1f;
+  --severity-alarm:     #b3401f;
+  --severity-trip:      #7a1d14;
 
-  /* --- Aliases for supporting pages -------------------------------------
-     welcome-home.html and predictors.html historically used --status-normal /
-     --status-critical naming. Aliased here so a single token swap keeps
-     both naming schemes alive until pages standardize. */
-  --status-normal:    var(--status-ok);    --status-normal-bg:   var(--status-ok-bg);
-  --status-critical:  var(--status-alarm); --status-critical-bg: var(--status-alarm-bg);
+  /* --- Chart series (ferriq-charts.js visual grammar) --------------------*/
+  --chart-measured:   var(--copper);
+  --chart-baseline:   #7a7a7d;   /* neutral dashed */
+  --chart-prediction: #597ea3;   /* differentiated dashed continuation */
+  --chart-constraint: #b3401f;   /* thin labelled reference line */
+  --chart-now:        #241d17;   /* NOW boundary on predictor charts */
 
-  /* --- Surfaces (Path C) ----------------------------------------------- */
-  --surface-page:    #F2F2F0;   /* COLOR-001: was #F7F6F2 */
-  --surface-card:    #FFFFFF;
-  --surface-sidebar: #463B33;   /* COLOR-001 Q7: #38342F deferred */
-  --border-card:     #D9D6D0;   /* COLOR-001: was #E9E3DE */
-
-  /* --- Shadows ---------------------------------------------------------
-     SURFACE-001: dashboard surfaces use a single 2 px border-glow at 4 %
-     opacity, not the legacy dual-layer drop shadow. --shadow-card-heavy
-     is reserved for directory cards and modals (welcome-home eq-cards,
-     manual panel, future report drawer). */
-  --shadow-card:        0 0 0 2px rgba(0, 0, 0, 0.04);
-  --shadow-card-heavy:  0 4px 12px rgba(0, 0, 0, 0.08), 0 0 20px rgba(0, 0, 0, 0.04);
-  --shadow-sidebar:     2px 0 8px rgba(0, 0, 0, 0.06);
-  --shadow-topbar:      0 2px 6px rgba(0, 0, 0, 0.04);
-
-  /* --- Radii ----------------------------------------------------------
-     SURFACE-001: dashboard cards drop to 8 px. Pills/status keep 12 px,
-     alerts 10 px, nav 8 px. */
-  --radius-card:   8px;     /* SURFACE-001: was 16 px */
-  --radius-status: 12px;
-  --radius-alert:  10px;
-  --radius-nav:    8px;
-  --radius-pill:   32px;
+  /* --- Radii / shadows ----------------------------------------------------*/
+  --radius-card: 4px;
+  --radius-pill: 3px;
+  --shadow-card: 0 1px 2px rgba(36,29,23,0.06);
+  --shadow-drawer: -4px 0 24px rgba(36,29,23,0.14);
 
   /* --- Layout ---------------------------------------------------------- */
-  --sidebar-width:  200px;
-  --topbar-height:  56px;
-  --content-margin: 24px;
-  --tile-gap:       16px;
+  --sidebar-width: 236px;
+  --sidebar-width-collapsed: 64px;
 
-  /* --- Typography ------------------------------------------------------ */
-  --font-ui:   'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-data: 'IBM Plex Mono', 'SF Mono', 'Consolas', monospace;
-
-  /* --- Chart series palette (CHART-006) -------------------------------
-     Cool/neutral defaults so severity colors keep honest meaning when
-     they appear on threshold overlays and event markers. Active focus
-     line in --gold-600 per BRAND-001. */
-  --chart-1: #2F6F9F;  /* primary cool blue */
-  --chart-2: #667085;  /* neutral slate */
-  --chart-3: #2F7F7A;  /* teal */
-  --chart-4: #7A5AF8;  /* violet */
-  --chart-focus: var(--gold-600);  /* active focus line only */
+  /* --- Typography ---------------------------------------------------------
+     Barlow Condensed / Barlow per the approved Industry-derived direction.
+     Equipment tags (C-101A/B, E-201, ...) keep a monospace face so codes
+     stay visually distinct from prose. Numeric values use tabular-nums on
+     the body face rather than a monospace face (matches approved design). */
+  --font-heading: "Barlow Condensed", system-ui, sans-serif;
+  --font-body:    "Barlow", system-ui, sans-serif;
+  --font-tag:     ui-monospace, "SF Mono", Menlo, monospace;
 }
-
 
 /* ----------------------------------------------------------------------------
  * Body
  * -------------------------------------------------------------------------- */
 body {
-  font-family: var(--font-ui);
-  background: var(--surface-page);
+  font-family: var(--font-body);
+  background: var(--canvas);
   color: var(--text-primary);
-  overflow: hidden;
-  height: 100vh;
 }
-
+a { color: var(--copper); text-decoration: none; }
+a:hover { color: var(--copper-dark); }
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-heading); font-weight: 600; }
 
 /* ----------------------------------------------------------------------------
- * Shell (CSS Grid: 200 px sidebar + 56 px topbar)
+ * Shell (light warm sidebar + content — no separate topbar; the page-level
+ * top-row carries breadcrumb/title/range control instead)
  * -------------------------------------------------------------------------- */
-.shell {
-  display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr;
-  grid-template-rows: var(--topbar-height) 1fr;
-  height: 100vh;
-}
+.shell { min-height: 100vh; display: flex; }
 
-
-/* ----------------------------------------------------------------------------
- * Sidebar
- * --------------------------------------------------------------------------
- * COLOR-003: active fill stays neutral white-on-charcoal, no orange.
- * A11Y-004: section labels at 55 % white (was 35 %, measured 2.8:1 fail).
- * A11Y-006: active item gets a 3 px left rail in --rail-active.
- * -------------------------------------------------------------------------- */
 .sidebar {
-  grid-row: 1 / -1;
+  width: var(--sidebar-width); flex-shrink: 0;
   background: var(--surface-sidebar);
-  box-shadow: var(--shadow-sidebar);
-  display: flex;
-  flex-direction: column;
-  padding-top: 16px;
-  z-index: 10;
+  border-right: 1px solid var(--surface-sidebar-2);
+  display: flex; flex-direction: column;
+  padding: 18px 12px;
 }
-.sidebar-header {
+.brand {
   display: flex; align-items: center; gap: 10px;
-  padding: 0 16px; margin-bottom: 32px;
+  padding: 2px 8px 18px; text-decoration: none; flex-shrink: 0;
 }
-.sidebar-logo {
-  width: 36px; height: 36px; flex-shrink: 0;
-  text-decoration: none; display: flex; align-items: center;
+.brand-mark {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--copper); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-heading); font-weight: 600; font-size: 13px; flex-shrink: 0;
 }
-.sidebar-title {
-  font-size: 15px; font-weight: 600; color: #FFF; letter-spacing: 0.3px;
-}
+.brand-name { font-family: var(--font-heading); font-weight: 600; font-size: 19px; letter-spacing: 0.01em; color: var(--sidebar-text); }
 
-.nav-section-label {
-  font-size: 10px; font-weight: 500;
-  color: rgba(255, 255, 255, 0.55);   /* A11Y-004: was 0.35 */
-  text-transform: uppercase; letter-spacing: 1.2px;
-  padding: 0 16px; margin-bottom: 8px; margin-top: 8px;
+.nav-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--sidebar-text-dim); padding: 14px 10px 6px;
 }
-
-.nav-item {
+.navlink {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 16px; padding-left: 16px;
-  border-radius: var(--radius-nav);
-  margin: 0 8px 2px 8px;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
-  text-decoration: none;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 13px; font-weight: 500;
-  border-left: 3px solid transparent;     /* A11Y-006 reservation */
+  padding: 9px 10px; border-radius: 6px;
+  font-family: var(--font-heading); font-weight: 600; font-size: 14px; letter-spacing: 0.005em;
+  color: var(--sidebar-text-dim); text-decoration: none; cursor: pointer;
+  border: none; background: none; width: 100%; text-align: left;
 }
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.85);
-}
-.nav-item.active {
-  background: rgba(255, 255, 255, 0.12);
-  color: #FFF;
-  border-left-color: var(--rail-active);  /* A11Y-006: 3 px copper rail */
-}
-
-.nav-icon { width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.nav-icon svg { width: 18px; height: 18px; }
+.navlink:hover { background: rgba(0,0,0,0.05); color: var(--sidebar-text); }
+.navlink.current { background: var(--copper-tint); color: var(--sidebar-text); box-shadow: inset 3px 0 0 var(--copper); }
+.navlink:focus-visible { outline: 2px solid var(--copper); outline-offset: -2px; }
+.navlink svg { flex-shrink: 0; }
+.navlink .navtext { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.navlink .watch-tag { font-size: 9.5px; font-weight: 700; letter-spacing: 0.04em; color: var(--copper-dark); flex-shrink: 0; }
+.navlink .count-badge { font-size: 10px; font-weight: 700; background: var(--copper); color: #fff; border-radius: 999px; padding: 1px 6px; flex-shrink: 0; }
 
 .sidebar-spacer { flex: 1; }
-.sidebar-divider { height: 1px; background: rgba(255, 255, 255, 0.08); margin: 8px 16px; }
-
-.sidebar-user {
-  display: flex; align-items: center; gap: 10px;
-  padding: 12px 16px; margin: 8px 8px 12px 8px;
-  border-radius: var(--radius-nav);
-  background: rgba(255, 255, 255, 0.06);
-}
-.user-avatar {
-  width: 28px; height: 28px; border-radius: 50%;
-  background: var(--gold-600);  /* permitted: brand carrier */
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 600; color: #FFF; flex-shrink: 0;
-}
-.user-info { overflow: hidden; }
-.user-name {
-  font-size: 12px; font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.user-role { font-size: 10px; color: rgba(255, 255, 255, 0.4); }
-
-
-/* ----------------------------------------------------------------------------
- * Topbar
- * --------------------------------------------------------------------------
- * COLOR-003: time-pill active text becomes graphite, not gold-700.
- *           Breadcrumb hover stays neutral.
- * -------------------------------------------------------------------------- */
-.topbar {
-  background: var(--surface-card);
-  box-shadow: var(--shadow-topbar);
-  display: flex; align-items: center;
-  padding: 0 var(--content-margin);
-  justify-content: space-between;
-  z-index: 5;
-}
-.topbar-left  { display: flex; align-items: baseline; gap: 10px; }
-.topbar-right { display: flex; align-items: center;   gap: 12px; }
-
-.breadcrumb { font-size: 13px; color: var(--text-secondary); }
-.breadcrumb a { color: var(--text-secondary); text-decoration: none; }
-.breadcrumb a:hover { color: var(--text-primary); }   /* COLOR-003: was --gold-600 */
-.breadcrumb span { margin: 0 6px; opacity: 0.4; }
-
-.brand-name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
-.brand-env  { font-size: 13px; color: var(--text-secondary); }
-
+.sidebar-divider { height: 1px; background: var(--surface-sidebar-2); margin: 10px 6px; }
+.sidebar-user { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
 .avatar {
   width: 32px; height: 32px; border-radius: 50%;
-  background: var(--gold-600);  /* permitted: brand carrier */
+  background: var(--copper); color: #fff;
   display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 600; color: #FFF;
+  font-family: var(--font-heading); font-weight: 600; font-size: 12px; flex-shrink: 0;
 }
+.user-meta { min-width: 0; overflow: hidden; }
+.user-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--sidebar-text); }
+.user-role { font-size: 11px; color: var(--sidebar-text-dim); white-space: nowrap; }
 
-.topbar-btn {
-  background: none;
-  border: 1px solid var(--neutral-300);  /* COLOR-003: was --border-card / --gold */
-  color: var(--neutral-700);
-  border-radius: 6px; padding: 6px;
-  cursor: pointer; display: flex; align-items: center;
-  transition: border-color 0.15s, color 0.15s;
-}
-.topbar-btn:hover { border-color: var(--neutral-500); color: var(--text-primary); }
-
-
-/* --- Time-range pill bar + custom range -------------------------------- */
-.time-range-bar {
-  display: flex; gap: 2px;
-  background: var(--gold-100);
-  border-radius: 8px; padding: 2px;
-  align-items: center;
-}
-.time-pill {
-  background: none; border: none;
-  padding: 5px 10px;
-  font-size: 11px; font-weight: 500;
-  cursor: pointer;
-  border-radius: 6px;
-  color: var(--text-secondary);
-  font-family: var(--font-ui);
-  transition: all 0.15s;
-}
-.time-pill:hover { color: var(--text-primary); }
-.time-pill.active {
-  background: var(--surface-card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  color: var(--text-primary);  /* COLOR-003: was --gold-700 */
-  font-weight: 600;
-}
-.time-divider { width: 1px; height: 18px; background: var(--gold-200); margin: 0 4px; }
-.time-custom  { display: flex; align-items: center; gap: 3px; padding: 0 4px; }
-.time-custom input {
-  width: 46px; font-family: var(--font-data); font-size: 11px;
-  background: var(--surface-card); border: 1px solid var(--border-card);
-  border-radius: 4px; padding: 3px 5px; text-align: right;
-  color: var(--text-primary);
-}
-.time-custom input:focus  { outline: none; border-color: var(--neutral-600); }  /* COLOR-003 */
-.time-custom select {
-  font-family: var(--font-ui); font-size: 11px;
-  background: var(--surface-card); border: 1px solid var(--border-card);
-  border-radius: 4px; padding: 3px 4px;
-  color: var(--text-primary); cursor: pointer;
-}
-.time-custom select:focus { outline: none; border-color: var(--neutral-600); }
-.time-range-bar.custom-active .time-pill.active {
-  background: transparent; box-shadow: none;
-  color: var(--text-secondary); font-weight: 500;
-}
-.time-range-bar.custom-active .time-custom input {
-  border-color: var(--neutral-600);
-  background: #FFF;            /* COLOR-003: was --gold-300 tint */
-}
-
+.content { flex: 1; padding: 36px 32px 60px; max-width: 1180px; width: 100%; min-width: 0; }
+.crumb { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+.crumb a { color: var(--text-secondary); }
+.crumb a:hover { color: var(--text-primary); }
 
 /* ----------------------------------------------------------------------------
- * Content area
+ * Top row: asset identity + trend-window control
  * -------------------------------------------------------------------------- */
-.content { padding: var(--content-margin); overflow-y: auto; }
-
-
-/* ----------------------------------------------------------------------------
- * Tabs
- * --------------------------------------------------------------------------
- * COLOR-003: active text and underline are graphite, not gold.
- * -------------------------------------------------------------------------- */
-.tabs {
-  display: flex; gap: 4px;
-  margin-bottom: 20px;
+.top-row {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 32px; flex-wrap: wrap; margin-bottom: 20px; padding-bottom: 20px;
   border-bottom: 1px solid var(--border-card);
 }
-.tab {
-  padding: 10px 16px;
-  font-size: 13px; font-weight: 500;
-  color: var(--text-secondary);
-  border: none; background: none; cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: color 0.15s, border-color 0.15s;
+.top-left { flex: 1; min-width: 280px; }
+.kicker { font-family: var(--font-heading); font-weight: 600; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; }
+.asset-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; row-gap: 6px; }
+.asset-name, .page-title { font-family: var(--font-heading); font-weight: 600; font-size: 24px; letter-spacing: 0.005em; line-height: 1.25; }
+.asset-name { flex-basis: 100%; }
+.asset-meta, .page-sub, .meta-line { font-size: 12.5px; color: var(--text-secondary); }
+.asset-meta { margin-bottom: 2px; }
+.asset-fresh { font-size: 11.5px; color: var(--text-secondary); }
+
+.range-block { flex-shrink: 0; text-align: right; position: relative; }
+.range-caption { font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; }
+.range-seg { display: inline-flex; border: 1px solid var(--border-card); border-radius: 6px; overflow: hidden; }
+.range-opt {
+  display: inline-flex; align-items: center; padding: 7px 13px;
+  font-size: 12px; font-weight: 600; font-family: var(--font-heading); cursor: pointer;
+  color: var(--text-secondary); border: none; border-left: 1px solid var(--border-card); background: none;
 }
+.range-opt:first-child { border-left: none; }
+.range-opt.active { background: var(--surface-card); color: var(--text-primary); }
+.range-opt:hover { color: var(--text-primary); }
+.range-opt:focus-visible { outline: 2px solid var(--copper); outline-offset: -2px; }
+.range-context { font-size: 11px; color: var(--text-secondary); margin-top: 6px; text-align: right; }
+
+.custom-panel {
+  position: absolute; top: 100%; right: 0; margin-top: 8px;
+  background: var(--canvas); border: 1px solid var(--border-card); border-radius: 6px;
+  box-shadow: var(--shadow-drawer); padding: 14px; width: 280px; z-index: 20; text-align: left;
+}
+.custom-row { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.custom-row label { font-size: 10.5px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+.custom-inputs { display: flex; gap: 6px; }
+.custom-inputs input {
+  flex: 1; font-size: 12px; padding: 6px 7px; border: 1px solid var(--border-card);
+  border-radius: 4px; background: var(--surface-card); color: var(--text-primary);
+  font-family: var(--font-body); min-width: 0;
+}
+.custom-apply {
+  width: 100%; padding: 7px; font-size: 12px; font-weight: 600; font-family: var(--font-heading);
+  background: var(--copper); color: #fff; border: none; border-radius: 4px; cursor: pointer; margin-top: 2px;
+}
+.custom-apply:hover { background: var(--copper-dark); }
+
+/* ----------------------------------------------------------------------------
+ * State pill (page-level engineering state — see STATES.md above)
+ * -------------------------------------------------------------------------- */
+.state-pill {
+  display: inline-flex; align-items: center; font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.04em; padding: 2px 8px; border-radius: var(--radius-pill);
+  font-family: var(--font-heading); flex-shrink: 0;
+}
+.state-pill.normal      { color: var(--state-normal-text);      background: var(--state-normal-bg); }
+.state-pill.watch       { color: var(--state-watch-text);       background: var(--state-watch-bg); }
+.state-pill.investigate { color: var(--state-investigate-text); background: var(--state-investigate-bg); }
+.state-pill.data-issue  { color: var(--state-data-issue-text);  background: var(--state-data-issue-bg); border: 1px dashed var(--state-data-issue-border); }
+
+/* ----------------------------------------------------------------------------
+ * Finding (headline) + section headings
+ * -------------------------------------------------------------------------- */
+.finding { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+.finding-sub { font-size: 12.5px; color: var(--text-secondary); margin-bottom: 28px; }
+.review-headline { font-family: var(--font-heading); font-weight: 600; font-size: 27px; line-height: 1.35; letter-spacing: 0.005em; margin: 0 0 10px; }
+.review-context { font-size: 14px; font-weight: 600; color: var(--text-secondary); margin-bottom: 3px; }
+.review-sub { font-size: 12.5px; color: var(--text-secondary); }
+
+.section-heading { font-family: var(--font-heading); font-weight: 600; font-size: 19px; letter-spacing: 0.005em; margin-bottom: 2px; }
+.section-heading-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.section-heading-row .section-heading { white-space: nowrap; flex-shrink: 0; margin-bottom: 0; }
+.section-sub, .section-note { font-size: 12.5px; color: var(--text-secondary); margin: 0 0 14px; width: fit-content; }
+.calc-basis-link {
+  font-size: 12px; font-weight: 600; color: var(--copper-dark); background: none; border: none;
+  cursor: pointer; padding: 0; text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--copper-dark) 35%, transparent); flex-shrink: 0;
+}
+.calc-basis-link:hover { color: var(--copper); }
+
+/* ----------------------------------------------------------------------------
+ * Key metrics (replaces the old 8-tile KPI grid)
+ * -------------------------------------------------------------------------- */
+.metrics-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 32px; }
+.metric-card {
+  border: 1px solid var(--border-card); border-radius: var(--radius-card); background: var(--surface-card);
+  padding: 14px 15px; display: flex; flex-direction: column; gap: 7px; box-shadow: var(--shadow-card);
+}
+.metric-card.emphasis { border-color: color-mix(in srgb, var(--copper) 40%, var(--border-card)); }
+.metric-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; min-height: 28px; }
+.metric-label { font-size: 11.5px; color: var(--text-secondary); font-weight: 600; line-height: 1.3; }
+.metric-value-row { display: flex; align-items: baseline; gap: 3px; }
+.metric-value { font-size: 24px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; font-family: var(--font-body); }
+.metric-unit { font-size: 12px; font-weight: 500; color: var(--text-secondary); }
+.metric-facts { display: flex; flex-direction: column; gap: 2px; padding-top: 7px; border-top: 1px solid var(--border-card); }
+.metric-fact { font-size: 11px; color: var(--text-secondary); }
+.metric-fact strong { color: var(--text-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
+.metric-method { font-size: 10px; color: color-mix(in srgb, var(--text-secondary) 80%, transparent); margin-top: 1px; }
+
+/* ----------------------------------------------------------------------------
+ * Trend chart card (ferriq-charts.js renders an ECharts instance into
+ * .chart-echart; legend/head markup stays plain HTML for accessibility)
+ * -------------------------------------------------------------------------- */
+.chart-card { border: 1px solid var(--border-card); border-radius: var(--radius-card); background: var(--surface-card); padding: 18px 20px; margin-bottom: 32px; }
+.chart-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.chart-title { font-family: var(--font-heading); font-weight: 600; font-size: 14.5px; }
+.chart-legend { display: flex; gap: 14px; font-size: 11px; color: var(--text-secondary); flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-swatch { width: 14px; height: 2px; flex-shrink: 0; }
+.legend-swatch.measured   { background: var(--chart-measured); }
+.legend-swatch.baseline   { background: var(--chart-baseline); background-image: linear-gradient(90deg, var(--chart-baseline) 60%, transparent 40%); background-size: 6px 2px; }
+.legend-swatch.prediction { background: var(--chart-prediction); background-image: linear-gradient(90deg, var(--chart-prediction) 60%, transparent 40%); background-size: 6px 2px; }
+.legend-swatch.constraint { background: var(--chart-constraint); }
+.chart-toolbar { display: flex; gap: 6px; }
+.chart-toolbar button {
+  border: 1px solid var(--border-card); background: var(--surface-card); border-radius: 4px;
+  font-size: 11px; padding: 4px 8px; cursor: pointer; color: var(--text-secondary); font-family: var(--font-heading);
+}
+.chart-toolbar button:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+.chart-echart { width: 100%; height: 260px; }
+.chart-empty { text-align: center; color: var(--text-secondary); font-size: 13px; padding: 60px 0; }
+
+/* ----------------------------------------------------------------------------
+ * Calculation-input context grid
+ * -------------------------------------------------------------------------- */
+.context-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 32px; }
+.context-item { border: 1px solid var(--border-card); border-radius: var(--radius-card); padding: 11px 13px; background: var(--surface-card); }
+.context-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 3px; }
+.context-value { font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.context-unit { font-size: 11px; font-weight: 500; color: var(--text-secondary); margin-left: 2px; }
+
+/* ----------------------------------------------------------------------------
+ * Mechanical health bars (raw physical severity tiers appear here as
+ * reference facts — NOT as the page-level state pill)
+ * -------------------------------------------------------------------------- */
+.health-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 32px; }
+.health-card { border: 1px solid var(--border-card); border-radius: var(--radius-card); background: var(--surface-card); padding: 14px 16px; }
+.health-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.health-name { font-family: var(--font-heading); font-weight: 600; font-size: 13.5px; }
+.health-value { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.health-bar-track { height: 6px; border-radius: 3px; background: var(--state-normal-bg); position: relative; overflow: hidden; margin-bottom: 6px; }
+.health-bar-fill { position: absolute; left: 0; top: 0; height: 100%; background: var(--copper); border-radius: 3px; }
+.health-bar-fill.severity-advisory { background: var(--severity-advisory); }
+.health-bar-fill.severity-alarm    { background: var(--severity-alarm); }
+.health-bar-fill.severity-trip     { background: var(--severity-trip); }
+.health-zones { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-secondary); }
+
+/* ----------------------------------------------------------------------------
+ * Callout (data quality / assumption / model-limitation notes — kept
+ * textually distinct per the terminology split; see ferriq-nav.js)
+ * -------------------------------------------------------------------------- */
+.callout { border: 1px dashed var(--text-secondary); border-radius: var(--radius-card); padding: 13px 16px; margin-bottom: 32px; font-size: 12.5px; color: var(--text-secondary); line-height: 1.5; }
+.callout strong { color: var(--text-primary); }
+.callout.assumption { border-style: solid; border-color: var(--border-card); background: var(--surface-card); }
+.callout.limitation { border-color: color-mix(in srgb, var(--chart-prediction) 60%, var(--text-secondary)); }
+
+/* ----------------------------------------------------------------------------
+ * Disclosure (progressive-disclosure inline <details>)
+ * -------------------------------------------------------------------------- */
+.disclosure { margin-top: 8px; }
+.disclosure summary { font-size: 11.5px; font-weight: 600; color: var(--copper-dark); cursor: pointer; list-style: none; }
+.disclosure summary::-webkit-details-marker { display: none; }
+.disclosure summary:hover { color: var(--copper); }
+.disclosure-body { font-size: 11.5px; color: var(--text-secondary); line-height: 1.6; margin-top: 8px; }
+
+/* ----------------------------------------------------------------------------
+ * Drawer (Calculation basis & references; replaces the old manual-panel)
+ * -------------------------------------------------------------------------- */
+.drawer-backdrop { position: fixed; inset: 0; background: rgba(36,29,23,0.32); z-index: 100; }
+.drawer {
+  position: fixed; top: 0; right: 0; height: 100vh; width: 440px; max-width: 90vw;
+  background: var(--canvas); border-left: 1px solid var(--border-card); box-shadow: var(--shadow-drawer);
+  z-index: 101; overflow-y: auto; padding: 24px;
+}
+.drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border-card); }
+.drawer-title { font-family: var(--font-heading); font-weight: 600; font-size: 16px; }
+.drawer-close { background: none; border: none; font-size: 22px; line-height: 1; cursor: pointer; color: var(--text-secondary); padding: 0; }
+.drawer-close:hover { color: var(--text-primary); }
+.drawer-close:focus-visible { outline: 2px solid var(--copper); }
+.drawer-section { margin-bottom: 22px; }
+.drawer-section h4 { font-family: var(--font-heading); font-weight: 600; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 7px; }
+.drawer-section p { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 5px; }
+.drawer-section p:last-child { margin-bottom: 0; }
+.drawer-section code { background: var(--border-card); padding: 1px 5px; border-radius: 3px; font-family: var(--font-tag); font-size: 11px; }
+
+/* ----------------------------------------------------------------------------
+ * Watchlist grid (Home + Watchlist page)
+ * -------------------------------------------------------------------------- */
+.watchlist { margin-bottom: 36px; }
+.watch-grid { display: grid; grid-template-columns: 1.2fr 1.3fr 1.3fr 1fr 1fr; gap: 16px; align-items: center; }
+.watch-head { padding-bottom: 8px; border-bottom: 1px solid var(--border-card); font-size: 10.5px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); }
+.watch-item { padding: 15px 0; border-bottom: 1px solid var(--border-card); text-decoration: none; color: inherit; border-radius: 4px; display: grid; }
+.watch-item:hover { background: var(--surface-card); }
+.watch-item:last-of-type { border-bottom: none; }
+.watch-asset-name { font-family: var(--font-heading); font-weight: 600; font-size: 14px; }
+.watch-asset-tag { font-family: var(--font-tag); font-size: 10.5px; color: var(--text-secondary); }
+.watch-condition { font-size: 13px; color: var(--text-primary); }
+.watch-current { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.watch-ref { font-size: 11px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.watch-delta { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.watch-semantic { font-size: 11px; color: var(--text-secondary); }
+.watch-duration { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); }
+.watch-new { font-size: 12.5px; font-weight: 600; color: var(--state-watch-text); }
+
+/* ----------------------------------------------------------------------------
+ * Equipment grid (Home)
+ * -------------------------------------------------------------------------- */
+.equipment-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 12px; }
+.eq-card {
+  position: relative; display: flex; flex-direction: column; gap: 9px;
+  border: 1px solid var(--border-card); border-radius: var(--radius-card); background: var(--surface-card);
+  padding: 14px 15px; text-decoration: none; color: inherit; transition: border-color 0.15s; min-width: 0;
+}
+.eq-card:hover, .eq-card:focus-visible { border-color: var(--text-secondary); }
+.eq-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.eq-id { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.eq-name { font-family: var(--font-heading); font-weight: 600; font-size: 13px; letter-spacing: 0.005em; line-height: 1.2; }
+.eq-tag { font-family: var(--font-tag); font-size: 10px; letter-spacing: 0.01em; color: var(--text-secondary); }
+.kpi-row { display: flex; align-items: baseline; gap: 3px; }
+.kpi-value { font-size: 23px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.kpi-unit { font-size: 11.5px; font-weight: 500; color: var(--text-secondary); }
+.kpi-label { font-size: 11px; color: var(--text-secondary); margin-top: -3px; }
+.eq-facts { padding-top: 7px; border-top: 1px solid var(--border-card); display: flex; flex-direction: column; gap: 2px; }
+.eq-fact { font-size: 11.5px; color: var(--text-secondary); }
+.eq-fact strong { color: var(--text-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
+.eq-fresh { font-size: 10.5px; color: var(--text-secondary); }
+
+/* ----------------------------------------------------------------------------
+ * Tabs (Dashboard / Data & Log / About)
+ * -------------------------------------------------------------------------- */
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--border-card); }
+.tab { padding: 10px 16px; font-size: 13px; font-weight: 600; font-family: var(--font-heading); color: var(--text-secondary); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; }
 .tab:hover { color: var(--text-primary); }
-.tab.active {
-  color: var(--neutral-700);            /* COLOR-003: was --gold-700 */
-  border-bottom-color: var(--neutral-700);
-}
+.tab.active { color: var(--copper-dark); border-bottom-color: var(--copper); }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
-
 /* ----------------------------------------------------------------------------
- * Card primitive (SURFACE-001: 8 px radius, single-layer shadow)
- * -------------------------------------------------------------------------- */
-.card {
-  background: var(--surface-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  margin-bottom: var(--tile-gap);
-}
-.card-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-card);
-  font-weight: 600; font-size: 14px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.card-body { padding: 20px; }
-
-
-/* ----------------------------------------------------------------------------
- * KPI tile (KPI-001: type weight reversal)
- * --------------------------------------------------------------------------
- * Label  12 px / 400 / sentence case  (was 11 px / 600 uppercase)
- * Value  20 px / 700 / Plex Mono      (was 18 px / 500)
- *
- * COLOR-003: removed accent-current / accent-avg gold border-lefts.
- *            Tile borders stay neutral; severity expressed by status pills.
- *
- * Note: kpi-grid column counts (6 vs 8) and kpi-tile min-height stay in
- * each page's own <style> block — page-specific layout, not shared.
- * -------------------------------------------------------------------------- */
-.kpi-tile {
-  background: var(--surface-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  padding: 12px 14px;
-  transition: border-color 0.15s;
-  display: flex; flex-direction: column;
-  gap: 6px;
-}
-.kpi-tile:hover { border-color: var(--neutral-400); }   /* COLOR-003: was --gold-500 */
-
-.kpi-tile .kpi-label {
-  font-size: 12px;            /* KPI-001: was 11 px */
-  font-weight: 400;           /* KPI-001: was 600 */
-  color: var(--text-secondary);
-  text-transform: none;       /* KPI-001: was uppercase */
-  letter-spacing: 0;          /* KPI-001: was 0.04 em */
-}
-.kpi-tile .kpi-label sub {
-  font-size: 0.78em; vertical-align: sub;
-}
-.kpi-tile .kpi-value {
-  font-family: var(--font-data);
-  font-size: 20px;            /* KPI-001: was 18 px */
-  font-weight: 700;           /* KPI-001: was 500 */
-  color: var(--text-primary);
-  line-height: 1.15;
-}
-.kpi-tile .kpi-sub {
-  font-size: 10px;
-  color: var(--text-secondary);
-  margin-top: auto;
-  padding-top: 2px;
-}
-.kpi-tile .kpi-sub strong {
-  color: var(--text-primary);
-  font-weight: 500;
-  font-family: var(--font-data);
-}
-
-
-/* ----------------------------------------------------------------------------
- * KPI section title (TYPE-001: section title 15-16 px sentence case + COLOR-003: pulse dot removed, replaced by text)
- * -------------------------------------------------------------------------- */
-.kpi-section-title {
-  font-size: 15px;             /* TYPE-001: was 12 px */
-  font-weight: 600;
-  color: var(--text-primary);  /* TYPE-001: was --text-secondary; section heading reads as primary */
-  text-transform: none;        /* TYPE-001: was uppercase */
-  letter-spacing: 0;           /* TYPE-001: was 0.06em */
-  margin: 12px 0 8px 0;        /* slightly more top margin to separate from content above */
-  display: flex; align-items: center; gap: 8px;
-}
-.kpi-section-title .meta {
-  font-size: 11px; font-weight: 400;
-  text-transform: none; letter-spacing: 0;
-  color: var(--text-secondary);
-}
-/* COLOR-003: pulse dot removed. Pages should now express "live" with a
-   text label such as `<span class="meta">Live</span>` instead of a colored
-   dot. Legacy pulse class kept inert below for any page not yet migrated. */
-.kpi-section-title .pulse-dot { display: none; }
-
-
-/* ----------------------------------------------------------------------------
- * Banner
- * -------------------------------------------------------------------------- */
-.banner {
-  border-left: 4px solid var(--status-ok);
-  padding: 14px 20px;
-  border-radius: var(--radius-alert);
-  background: var(--surface-card);
-  margin-bottom: var(--tile-gap);
-  box-shadow: var(--shadow-card);
-}
-.banner h2 {
-  margin: 0 0 4px 0;
-  font-size: 10px;
-  text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--text-secondary);
-}
-.banner .banner-primary {
-  font-size: 18px; font-weight: 700;
-  display: flex; align-items: center; gap: 8px;
-}
-.banner .banner-primary .dot { width: 10px; height: 10px; border-radius: 50%; }
-.banner .banner-detail {
-  margin-top: 4px; font-size: 13px;
-  color: var(--text-secondary);
-}
-.banner.status-ok        { border-left-color: var(--status-ok); }
-.banner.status-ok        .banner-primary { color: var(--status-ok); }
-.banner.status-ok        .dot { background: var(--status-ok); }
-.banner.status-advisory  { border-left-color: var(--status-advisory); background: var(--status-advisory-bg); }
-.banner.status-advisory  .banner-primary { color: var(--status-advisory); }
-.banner.status-advisory  .dot { background: var(--status-advisory); }
-.banner.status-alarm     { border-left-color: var(--status-alarm); background: var(--status-alarm-bg); }
-.banner.status-alarm     .banner-primary { color: var(--status-alarm); }
-.banner.status-alarm     .dot { background: var(--status-alarm); }
-.banner.status-trip      { border-left-color: var(--status-trip); background: var(--status-trip-bg); }
-.banner.status-trip      .banner-primary { color: var(--status-trip); }
-.banner.status-trip      .dot { background: var(--status-trip); }
-
-
-/* ----------------------------------------------------------------------------
- * Alert items (banner row entries)
- * -------------------------------------------------------------------------- */
-.alert-item {
-  padding: 8px 12px;
-  border-radius: 6px;
-  margin-top: 8px;
-  font-size: 13px;
-  display: flex; align-items: center; gap: 8px;
-}
-.alert-item .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.alert-item .src { font-size: 10px; color: var(--text-secondary); margin-left: auto; }
-.alert-item.severity-advisory { background: var(--status-advisory-bg); color: var(--status-advisory); border-left: 3px solid var(--status-advisory); }
-.alert-item.severity-advisory .dot { background: var(--status-advisory); }
-.alert-item.severity-alarm    { background: var(--status-alarm-bg);    color: var(--status-alarm);    border-left: 3px solid var(--status-alarm); }
-.alert-item.severity-alarm    .dot { background: var(--status-alarm); }
-.alert-item.severity-trip     { background: var(--status-trip-bg);     color: var(--status-trip);     border-left: 3px solid var(--status-trip); }
-.alert-item.severity-trip     .dot { background: var(--status-trip); }
-
-
-/* ----------------------------------------------------------------------------
- * Status pill (STATUS-001: 22-24 px height, 12 px text, severity SHAPES)
- * --------------------------------------------------------------------------
- * Triple-encoded: color + shape + text. The .marker element is a 10-12 px
- * shape per severity:
- *   .ok       → circle
- *   .advisory → square
- *   .alarm    → diamond (rotated square)
- *   .trip     → triangle
- *
- * Severity-shape replaces the legacy generic 6 px dot. Shape is drawn with
- * CSS, no SVG required. Pages migrating from .dot to .marker can keep both
- * markup forms during the transition.
- * -------------------------------------------------------------------------- */
-.status-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  height: 22px;                /* STATUS-001 */
-  padding: 0 10px;
-  border-radius: var(--radius-status);
-  font-size: 12px;             /* STATUS-001: was 11 px */
-  font-weight: 500;
-  font-family: var(--font-ui);
-}
-/* Legacy dot kept for pages not yet updated to .marker shapes */
-.status-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
-
-/* STATUS-001 severity shapes. Use .marker in new markup. */
-.status-pill .marker {
-  width: 10px; height: 10px; flex-shrink: 0;
-  display: inline-block;
-}
-.status-pill.ok       .marker { border-radius: 50%; }                  /* circle */
-.status-pill.advisory .marker { border-radius: 1px; }                  /* square */
-.status-pill.alarm    .marker { transform: rotate(45deg); border-radius: 1px; }  /* diamond */
-.status-pill.trip     .marker {
-  width: 0; height: 0;
-  background: transparent !important;
-  border-left: 6px solid transparent;
-  border-right: 6px solid transparent;
-  border-bottom: 10px solid currentColor;
-}                                                                       /* triangle */
-
-.status-pill.ok       { background: var(--status-ok-bg);       color: var(--status-ok); }
-.status-pill.ok       .dot, .status-pill.ok .marker       { background: var(--status-ok); }
-.status-pill.advisory { background: var(--status-advisory-bg); color: var(--status-advisory); }
-.status-pill.advisory .dot, .status-pill.advisory .marker { background: var(--status-advisory); }
-.status-pill.alarm    { background: var(--status-alarm-bg);    color: var(--status-alarm); }
-.status-pill.alarm    .dot, .status-pill.alarm .marker    { background: var(--status-alarm); }
-.status-pill.trip     { background: var(--status-trip-bg);     color: var(--status-trip); }
-.status-pill.trip     .dot                                    { background: var(--status-trip); }
-/* trip .marker is a triangle drawn with currentColor — no background */
-
-
-/* ----------------------------------------------------------------------------
- * Tables
+ * Tables (Data & Log tab, System & Change Log)
  * -------------------------------------------------------------------------- */
 table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
-table.data th, table.data td {
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-card);
-  text-align: left;
-}
-table.data th {
-  font-weight: 600; color: var(--text-secondary);
-  text-transform: uppercase; font-size: 11px;
-  letter-spacing: 0.03em;
-  background: var(--gold-100);
-}
-table.data td.num { font-family: var(--font-data); text-align: right; }
-
+table.data th, table.data td { padding: 8px 12px; border-bottom: 1px solid var(--border-card); text-align: left; }
+table.data th { font-weight: 600; color: var(--text-secondary); text-transform: uppercase; font-size: 11px; letter-spacing: 0.03em; background: var(--canvas); }
+table.data td.num { font-variant-numeric: tabular-nums; text-align: right; }
 
 /* ----------------------------------------------------------------------------
- * Chart box scaffold (CHART-006 series defaults live in chart.js JS, not CSS)
- * --------------------------------------------------------------------------
- * The chart series tokens (--chart-1..4, --chart-focus) are defined in :root
- * for JS to reference via getComputedStyle. The dataset .borderColor pickup
- * happens in each page's chart-build code. Severity colors only land on
- * threshold overlay lines and event markers.
+ * Cards / config panels (settings, CSV import)
  * -------------------------------------------------------------------------- */
-.chart-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--tile-gap);
-}
-@media (max-width: 1100px) { .chart-grid { grid-template-columns: 1fr; } }
+.card { background: var(--surface-card); border: 1px solid var(--border-card); border-radius: var(--radius-card); box-shadow: var(--shadow-card); margin-bottom: 16px; }
+.card-header { padding: 14px 18px; border-bottom: 1px solid var(--border-card); font-weight: 600; font-family: var(--font-heading); font-size: 14px; display: flex; align-items: center; justify-content: space-between; }
+.card-body { padding: 18px; }
 
-.chart-box {
-  background: var(--surface-card);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-card);
-  padding: 16px;
-  box-shadow: var(--shadow-card);
-  display: flex; flex-direction: column;
-}
-.chart-box.full-width { grid-column: 1 / -1; }
-
-.chart-head {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 10px; padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-card);
-  gap: 8px; flex-wrap: wrap;
-}
-.chart-head h4 {
-  margin: 0;
-  font-size: 12px; font-weight: 600;
-  color: var(--text-primary);
-  text-transform: uppercase; letter-spacing: 0.04em;
-}
-
-.axis-controls {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11px; color: var(--text-secondary);
-}
-.axis-controls input {
-  width: 54px;
-  font-family: var(--font-data); font-size: 11px;
-  background: var(--surface-page);
-  border: 1px solid var(--border-card);
-  border-radius: 4px; padding: 2px 5px;
-  text-align: right;
-}
-.axis-controls input:focus {
-  outline: none;
-  border-color: var(--neutral-600);   /* COLOR-003: was --gold-500 */
-}
-
-.toggle-row {
-  display: flex; flex-wrap: wrap;
-  gap: 10px 14px;
-  margin-bottom: 8px;
-}
-.toggle-pill {
-  display: inline-flex; align-items: center; gap: 6px;
-  cursor: pointer;
-  font-size: 11px;
-  color: var(--text-secondary);
-  user-select: none;
-}
-.toggle-pill input { display: none; }
-.toggle-pill .swatch {
-  width: 24px; height: 12px;
-  border-radius: 6px;
-  background: var(--border-card);
-  position: relative;
-  transition: background 0.15s;
-}
-.toggle-pill .swatch::after {
-  content: ''; position: absolute;
-  top: 1px; left: 1px;
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  background: #FFF;
-  transition: transform 0.15s;
-}
-.toggle-pill input:checked + .swatch::after { transform: translateX(12px); }
-.toggle-pill input:checked + .swatch        {
-  background: var(--swatch-color, var(--chart-1));   /* CHART-006: neutral default */
-}
-.toggle-pill .toggle-label { font-weight: 500; }
-.toggle-pill input:checked ~ .toggle-label { color: var(--text-primary); }
-
-.chart-canvas-wrap {
-  position: relative;
-  height: 240px; flex: 1;
-  min-height: 200px;
-}
-
-
-/* ----------------------------------------------------------------------------
- * Buttons (BRAND-001: secondary buttons stay neutral, NOT gold)
- * --------------------------------------------------------------------------
- * .btn (filled) is reserved for the ONE primary action per page. By default
- * it is graphite-on-neutral so pages don't accidentally place a copper
- * button next to the page-level Build Report primary. To opt into the
- * page-level copper primary, add .btn-primary.
- *
- * .btn-outline / .btn-secondary are graphite-on-white outlines for
- * Restore Defaults, Export CSV, View Manual, Run scenario reset, etc.
- * -------------------------------------------------------------------------- */
-.btn {
-  background: var(--neutral-700);     /* BRAND-001: was --gold-600 */
-  color: #FFF; border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 13px; font-weight: 500;
-  cursor: pointer;
-  font-family: var(--font-ui);
-  transition: background 0.15s;
-}
-.btn:hover { background: var(--neutral-800); }
-.btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 6px; }
-
-.btn-primary {                         /* page-level copper primary (Build Report) */
-  background: var(--gold-600);
-  color: #FFF;
-}
-.btn-primary:hover { background: var(--gold-700); }
-
-.btn-outline,
-.btn-secondary {                       /* COLOR-003: neutral outline, not gold */
-  background: transparent;
-  color: var(--neutral-700);
-  border: 1px solid var(--neutral-300);
-}
-.btn-outline:hover,
-.btn-secondary:hover {
-  background: #F8FAFC;
-  border-color: var(--neutral-500);
-}
-
-
-/* ----------------------------------------------------------------------------
- * Action bar
- * -------------------------------------------------------------------------- */
-.action-bar {
-  display: flex; gap: 8px;
-  margin-bottom: var(--tile-gap);
-  flex-wrap: wrap;
-}
-
-
-/* ----------------------------------------------------------------------------
- * Summary row (small inline stat chips)
- * -------------------------------------------------------------------------- */
-.summary-row { display: flex; gap: 8px; flex-wrap: wrap; }
-.summary-row .stat {
-  background: var(--gold-100);
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-}
-.summary-row .stat strong {
-  color: var(--text-primary);          /* COLOR-003: was --gold-700 */
-  font-family: var(--font-data);
-}
-
-
-/* ----------------------------------------------------------------------------
- * Config bar (settings + limits panel)
- * --------------------------------------------------------------------------
- * Each model dashboard sets its own grid-template-columns inside
- * .config-bar-body to fit its number of config columns. The base
- * scaffold here covers the chrome.
- * -------------------------------------------------------------------------- */
-.config-bar {
-  background: var(--surface-card);
-  border: 1px solid var(--border-card);
-  border-radius: 12px;
-  box-shadow: var(--shadow-card);
-  margin-bottom: var(--tile-gap);
-  overflow: hidden;
-}
-.config-bar-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px;
-  cursor: pointer; user-select: none;
-  transition: background 0.1s;
-}
-.config-bar-header:hover { background: var(--gold-100); }
-.config-bar-title {
-  font-size: 11px; font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase; letter-spacing: 0.06em;
-}
-.config-toggle {
-  font-size: 14px; color: var(--text-secondary);
-  transition: transform 0.2s;
-}
-
-.config-bar-body {
-  display: grid;
-  grid-template-columns: 200px 1fr 1fr;   /* model dashboards may override */
-  gap: 0 24px;
-  padding: 12px 16px 16px 16px;
-  border-top: 1px solid var(--border-card);
-}
+.config-bar { background: var(--surface-card); border: 1px solid var(--border-card); border-radius: var(--radius-card); box-shadow: var(--shadow-card); margin-bottom: 16px; overflow: hidden; }
+.config-bar-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; cursor: pointer; user-select: none; }
+.config-bar-header:hover { background: var(--canvas); }
+.config-bar-title { font-size: 11px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.06em; }
+.config-toggle { font-size: 14px; color: var(--text-secondary); transition: transform 0.2s; }
+.config-bar-body { display: grid; grid-template-columns: 200px 1fr 1fr; gap: 0 24px; padding: 12px 16px 16px; border-top: 1px solid var(--border-card); }
 .config-bar-body.collapsed { display: none; }
 .config-col { min-width: 0; }
-.config-col h4 {
-  font-size: 10px;
-  text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--text-secondary);
-  margin: 0 0 6px 0;
-  font-weight: 600;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border-card);
+.config-col h4 { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-secondary); margin: 0 0 6px; font-weight: 600; padding-bottom: 4px; border-bottom: 1px solid var(--border-card); }
+.config-row { display: flex; align-items: center; justify-content: space-between; padding: 2px 0; gap: 8px; }
+.config-row label { font-size: 11px; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
+.config-row input, .config-row select {
+  background: var(--canvas); border: 1px solid var(--border-card); border-radius: 5px; padding: 3px 6px;
+  font-size: 12px; color: var(--text-primary); width: 96px; text-align: right;
 }
-.config-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 2px 0; gap: 8px;
-}
-.config-row label {
-  font-size: 11px; font-weight: 400;
-  color: var(--text-secondary);
-  white-space: nowrap; flex-shrink: 0;
-}
-.config-row input,
-.config-row select {
-  background: var(--surface-page);
-  border: 1px solid var(--border-card);
-  border-radius: 5px;
-  padding: 3px 6px;
-  font-size: 12px;
-  color: var(--text-primary);
-  font-family: var(--font-data);
-  width: 90px;
-  text-align: right;
-}
-.config-row select {
-  text-align: left; width: 110px;
-  font-family: var(--font-ui);
-}
-.config-row input:focus,
-.config-row select:focus {
-  outline: none;
-  border-color: var(--neutral-600);                  /* COLOR-003: was --gold-500 */
-  box-shadow: 0 0 0 2px rgba(75, 85, 99, 0.15);      /* COLOR-003: was gold tint */
-}
+.config-row select { text-align: left; width: 120px; font-family: var(--font-body); }
+.config-row input:focus, .config-row select:focus { outline: none; border-color: var(--copper); box-shadow: 0 0 0 2px var(--copper-tint); }
 
-
-/* ----------------------------------------------------------------------------
- * Upload (CSV inline drop zone)
- * -------------------------------------------------------------------------- */
-.upload-inline {
-  display: flex; flex-direction: column; align-items: center;
-  padding: 10px 8px;
-  border: 1.5px dashed var(--border-card);
-  border-radius: 8px;
-  cursor: pointer; text-align: center;
-  transition: all 0.15s;
-  background: var(--surface-page);
-}
-.upload-inline:hover { border-color: var(--neutral-500); }   /* COLOR-003: was --gold-500 */
+.upload-inline { display: flex; flex-direction: column; align-items: center; padding: 10px 8px; border: 1.5px dashed var(--border-card); border-radius: var(--radius-card); cursor: pointer; text-align: center; background: var(--canvas); }
+.upload-inline:hover { border-color: var(--text-secondary); }
 .upload-inline input { display: none; }
-.upload-inline .up-title {
-  font-weight: 600;
-  color: var(--neutral-700);            /* COLOR-003: was --gold-600 */
-  font-size: 12px;
-}
-.upload-inline .up-sub {
-  font-size: 10px; color: var(--text-secondary);
-  margin-top: 3px;
-}
+.upload-inline .up-title { font-weight: 600; color: var(--copper-dark); font-size: 12px; }
+.upload-inline .up-sub { font-size: 10px; color: var(--text-secondary); margin-top: 3px; }
 
+.empty-state { text-align: center; padding: 48px; color: var(--text-secondary); }
+.empty-state h3 { margin: 0 0 8px; color: var(--text-primary); font-weight: 600; }
+.action-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 
 /* ----------------------------------------------------------------------------
- * Empty state
+ * Buttons
  * -------------------------------------------------------------------------- */
-.empty-state {
-  text-align: center;
-  padding: 48px;
-  color: var(--text-secondary);
-}
-.empty-state h3 {
-  margin: 0 0 8px 0;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
+.btn { background: var(--text-primary); color: #fff; border: none; border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 600; font-family: var(--font-heading); cursor: pointer; }
+.btn:hover { background: color-mix(in srgb, var(--text-primary) 85%, black); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-sm { padding: 6px 12px; font-size: 12px; border-radius: 5px; }
+.btn-primary { background: var(--copper); }
+.btn-primary:hover { background: var(--copper-dark); }
+.btn-outline, .btn-secondary { background: transparent; color: var(--text-secondary); border: 1px solid var(--border-card); }
+.btn-outline:hover, .btn-secondary:hover { background: var(--canvas); border-color: var(--text-secondary); color: var(--text-primary); }
 
 /* ----------------------------------------------------------------------------
- * Manual panel (slide-out with operator manual content)
- * --------------------------------------------------------------------------
- * Manual panel keeps the heavier shadow because it is a modal surface,
- * not an in-flow card (per SURFACE-001 exception list).
- *
- * COLOR-003: manual section headings (h3) become graphite, not gold.
- * Each model dashboard sets its own width (560-580 px) inside its own
- * <style> block.
+ * Responsive: tablet keeps a usable icon-rail sidebar, never shrinks
+ * technical values below legible size (accessibility charter)
  * -------------------------------------------------------------------------- */
-.manual-overlay {
-  display: none;
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 100;
+@media (max-width: 1150px) {
+  .metrics-grid { grid-template-columns: repeat(2,1fr); }
+  .context-grid { grid-template-columns: repeat(2,1fr); }
+  .equipment-grid { grid-template-columns: repeat(auto-fit,minmax(170px,1fr)); }
+  .watch-grid { grid-template-columns: 1.3fr 1.4fr 1.3fr 1fr; }
+  .watch-duration { display: none; }
 }
-.manual-panel {
-  position: fixed;
-  top: 0; right: 0;
-  width: 560px; height: 100vh;
-  background: var(--surface-card);
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
-  z-index: 101;
-  display: none;
-  flex-direction: column;
+@media (max-width: 900px) {
+  .sidebar { width: var(--sidebar-width-collapsed); padding: 18px 8px; align-items: center; }
+  .brand { padding: 2px 0 18px; justify-content: center; }
+  .brand-name, .nav-label, .navtext, .count-badge, .watch-tag, .user-meta { display: none; }
+  .navlink { justify-content: center; padding: 10px; }
+  .sidebar-user { justify-content: center; }
+  .top-row { flex-direction: column; }
+  .range-block { text-align: left; }
+  .health-grid { grid-template-columns: 1fr; }
+  .drawer { width: 100%; }
 }
-.manual-panel.open { display: flex; }
-.manual-panel-header {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-card);
-  display: flex; align-items: center; justify-content: space-between;
-}
-.manual-panel-header h3 { font-size: 16px; font-weight: 600; }
-.manual-panel-close {
-  background: none; border: none;
-  font-size: 20px; cursor: pointer;
-  color: var(--text-secondary);
-  padding: 4px 8px;
-}
-.manual-panel-body {
-  flex: 1; overflow-y: auto;
-  padding: 20px;
-  font-size: 14px; line-height: 1.6;
-}
-.manual-panel-body h3 {
-  margin: 20px 0 8px 0;
-  font-size: 15px; font-weight: 600;
-  color: var(--neutral-700);             /* COLOR-003: was --gold-700 */
-}
-.manual-panel-body h3:first-child { margin-top: 0; }
-.manual-panel-body p { margin-bottom: 12px; }
-.manual-panel-body code {
-  background: var(--gold-100);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: var(--font-data);
-  font-size: 13px;
-}
-.manual-panel-body table {
-  width: 100%; border-collapse: collapse;
-  margin: 8px 0 14px 0;
-  font-size: 12px;
-}
-.manual-panel-body th,
-.manual-panel-body td {
-  padding: 5px 8px;
-  border-bottom: 1px solid var(--border-card);
-  text-align: left; vertical-align: top;
-}
-.manual-panel-body th {
-  background: var(--gold-100);
-  color: var(--neutral-700);             /* COLOR-003: was --gold-700 */
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 10px; letter-spacing: 0.04em;
-}
-.manual-panel-body td.num { font-family: var(--font-data); text-align: right; }
-
-
-/* ----------------------------------------------------------------------------
- * View Manual button (COLOR-003 outline spec)
- * --------------------------------------------------------------------------
- * Build-plan calls out the View Manual outline specifically: #CBD5E1 border,
- * #374151 text. Use .btn-outline.btn-manual on the trigger.
- * -------------------------------------------------------------------------- */
-.btn-manual {
-  border-color: var(--neutral-300);
-  color: var(--neutral-700);
-}
-.btn-manual:hover {
-  border-color: var(--neutral-500);
-  background: #F8FAFC;
-}
-
-
-/* ----------------------------------------------------------------------------
- * PORTFOLIO-001: hide non-functional pages from public sidebar
- * --------------------------------------------------------------------------
- * Direct URL access still works (browser can navigate to any page). Only
- * the sidebar nav entries disappear. The href$= matcher works for both
- * model dashboards (href="alerts.html") and the predictor subfolder
- * (href="../alerts.html").
- *
- * Section labels and dividers that sit immediately above hidden links are
- * also hidden via :has() so the sidebar doesn't show orphan section
- * headers like "MONITOR" with nothing under them.
- *
- * Browsers: :has() is supported in Chrome 105+, Firefox 121+, Safari 15.4+
- * (covers all modern releases).
- * -------------------------------------------------------------------------- */
-.sidebar .nav-item[href$="alerts.html"],
-.sidebar .nav-item[href$="activity-log.html"],
-.sidebar .nav-item[href$="data-export.html"],
-.sidebar .nav-item[href$="reports.html"],
-.sidebar .nav-item[href$="help.html"],
-.sidebar .nav-item[href$="changelog.html"],
-.sidebar .nav-item[href$="settings.html"] {
-  display: none;
-}
-.sidebar .nav-section-label:has(+ .nav-item[href$="alerts.html"]),
-.sidebar .nav-section-label:has(+ .nav-item[href$="data-export.html"]),
-.sidebar .sidebar-divider:has(+ .nav-item[href$="help.html"]),
-.sidebar .sidebar-divider:has(+ .nav-item[href$="settings.html"]) {
-  display: none;
-}
-
-/* Footer note in sidebar above the user block. Insert
-   <div class="planned-modules">Planned: Alerts, Activity Log, Data Export,
-   Reports, Help, Changelog, Settings</div> before <div class="sidebar-user">
-   on any page that wants the note shown. */
-.planned-modules {
-  margin: 8px 16px 4px;
-  padding: 10px 12px;
-  font-size: 10px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.45);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px dashed rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-}
-.planned-modules strong {
-  display: block;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.6);
-  margin-bottom: 4px;
-}
-
 
 /* ----------------------------------------------------------------------------
  * End theme.css
- * --------------------------------------------------------------------------
- * Sprint 2-5 component primitives are intentionally NOT in this file.
- * They land alongside their HTML in:
- *   Sprint 2 — Asset Health Scorecard         (SCORECARD-001, DQ-001..004)
- *   Sprint 3 — Comparison overlay             (COMPARE-001..005)
- *   Sprint 4 — Predictor what-if              (PRED-001, PRED-COMP-01..11)
- *   Sprint 5 — Build Report drawer            (REPORT-POC, REPORT-007)
- *
- * Verified Rev 2: brace balance, var() resolution, no page-specific leaks.
  * ========================================================================== */
