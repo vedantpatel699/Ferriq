@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Ferriq</title>
+    <!--
+      GitHub Pages has no server-side rewrite rule for a client-side
+      router's clean URLs — a direct load or reload of, say,
+      /Ferriq/equipment/air-blower hits Pages' static file server, finds
+      no matching file, and serves this 404 page. This encodes the
+      requested path into a query string and redirects to the real
+      index.html, which decodes it back (see the matching script in
+      index.html) and hands the corrected URL to React Router before it
+      mounts. Standard technique: https://github.com/rafgraph/spa-github-pages
+    -->
+    <script>
+      var pathSegmentsToKeep = 1; // keep "/Ferriq" (this is a project page, not a user/org page)
+      var l = window.location;
+      l.replace(
+        l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/') + '/?/' +
+        l.pathname.slice(1).split('/').slice(pathSegmentsToKeep).join('/').replace(/&/g, '~and~') +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash
+      );
+    </script>
+  </head>
+  <body></body>
+</html>

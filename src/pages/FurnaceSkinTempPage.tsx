@@ -24,7 +24,7 @@ export function FurnaceSkinTempPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    fetch("/data/furnace-skin-temp-model.json")
+    fetch(`${import.meta.env.BASE_URL}data/furnace-skin-temp-model.json`)
       .then((r) => { if (!r.ok) throw new Error(`${r.status} ${r.statusText}`); return r.json(); })
       .then(setBundle)
       .catch((e) => setError(String(e)));
