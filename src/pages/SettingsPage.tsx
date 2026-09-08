@@ -1,68 +1,73 @@
 import { useState } from "react";
-import { DEFAULT_FERRIQ_SETTINGS, getFerriqSettings, saveFerriqSettings, resetFerriqSettings, type FerriqSettings } from "../lib/settingsStore";
-import { SITE_TIMEZONE } from "../lib/timeRange";
-
-/** Only settings that affect real engineering behavior are exposed here —
- *  shift boundaries, which drive the Shift time-range calculation
- *  everywhere in the app. UI-only knobs (decimal precision, line
- *  thickness, gridlines, a theme switch) are deliberately not modeled:
- *  Ferriq is light-theme only, and metric precision is defined per
- *  engineering quantity in each equipment module, not globally. */
+import { useResource, useWorkspace } from "../lib/WorkspaceContext";
+import type { FerriqSettings } from "../lib/settingsStore";
 export function SettingsPage() {
-  const [draft, setDraft] = useState<FerriqSettings>(getFerriqSettings());
-  const [savedNote, setSavedNote] = useState<string | null>(null);
-
+  const { data, version } = useResource<FerriqSettings>("settings"),
+    { save, reset, published } = useWorkspace();
+  const [draft, setDraft] = useState(data),
+    [note, setNote] = useState(""),
+    [draftVersion, setDraftVersion] = useState(version);
+  async function apply(revert = false) {
+    try {
+      if (revert) {
+        await reset("settings");
+        setDraftVersion(1);
+        setDraft(
+          published.find((r) => r.key === "settings")!.data as FerriqSettings,
+        );
+      } else {
+        await save("settings", draft, "settings", draftVersion);
+        setDraftVersion(draftVersion + 1);
+      }
+      setNote(
+        revert
+          ? "Restored published shift settings."
+          : "Shift settings saved in this browser.",
+      );
+    } catch (e) {
+      setNote((e as Error).message);
+    }
+  }
   return (
     <>
-      <div className="top-row">
-        <div className="top-left">
-          <div className="kicker">System</div>
-          <div className="page-title">Settings</div>
-          <div className="page-sub">Site timezone and shift boundaries used by the Shift trend-range control</div>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="card-header">Site &amp; shift configuration</div>
-        <div className="card-body">
-          <div className="config-row">
-            <label htmlFor="site-timezone">Site timezone</label>
-            <span id="site-timezone">{SITE_TIMEZONE}</span>
-          </div>
-          <div className="config-row">
-            <label htmlFor="shift-start">Day-shift start (hour, 0–23)</label>
+      <h1>Settings</h1>
+      <p>
+        Site timezone: America/Edmonton. Shift windows use the dataset
+        observation date. Saved settings apply to every equipment page in this
+        browser.
+      </p>
+      <form
+        className="card card-body"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void apply();
+        }}
+      >
+        {(["shiftStartHour", "shiftEndHour"] as const).map((key, i) => (
+          <label className="editor-field" key={key}>
+            {i ? "Day-shift end (hour)" : "Day-shift start (hour)"}
             <input
-              id="shift-start"
-              type="number" className="config-input" min={0} max={23} value={draft.shiftStartHour}
-              onChange={(e) => setDraft((d) => ({ ...d, shiftStartHour: Math.max(0, Math.min(23, parseInt(e.target.value) || 0)) }))}
+              required
+              type="number"
+              min="0"
+              max="23"
+              step="1"
+              value={draft[key]}
+              onChange={(e) =>
+                setDraft((d) => ({ ...d, [key]: e.target.valueAsNumber }))
+              }
             />
-          </div>
-          <div className="config-row">
-            <label htmlFor="shift-end">Day-shift end (hour, 0–23)</label>
-            <input
-              id="shift-end"
-              type="number" className="config-input" min={0} max={23} value={draft.shiftEndHour}
-              onChange={(e) => setDraft((d) => ({ ...d, shiftEndHour: Math.max(0, Math.min(23, parseInt(e.target.value) || 0)) }))}
-            />
-          </div>
+          </label>
+        ))}
+        <p>Start must precede end; the remaining hours form the night shift.</p>
+        <div className="action-bar">
+          <button type="submit">Save Changes</button>
+          <button type="button" onClick={() => void apply(true)}>
+            Reset to Defaults
+          </button>
         </div>
-      </div>
-
-      <div className="action-bar">
-        <button
-          type="button" className="btn"
-          onClick={() => { saveFerriqSettings(draft); setSavedNote("Saved."); setTimeout(() => setSavedNote(null), 2000); }}
-        >
-          Save Changes
-        </button>
-        <button
-          type="button" className="btn btn-outline"
-          onClick={() => { resetFerriqSettings(); setDraft(DEFAULT_FERRIQ_SETTINGS); setSavedNote("Reset to defaults."); setTimeout(() => setSavedNote(null), 2000); }}
-        >
-          Reset to Defaults
-        </button>
-        {savedNote && <span style={{ alignSelf: "center", fontSize: 13, color: "var(--text-secondary)" }}>{savedNote}</span>}
-      </div>
+      </form>
+      {note && <p role="status">{note}</p>}
     </>
   );
 }

@@ -1,57 +1,51 @@
 import { NavLink } from "react-router-dom";
-import { EQUIPMENT_REGISTRY, stateLabel } from "../lib/equipmentRegistry";
-
-/** One consistent application-wide navigation — replaces the ~150-line
- *  sidebar block duplicated verbatim across all 18 pages of the original
- *  HTML site. Frequently used equipment stays directly reachable on
- *  desktop (no mega-menu / no burying equipment behind a dropdown); on
- *  tablet it collapses to an icon rail (see theme.css @media 900px). */
-export function Sidebar() {
-  const watchCount = EQUIPMENT_REGISTRY.filter((e) => e.state !== "normal").length;
-
+import { useSummaries } from "../lib/summaries";
+import { stateLabel } from "../lib/equipmentRegistry";
+export function Sidebar({ onNavigate }: { onNavigate: () => void }) {
+  const items = useSummaries();
+  const link = (to: string, label: string, badge?: string) => (
+    <NavLink
+      key={to}
+      end={to === "/"}
+      onClick={onNavigate}
+      className={({ isActive }) => "navlink" + (isActive ? " current" : "")}
+      to={to}
+    >
+      <span className="navtext">{label}</span>
+      {badge && <span className="watch-tag">{badge}</span>}
+    </NavLink>
+  );
   return (
-    <nav className="sidebar">
-      <NavLink className="brand" to="/">
+    <nav className="sidebar" id="main-navigation" aria-label="Main navigation">
+      <NavLink className="brand" to="/" onClick={onNavigate}>
         <span className="brand-mark">Fe</span>
         <span className="brand-name">Ferriq</span>
       </NavLink>
-
-      <NavLink className={({ isActive }) => `navlink${isActive ? " current" : ""}`} to="/" end title="Home">
-        <span className="navtext">Home</span>
-      </NavLink>
-
+      {link("/", "Overview")}
       <div className="nav-label">Equipment</div>
-      {EQUIPMENT_REGISTRY.map((eq) => (
-        <NavLink
-          key={eq.id}
-          className={({ isActive }) => `navlink${isActive ? " current" : ""}`}
-          to={eq.path}
-          title={eq.name}
-        >
-          <span className="navtext">{eq.name}</span>
-          {eq.state !== "normal" && <span className="watch-tag">{stateLabel(eq.state)}</span>}
-        </NavLink>
-      ))}
-
-      <div className="nav-label">Monitor</div>
-      <NavLink className={({ isActive }) => `navlink${isActive ? " current" : ""}`} to="/watchlist" title="Watchlist">
-        <span className="navtext">Watchlist</span>
-        <span className="count-badge">{watchCount}</span>
-      </NavLink>
-
+      {items.map((e) =>
+        link(
+          e.path,
+          e.name,
+          e.state === "normal" ? undefined : stateLabel(e.state),
+        ),
+      )}
+      {link("/crude-to-profit", "Crude to Profit")}
+      <div className="nav-label">Workspace</div>
+      {link(
+        "/watchlist",
+        "Watchlist",
+        String(items.filter((e) => e.priority > 0).length),
+      )}
+      {link("/data-export", "Database & change log")}
+      {link("/settings", "Settings")}
+      {link("/help", "Help & manuals")}
       <div className="sidebar-spacer" />
-      <div className="sidebar-divider" />
-      <NavLink className={({ isActive }) => `navlink${isActive ? " current" : ""}`} to="/settings" title="Settings">
-        <span className="navtext">Settings</span>
-      </NavLink>
-      <div className="sidebar-divider" />
-      <div className="sidebar-user">
-        <div className="avatar">VP</div>
-        <div className="user-meta">
-          <div className="user-name">Vedant Patel</div>
-          <div className="user-role">Engineer</div>
-        </div>
-      </div>
+      <p className="source-note">
+        Published reference data
+        <br />
+        Edits saved in this browser
+      </p>
     </nav>
   );
 }

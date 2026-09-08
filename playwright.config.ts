@@ -8,7 +8,7 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     baseURL: "http://localhost:4173",
-    launchOptions: { executablePath: "/opt/pw-browsers/chromium" },
+    ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH?{launchOptions:{executablePath:process.env.PLAYWRIGHT_EXECUTABLE_PATH}}:process.platform==='win32'?{channel:'chrome'}:{}),
   },
   webServer: {
     command: "npm run preview -- --port 4173",

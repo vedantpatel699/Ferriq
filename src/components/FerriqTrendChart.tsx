@@ -1,148 +1,383 @@
-import { useEffect, useRef } from "react";
-// Tree-shaken ECharts import (core + only the renderer/chart/components
-// actually used) instead of the full library, to keep the bundle small.
+import { useEffect, useRef, useState } from "react";
 import * as echarts from "echarts/core";
 import { LineChart } from "echarts/charts";
-import { GridComponent, TooltipComponent, DataZoomComponent, MarkLineComponent } from "echarts/components";
+import {
+  GridComponent,
+  TooltipComponent,
+  DataZoomComponent,
+  MarkLineComponent,
+  AriaComponent,
+  BrushComponent,
+} from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
-
-echarts.use([LineChart, GridComponent, TooltipComponent, DataZoomComponent, MarkLineComponent, CanvasRenderer]);
-
+import { DateTime } from "luxon";
+import { DataTable } from "./DataTable";
+import { formatNumber } from "../lib/format";
+echarts.use([
+  LineChart,
+  GridComponent,
+  TooltipComponent,
+  DataZoomComponent,
+  MarkLineComponent,
+  AriaComponent,
+  BrushComponent,
+  CanvasRenderer,
+]);
 export type ChartSeriesKind = "measured" | "baseline" | "prediction";
-
 export interface ChartSeries {
   name: string;
   kind: ChartSeriesKind;
-  /** [epoch-ms, value | null] pairs. A null value creates a real gap in
-   *  the line rather than interpolating across missing data. */
   data: [number, number | null][];
+  color?: string;
 }
-
 export interface ChartConstraintLine {
   name: string;
   value: number;
 }
-
 export interface FerriqTrendChartProps {
   series: ChartSeries[];
   unit: string;
   constraints?: ChartConstraintLine[];
-  /** Vertical boundary between historical and forecast data, for
-   *  predictor charts (epoch-ms). */
   nowBoundary?: number;
   height?: number;
+  title?: string;
+  digits?: number;
+  bounds?: { min?: number; max?: number };
+  uncertainty?: {
+    lower: [number, number | null][];
+    upper: [number, number | null][];
+  };
 }
-
-function cssVar(name: string, fallback: string): string {
-  if (typeof window === "undefined") return fallback;
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return v || fallback;
-}
-
-/** Shared ECharts-based trend chart: real timestamp x-axis, readable
- *  numeric y-axis with units, measured/baseline/prediction visual
- *  grammar, constraint reference lines, crosshair + tooltip, zoom/pan
- *  with a reset-view control, and responsive resize. Never fabricates an
- *  uncertainty/confidence band — a series is only rendered if the caller
- *  supplies real data for it. */
-export function FerriqTrendChart({ series, unit, constraints = [], nowBoundary, height = 260 }: FerriqTrendChartProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<echarts.ECharts | null>(null);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const chart = echarts.init(containerRef.current);
-    chartRef.current = chart;
-    const onResize = () => chart.resize();
-    window.addEventListener("resize", onResize);
-    return () => { window.removeEventListener("resize", onResize); chart.dispose(); };
-  }, []);
-
-  useEffect(() => {
-    const chart = chartRef.current;
-    if (!chart) return;
-
-    const colorFor: Record<ChartSeriesKind, string> = {
-      measured: cssVar("--chart-measured", "#9c6636"),
-      baseline: cssVar("--chart-baseline", "#7a7a7d"),
-      prediction: cssVar("--chart-prediction", "#597ea3"),
-    };
-    const constraintColor = cssVar("--chart-constraint", "#b3401f");
-    const nowColor = cssVar("--chart-now", "#241d17");
-
-    const hasData = series.some((s) => s.data.length > 0);
-
-    chart.setOption({
-      grid: { left: 56, right: 20, top: 16, bottom: 40 },
-      tooltip: {
-        trigger: "axis",
-        axisPointer: { type: "cross", label: { backgroundColor: "#6a7985" } },
-      },
-      xAxis: { type: "time" },
-      yAxis: {
-        type: "value",
-        name: unit,
-        nameLocation: "end",
-        axisLabel: { formatter: (v: number) => v.toLocaleString() },
-      },
-      dataZoom: [
-        { type: "inside" },
-        { type: "slider", height: 18, bottom: 4 },
-      ],
-      series: [
-        ...series.map((s) => ({
-          name: s.name,
-          type: "line" as const,
-          showSymbol: false,
-          connectNulls: false,
-          lineStyle: {
-            color: colorFor[s.kind],
-            width: s.kind === "measured" ? 2.5 : 1.5,
-            type: s.kind === "measured" ? "solid" : "dashed",
-          },
-          itemStyle: { color: colorFor[s.kind] },
-          data: s.data,
-          markLine: nowBoundary !== undefined && s.kind === "measured" ? {
-            symbol: "none",
-            silent: true,
-            lineStyle: { color: nowColor, type: "solid", width: 1.5 },
-            label: { formatter: "Now", color: nowColor },
-            data: [{ xAxis: nowBoundary }],
-          } : undefined,
-        })),
-        ...(constraints.length > 0 ? [{
-          name: "Constraints",
-          type: "line" as const,
-          data: [],
-          markLine: {
-            symbol: "none",
-            lineStyle: { color: constraintColor, type: "solid", width: 1 },
-            label: { formatter: (p: { name: string }) => p.name, color: constraintColor, position: "insideEndTop" as const },
-            data: constraints.map((c) => ({ name: c.name, yAxis: c.value })),
-          },
-        }] : []),
-      ],
-    }, true);
-
-    if (!hasData) chart.clear();
-  }, [series, unit, constraints, nowBoundary]);
-
-  const hasData = series.some((s) => s.data.length > 0);
-
-  return (
-    <div style={{ position: "relative" }}>
-      {!hasData && <div className="chart-empty">No data in the selected range.</div>}
-      <div
-        ref={containerRef}
-        className="chart-echart"
-        style={{ height, visibility: hasData ? "visible" : "hidden" }}
-      />
-    </div>
+const finite = (v: unknown): v is number =>
+  typeof v === "number" && Number.isFinite(v);
+const time = (t: number) =>
+  DateTime.fromMillis(t, { zone: "America/Edmonton" }).toFormat(
+    "LLL d, yyyy HH:mm",
   );
-}
-
-export function resetChartZoom(container: HTMLDivElement | null) {
-  if (!container) return;
-  const chart = echarts.getInstanceByDom(container);
-  chart?.dispatchAction({ type: "dataZoom", start: 0, end: 100 });
+export function FerriqTrendChart({
+  series,
+  unit,
+  constraints = [],
+  nowBoundary,
+  height = 320,
+  title = "Engineering trend",
+  digits = 2,
+  bounds,
+  uncertainty,
+}: FerriqTrendChartProps) {
+  const container = useRef<HTMLDivElement>(null),
+    chart = useRef<echarts.ECharts | null>(null);
+  const [hidden, setHidden] = useState<string[]>([]);
+  const [zoom, setZoom] = useState<[number, number]>([0, 100]);
+  const valid = series.some((s) => s.data.some((p) => finite(p[1])));
+  useEffect(() => {
+    if (!container.current) return;
+    const c = echarts.init(container.current);
+    chart.current = c;
+    const resize = new ResizeObserver(() => c.resize());
+    resize.observe(container.current);
+    c.on("datazoom", () => {
+      const z = (
+        c.getOption().dataZoom as { start?: number; end?: number }[]
+      )[0];
+      setZoom([z.start ?? 0, z.end ?? 100]);
+    });
+    return () => {
+      resize.disconnect();
+      c.dispose();
+    };
+  }, []);
+  useEffect(() => {
+    const c = chart.current;
+    if (!c) return;
+    const palette = ["#2F6F9F", "#667085", "#2F7F7A", "#7A5AF8"];
+    const lines = series
+      .filter((s) => !hidden.includes(s.name))
+      .map((s, i) => ({
+        id: s.name,
+        name: s.name,
+        type: "line",
+        showSymbol: false,
+        connectNulls: false,
+        lineStyle: {
+          width: s.kind === "measured" ? 2.5 : 1.8,
+          type: s.kind === "measured" ? "solid" : "dashed",
+          color:
+            s.color ??
+            (s.kind === "baseline"
+              ? "#66666b"
+              : s.kind === "prediction"
+                ? "#366f9c"
+                : palette[i % palette.length]),
+        },
+        itemStyle: {
+          color:
+            s.color ??
+            (s.kind === "baseline"
+              ? "#66666b"
+              : s.kind === "prediction"
+                ? "#366f9c"
+                : palette[i % palette.length]),
+        },
+        data: s.data.map(([t, v]) => [t, finite(v) ? v : null]),
+        markLine:
+          nowBoundary !== undefined && s.kind === "measured"
+            ? {
+                symbol: "none",
+                silent: true,
+                label: {
+                  formatter: "Observation cutoff",
+                  position: "insideEndTop",
+                },
+                data: [{ xAxis: nowBoundary }],
+                lineStyle: { color: "#3c3530" },
+              }
+            : undefined,
+      }));
+    const band = uncertainty
+      ? [
+          {
+            id: "band-base",
+            name: "Band base",
+            type: "line",
+            data: uncertainty.lower,
+            stack: "uncertainty",
+            lineStyle: { opacity: 0 },
+            areaStyle: { opacity: 0 },
+            symbol: "none",
+            tooltip: { show: false },
+            silent: true,
+          },
+          {
+            id: "band-width",
+            name: "P10–P90 interval",
+            type: "line",
+            stack: "uncertainty",
+            data: uncertainty.upper.map(([t, v], i) => [
+              t,
+              finite(v) && finite(uncertainty.lower[i]?.[1])
+                ? v - uncertainty.lower[i][1]!
+                : null,
+            ]),
+            lineStyle: { opacity: 0 },
+            areaStyle: { color: "#537fa5", opacity: 0.16 },
+            symbol: "none",
+            tooltip: { show: false },
+            silent: true,
+          },
+        ]
+      : [];
+    c.setOption(
+      {
+        animation: false,
+        aria: {
+          enabled: true,
+          description: `${title}. ${unit}. Dates in America/Edmonton. An accessible table follows the chart.`,
+        },
+        grid: { left: 80, right: 35, top: 42, bottom: 80, containLabel: false },
+        tooltip: {
+          trigger: "axis",
+          confine: true,
+          axisPointer: { type: "cross" },
+          formatter: (
+            items: {
+              seriesName: string;
+              value: [number, number | null];
+              marker: string;
+            }[],
+          ) => {
+            const rows = items.filter(
+              (p) =>
+                !["Band base", "P10–P90 interval", "Constraints"].includes(
+                  p.seriesName,
+                ),
+            );
+            if (!rows.length) return "";
+            const safe = (s: string) =>
+              s.replace(
+                /[&<>"']/g,
+                (c) =>
+                  ({
+                    "&": "&amp;",
+                    "<": "&lt;",
+                    ">": "&gt;",
+                    '"': "&quot;",
+                    "'": "&#39;",
+                  })[c]!,
+              );
+            return (
+              `<strong>${time(rows[0].value[0])} · Edmonton</strong>` +
+              rows
+                .map(
+                  (p) =>
+                    `<br>${p.marker}${safe(p.seriesName)}: <strong>${formatNumber(p.value[1], digits)} ${safe(unit)}</strong>`,
+                )
+                .join("")
+            );
+          },
+        },
+        xAxis: {
+          type: "time",
+          axisLabel: {
+            hideOverlap: true,
+            formatter: (v: number) =>
+              DateTime.fromMillis(v, { zone: "America/Edmonton" }).toFormat(
+                "LLL d\nHH:mm",
+              ),
+          },
+        },
+        yAxis: {
+          type: "value",
+          scale: true,
+          name: unit,
+          nameGap: 22,
+          min: bounds?.min,
+          max: bounds?.max,
+          axisLabel: { formatter: (v: number) => formatNumber(v, digits) },
+        },
+        dataZoom: [
+          { type: "inside", filterMode: "none" },
+          { type: "slider", height: 24, bottom: 8, filterMode: "none" },
+        ],
+        series: [
+          ...band,
+          ...lines,
+          ...(constraints.length
+            ? [
+                {
+                  id: "constraints",
+                  name: "Constraints",
+                  type: "line",
+                  data: [],
+                  markLine: {
+                    symbol: "none",
+                    silent: true,
+                    lineStyle: { color: "#943e2b", type: "dashed" },
+                    label: {
+                      position: "insideEndTop",
+                      formatter: (p: { name: string; value: number }) =>
+                        `${p.name} ${formatNumber(p.value, digits)}`,
+                    },
+                    data: constraints.map((c) => ({
+                      name: c.name,
+                      yAxis: c.value,
+                    })),
+                  },
+                },
+              ]
+            : []),
+        ],
+      },
+      { replaceMerge: ["series"] },
+    );
+  }, [
+    series,
+    unit,
+    constraints,
+    nowBoundary,
+    hidden,
+    title,
+    digits,
+    bounds,
+    uncertainty,
+  ]);
+  function view(start: number, end: number) {
+    const width = Math.min(100, Math.max(2, end - start));
+    const s = Math.max(0, Math.min(100 - width, start));
+    chart.current?.dispatchAction({
+      type: "dataZoom",
+      start: s,
+      end: s + width,
+    });
+  }
+  const times = [
+    ...new Set(series.flatMap((s) => s.data.map((p) => p[0]))),
+  ].sort((a, b) => a - b);
+  const rows = times.map((t) =>
+    Object.fromEntries([
+      ["Time (America/Edmonton)", time(t)],
+      ...series.map((s) => [
+        `${s.name} (${unit})`,
+        s.data.find((p) => p[0] === t)?.[1] ?? null,
+      ]),
+    ]),
+  );
+  return (
+    <section aria-label={title} className="trend-surface">
+      <div className="chart-tools" role="group" aria-label="Chart view">
+        <button
+          disabled={!valid}
+          onClick={() => {
+            const w = (zoom[1] - zoom[0]) / 4;
+            view(zoom[0] + w, zoom[1] - w);
+          }}
+        >
+          Zoom in
+        </button>
+        <button
+          disabled={!valid}
+          onClick={() => {
+            const w = (zoom[1] - zoom[0]) / 2;
+            view(zoom[0] - w, zoom[1] + w);
+          }}
+        >
+          Zoom out
+        </button>
+        <button
+          disabled={!valid || zoom[0] === 0}
+          onClick={() => {
+            const w = (zoom[1] - zoom[0]) / 3;
+            view(zoom[0] - w, zoom[1] - w);
+          }}
+        >
+          Earlier
+        </button>
+        <button
+          disabled={!valid || zoom[1] === 100}
+          onClick={() => {
+            const w = (zoom[1] - zoom[0]) / 3;
+            view(zoom[0] + w, zoom[1] + w);
+          }}
+        >
+          Later
+        </button>
+        <button onClick={() => view(0, 100)}>Reset view</button>
+        <span>Site time: America/Edmonton</span>
+      </div>
+      <div className="series-controls" role="group" aria-label="Visible series">
+        {series.map((s) => (
+          <label key={s.name}>
+            <input
+              type="checkbox"
+              checked={!hidden.includes(s.name)}
+              onChange={() =>
+                setHidden((h) =>
+                  h.includes(s.name)
+                    ? h.filter((n) => n !== s.name)
+                    : [...h, s.name],
+                )
+              }
+            />
+            {s.name}
+          </label>
+        ))}
+      </div>
+      {!valid && (
+        <p role="status">
+          No valid measurements in this range. Missing values are not zero.
+        </p>
+      )}
+      <div
+        ref={container}
+        className="chart-echart"
+        style={{ height, display: valid ? "block" : "none" }}
+        role="img"
+        aria-label={`${title}; ${unit}. Use chart controls or the data table for keyboard access.`}
+      />
+      <details>
+        <summary>Accessible chart data</summary>
+        <DataTable rows={rows} caption={title} />
+      </details>
+    </section>
+  );
 }

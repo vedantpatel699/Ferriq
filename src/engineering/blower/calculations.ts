@@ -56,14 +56,18 @@ export const DEFAULT_BLOWER_LIMITS: BlowerLimits = {
   brgAdvisoryC: 70,
   brgAlarmC: 85,
   brgTripC: 95,
-  filterDpMaxBar: 0.10,
-  blowerDpMaxBar: 1.00,
+  filterDpMaxBar: 0.1,
+  blowerDpMaxBar: 1.0,
   bypassOpenMaxPct: 60,
 };
 
 /** IEEE/NEMA 3-phase motor input power. P = sqrt(3) * V * I * PF / 1000 [kW] */
-export function shaftPowerKw(voltageV: number, currentA: number, powerFactor: number): number {
-  return Math.sqrt(3) * voltageV * currentA * powerFactor / 1000;
+export function shaftPowerKw(
+  voltageV: number,
+  currentA: number,
+  powerFactor: number,
+): number {
+  return (Math.sqrt(3) * voltageV * currentA * powerFactor) / 1000;
 }
 
 /** Convert mixed-unit plant measurements to absolute bar.
@@ -79,12 +83,18 @@ export function normalizePressures(
 /** Incompressible-flow hydraulic-power trending indicator (NOT a
  *  thermodynamically correct compressor efficiency). P_fluid = Q*dP/36 [kW] */
 export function fluidPowerKw(flowNm3hr: number, dpBar: number): number {
-  return flowNm3hr * dpBar / 36;
+  return (flowNm3hr * dpBar) / 36;
 }
 
 /** Isentropic (adiabatic) efficiency, ASME PTC 10 §5.4. Returns a decimal
  *  fraction (0.75 = 75%), or NaN if inputs are thermodynamically infeasible. */
-export function isentropicEfficiency(t1K: number, t2K: number, p1Bar: number, p2Bar: number, k: number): number {
+export function isentropicEfficiency(
+  t1K: number,
+  t2K: number,
+  p1Bar: number,
+  p2Bar: number,
+  k: number,
+): number {
   if (!(p2Bar > p1Bar && t2K > t1K)) return NaN;
   const exponent = (k - 1) / k;
   return (t1K * (Math.pow(p2Bar / p1Bar, exponent) - 1)) / (t2K - t1K);
@@ -94,7 +104,13 @@ export function isentropicEfficiency(t1K: number, t2K: number, p1Bar: number, p2
  *  Independent of compression ratio — used for cross-machine comparison
  *  and degradation tracking. Returns a decimal fraction, or NaN if
  *  thermodynamically infeasible. */
-export function polytropicEfficiency(t1K: number, t2K: number, p1Bar: number, p2Bar: number, k: number): number {
+export function polytropicEfficiency(
+  t1K: number,
+  t2K: number,
+  p1Bar: number,
+  p2Bar: number,
+  k: number,
+): number {
   if (!(p2Bar > p1Bar && t2K > t1K)) return NaN;
   const sigma = Math.log(t2K / t1K) / Math.log(p2Bar / p1Bar);
   if (sigma <= 0) return NaN;
@@ -102,7 +118,10 @@ export function polytropicEfficiency(t1K: number, t2K: number, p1Bar: number, p2
 }
 
 export function detectActiveBlower(
-  currentA: number, currentB: number, mode: BlowerSettings["blowerMode"], minA: number,
+  currentA: number,
+  currentB: number,
+  mode: BlowerSettings["blowerMode"],
+  minA: number,
 ): "A" | "B" | null {
   if (mode === "A") return !isNaN(currentA) && currentA > minA ? "A" : null;
   if (mode === "B") return !isNaN(currentB) && currentB > minA ? "B" : null;
@@ -126,25 +145,86 @@ export interface AlertInputs {
 
 const ISO = "ISO 10816-3, Group 1";
 
-export function buildAlerts(inputs: AlertInputs, limits: BlowerLimits): EngineeringAlert[] {
-  const { maxVibrationMms: v, maxBearingTempC: b, filterDpBar: fdp, blowerDpBar: dp, bypassOpPct: byp, dischargePressureKpag: p2, controllerSpKpag: sp } = inputs;
+export function buildAlerts(
+  inputs: AlertInputs,
+  limits: BlowerLimits,
+): EngineeringAlert[] {
+  const {
+    maxVibrationMms: v,
+    maxBearingTempC: b,
+    filterDpBar: fdp,
+    blowerDpBar: dp,
+    bypassOpPct: byp,
+    dischargePressureKpag: p2,
+    controllerSpKpag: sp,
+  } = inputs;
   const alerts: EngineeringAlert[] = [];
 
   if (!isNaN(v)) {
-    if (v >= limits.vibTripMms) alerts.push({ severity: "trip", message: `Vibration ${v.toFixed(2)} mm/s exceeds trip ${limits.vibTripMms} mm/s (Zone D).`, source: ISO });
-    else if (v >= limits.vibAlarmMms) alerts.push({ severity: "alarm", message: `Vibration ${v.toFixed(2)} mm/s exceeds alarm ${limits.vibAlarmMms} mm/s (Zone C/D).`, source: ISO });
-    else if (v >= limits.vibAdvisoryMms) alerts.push({ severity: "advisory", message: `Vibration ${v.toFixed(2)} mm/s above advisory ${limits.vibAdvisoryMms} mm/s (Zone B/C).`, source: ISO });
+    if (v >= limits.vibTripMms)
+      alerts.push({
+        severity: "trip",
+        message: `Vibration ${v.toFixed(2)} mm/s exceeds trip ${limits.vibTripMms} mm/s (Zone D).`,
+        source: ISO,
+      });
+    else if (v >= limits.vibAlarmMms)
+      alerts.push({
+        severity: "alarm",
+        message: `Vibration ${v.toFixed(2)} mm/s exceeds alarm ${limits.vibAlarmMms} mm/s (Zone C/D).`,
+        source: ISO,
+      });
+    else if (v >= limits.vibAdvisoryMms)
+      alerts.push({
+        severity: "advisory",
+        message: `Vibration ${v.toFixed(2)} mm/s above advisory ${limits.vibAdvisoryMms} mm/s (Zone B/C).`,
+        source: ISO,
+      });
   }
   if (!isNaN(b)) {
-    if (b >= limits.brgTripC) alerts.push({ severity: "trip", message: `Bearing T ${b.toFixed(1)} C exceeds trip ${limits.brgTripC} C.`, source: "bearing datasheet" });
-    else if (b >= limits.brgAlarmC) alerts.push({ severity: "alarm", message: `Bearing T ${b.toFixed(1)} C exceeds alarm ${limits.brgAlarmC} C.`, source: "bearing datasheet" });
-    else if (b >= limits.brgAdvisoryC) alerts.push({ severity: "advisory", message: `Bearing T ${b.toFixed(1)} C above advisory ${limits.brgAdvisoryC} C.`, source: "bearing datasheet" });
+    if (b >= limits.brgTripC)
+      alerts.push({
+        severity: "trip",
+        message: `Bearing T ${b.toFixed(1)} C exceeds trip ${limits.brgTripC} C.`,
+        source: "bearing datasheet",
+      });
+    else if (b >= limits.brgAlarmC)
+      alerts.push({
+        severity: "alarm",
+        message: `Bearing T ${b.toFixed(1)} C exceeds alarm ${limits.brgAlarmC} C.`,
+        source: "bearing datasheet",
+      });
+    else if (b >= limits.brgAdvisoryC)
+      alerts.push({
+        severity: "advisory",
+        message: `Bearing T ${b.toFixed(1)} C above advisory ${limits.brgAdvisoryC} C.`,
+        source: "bearing datasheet",
+      });
   }
-  if (!isNaN(fdp) && fdp > limits.filterDpMaxBar) alerts.push({ severity: "advisory", message: `Filter dP ${fdp.toFixed(3)} bar above ${limits.filterDpMaxBar} bar - replace filter.`, source: "plant setpoint" });
-  if (!isNaN(dp) && dp > limits.blowerDpMaxBar) alerts.push({ severity: "advisory", message: `Blower dP ${dp.toFixed(3)} bar above design ${limits.blowerDpMaxBar} bar.`, source: "plant setpoint" });
-  if (!isNaN(byp) && byp > limits.bypassOpenMaxPct) alerts.push({ severity: "advisory", message: `Bypass ${byp.toFixed(1)}% above ${limits.bypassOpenMaxPct}%.`, source: "plant setpoint" });
+  if (!isNaN(fdp) && fdp > limits.filterDpMaxBar)
+    alerts.push({
+      severity: "advisory",
+      message: `Filter dP ${fdp.toFixed(3)} bar above ${limits.filterDpMaxBar} bar - replace filter.`,
+      source: "plant setpoint",
+    });
+  if (!isNaN(dp) && dp > limits.blowerDpMaxBar)
+    alerts.push({
+      severity: "advisory",
+      message: `Blower dP ${dp.toFixed(3)} bar above design ${limits.blowerDpMaxBar} bar.`,
+      source: "plant setpoint",
+    });
+  if (!isNaN(byp) && byp > limits.bypassOpenMaxPct)
+    alerts.push({
+      severity: "advisory",
+      message: `Bypass ${byp.toFixed(1)}% above ${limits.bypassOpenMaxPct}%.`,
+      source: "plant setpoint",
+    });
   if (!isNaN(byp) && byp < 5 && !isNaN(p2) && !isNaN(sp) && p2 < sp) {
-    alerts.push({ severity: "advisory", message: "Bypass closed and discharge below setpoint - at capacity limit.", source: "control narrative" });
+    alerts.push({
+      severity: "advisory",
+      message:
+        "Bypass closed and discharge below setpoint - at capacity limit.",
+      source: "control narrative",
+    });
   }
   return alerts;
 }
@@ -158,7 +238,9 @@ export function rollUpSeverity(alerts: EngineeringAlert[]): RawSeverity {
 
 /** Ferriq page-level engineering state, distinct from the raw physical
  *  severity above — see EquipmentState doc comment in types.ts. */
-export function toEquipmentState(severity: RawSeverity): "normal" | "watch" | "investigate" {
+export function toEquipmentState(
+  severity: RawSeverity,
+): "normal" | "watch" | "investigate" {
   if (severity === "ok") return "normal";
   if (severity === "advisory") return "watch";
   return "investigate"; // alarm or trip
@@ -189,7 +271,8 @@ export interface BlowerRowInput {
 }
 
 export interface BlowerRowResult {
-  drop: true; reason: string;
+  drop: true;
+  reason: string;
 }
 
 export interface BlowerRowSuccess {
@@ -228,8 +311,14 @@ export function processBlowerRow(
   limits: BlowerLimits,
   t1ForwardFilled: number | null,
 ): BlowerRowResult | BlowerRowSuccess {
-  const active = detectActiveBlower(row.motorCurrentA, row.motorCurrentB, settings.blowerMode, settings.activeCurrentMinA);
-  if (!active) return { drop: true, reason: "no active blower (both currents below min)" };
+  const active = detectActiveBlower(
+    row.motorCurrentA,
+    row.motorCurrentB,
+    settings.blowerMode,
+    settings.activeCurrentMinA,
+  );
+  if (!active)
+    return { drop: true, reason: "no active blower (both currents below min)" };
 
   const isA = active === "A";
   const current = isA ? row.motorCurrentA : row.motorCurrentB;
@@ -242,22 +331,46 @@ export function processBlowerRow(
   const vibration = isA ? row.vibrationA : row.vibrationB;
   const bearingTemp = isA ? row.bearingTempA : row.bearingTempB;
 
-  if (isNaN(suctionKpaa) || isNaN(dischargeKpag) || isNaN(row.totalFlowNm3hr) || isNaN(current)) {
-    return { drop: true, reason: "missing critical tag (P1, P2, flow, or current)" };
+  if (
+    isNaN(suctionKpaa) ||
+    isNaN(dischargeKpag) ||
+    isNaN(row.totalFlowNm3hr) ||
+    isNaN(current)
+  ) {
+    return {
+      drop: true,
+      reason: "missing critical tag (P1, P2, flow, or current)",
+    };
   }
 
-  let t1c: number; let t1Source: BlowerRowSuccess["t1Source"];
-  if (row.suctionTempC !== null && !isNaN(row.suctionTempC)) { t1c = row.suctionTempC; t1Source = "measured"; }
-  else if (t1ForwardFilled !== null) { t1c = t1ForwardFilled; t1Source = "forward-filled"; }
-  else { t1c = settings.suctionTempFallbackC; t1Source = "default"; }
+  let t1c: number;
+  let t1Source: BlowerRowSuccess["t1Source"];
+  if (row.suctionTempC !== null && !isNaN(row.suctionTempC)) {
+    t1c = row.suctionTempC;
+    t1Source = "measured";
+  } else if (t1ForwardFilled !== null) {
+    t1c = t1ForwardFilled;
+    t1Source = "forward-filled";
+  } else {
+    t1c = settings.suctionTempFallbackC;
+    t1Source = "default";
+  }
 
   const vibsClean = vibration.filter((x) => !isNaN(x));
   const brgsClean = bearingTemp.filter((x) => !isNaN(x));
   const maxVibrationMms = vibsClean.length ? Math.max(...vibsClean) : NaN;
   const maxBearingTempC = brgsClean.length ? Math.max(...brgsClean) : NaN;
 
-  const powerKw = shaftPowerKw(settings.motorVoltageV, current, settings.powerFactor);
-  const [p1BarAbs, p2BarAbs] = normalizePressures(suctionKpaa, dischargeKpag, settings.atmPressureBar);
+  const powerKw = shaftPowerKw(
+    settings.motorVoltageV,
+    current,
+    settings.powerFactor,
+  );
+  const [p1BarAbs, p2BarAbs] = normalizePressures(
+    suctionKpaa,
+    dischargeKpag,
+    settings.atmPressureBar,
+  );
   const dpBar = p2BarAbs - p1BarAbs;
   const pressureRatio = p1BarAbs > 0 ? p2BarAbs / p1BarAbs : NaN;
   const fluidPwr = fluidPowerKw(row.totalFlowNm3hr, dpBar);
@@ -265,11 +378,21 @@ export function processBlowerRow(
 
   const t1K = t1c + 273.15;
   const t2K = dischargeTempC === null ? NaN : dischargeTempC + 273.15;
-  const efficiencyIsentropicPct = dischargeTempC === null ? NaN : isentropicEfficiency(t1K, t2K, p1BarAbs, p2BarAbs, settings.gammaK) * 100;
-  const efficiencyPolytropicPct = dischargeTempC === null ? NaN : polytropicEfficiency(t1K, t2K, p1BarAbs, p2BarAbs, settings.gammaK) * 100;
+  const efficiencyIsentropicPct =
+    dischargeTempC === null
+      ? NaN
+      : isentropicEfficiency(t1K, t2K, p1BarAbs, p2BarAbs, settings.gammaK) *
+        100;
+  const efficiencyPolytropicPct =
+    dischargeTempC === null
+      ? NaN
+      : polytropicEfficiency(t1K, t2K, p1BarAbs, p2BarAbs, settings.gammaK) *
+        100;
 
   const byMethod: Record<BlowerSettings["efficiencyMethod"], number> = {
-    polytropic: efficiencyPolytropicPct, isentropic: efficiencyIsentropicPct, fluid: efficiencyFluidPct,
+    polytropic: efficiencyPolytropicPct,
+    isentropic: efficiencyIsentropicPct,
+    fluid: efficiencyFluidPct,
   };
   let efficiencyHeadlinePct = byMethod[settings.efficiencyMethod];
   let efficiencyMethodUsed: string = settings.efficiencyMethod;
@@ -279,7 +402,15 @@ export function processBlowerRow(
   }
 
   const alerts = buildAlerts(
-    { maxVibrationMms, maxBearingTempC, filterDpBar: filterDp, blowerDpBar: dpBar, bypassOpPct: bypassOp, dischargePressureKpag: dischargeKpag, controllerSpKpag: controllerSp },
+    {
+      maxVibrationMms,
+      maxBearingTempC,
+      filterDpBar: filterDp,
+      blowerDpBar: dpBar,
+      bypassOpPct: bypassOp,
+      dischargePressureKpag: dischargeKpag,
+      controllerSpKpag: controllerSp,
+    },
     limits,
   );
 
@@ -287,14 +418,25 @@ export function processBlowerRow(
     drop: false,
     timestamp: row.timestamp,
     activeBlower: active,
-    powerKw, pressureRatio, dpBar, p1BarAbs, p2BarAbs,
+    powerKw,
+    pressureRatio,
+    dpBar,
+    p1BarAbs,
+    p2BarAbs,
     flowNm3hr: row.totalFlowNm3hr,
     fluidPowerKw: fluidPwr,
-    efficiencyFluidPct, efficiencyIsentropicPct, efficiencyPolytropicPct,
-    efficiencyHeadlinePct, efficiencyMethodUsed,
-    maxVibrationMms, maxBearingTempC,
-    filterDpBar: filterDp, bypassOpPct: bypassOp,
-    t1CUsed: t1c, t1Source,
-    alerts, severity: rollUpSeverity(alerts),
+    efficiencyFluidPct,
+    efficiencyIsentropicPct,
+    efficiencyPolytropicPct,
+    efficiencyHeadlinePct,
+    efficiencyMethodUsed,
+    maxVibrationMms,
+    maxBearingTempC,
+    filterDpBar: filterDp,
+    bypassOpPct: bypassOp,
+    t1CUsed: t1c,
+    t1Source,
+    alerts,
+    severity: rollUpSeverity(alerts),
   };
 }

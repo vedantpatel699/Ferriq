@@ -1,0 +1,88 @@
+
+<h3>1. Purpose and scope</h3>
+<p>Forecasts when any radiant tube skin thermocouple in a fired heater pass will reach 475 &deg;C, the polythionic stress corrosion cracking limit per API 530. The model is trained on historical operating data and exposed as an XGBoost ensemble distilled to JSON for in-browser inference.</p>
+
+<h3>2. Equipment context</h3>
+<p>Three furnaces in scope:</p>
+<ul style="margin-left:20px">
+  <li><strong>Heater 1</strong> - 4-pass atmospheric residue heater feeding the vacuum unit. 4 radiant skin thermocouples per pass (Pass 3 has 3). Daily aggregated readings.</li>
+  <li><strong>Heater 2</strong> - 4-pass vacuum tower heater. 3 radiant skin thermocouples per pass. 4-hour cadence.</li>
+  <li><strong>Heater 3</strong> - Atmospheric heater for the first distillation column. Limited instrumentation (1 convection skin, 2 radiant skins). 4-hour cadence. Lower model fidelity expected.</li>
+</ul>
+
+<h3>3. Operating envelope</h3>
+<p>Skin TI range observed in training data: 250 to 510 &deg;C. Below 250 &deg;C is treated as a sensor-failure reading and excluded. Above 600 &deg;C is also masked as sensor noise. Pass flows typical 80 to 130 m&sup3;/h per pass on Heater 1; 30 to 50 m&sup3;/h on Heater 2. Radiant box temperatures 600 to 720 &deg;C.</p>
+
+<h3>4. Tag dictionary (generic aliases)</h3>
+<table class="data">
+  <thead><tr><th>Alias</th><th>Description</th><th>Unit</th></tr></thead>
+  <tbody>
+    <tr><td>skin_max_p{N}</td><td>Max radiant skin TI on pass N (the trip-relevant quantity)</td><td>&deg;C</td></tr>
+    <tr><td>rad_skin_p{N}_a..d</td><td>Individual radiant skin thermocouples on pass N</td><td>&deg;C</td></tr>
+    <tr><td>conv_skin_pass_{N}</td><td>Convection-section skin TI on pass N</td><td>&deg;C</td></tr>
+    <tr><td>crossover_pass_{N}</td><td>Pass crossover temperature (between convection and radiant)</td><td>&deg;C</td></tr>
+    <tr><td>outlet_pass_{N}</td><td>Pass coil outlet temperature (COT)</td><td>&deg;C</td></tr>
+    <tr><td>flow_pass_{N}</td><td>Pass charge flow rate</td><td>m&sup3;/h</td></tr>
+    <tr><td>steam_pass_{N}</td><td>IP velocity steam injection on pass N</td><td>kg/h</td></tr>
+    <tr><td>box_t_c</td><td>Radiant section box temperature</td><td>&deg;C</td></tr>
+    <tr><td>stack_t_c</td><td>Stack temperature</td><td>&deg;C</td></tr>
+    <tr><td>fuel_gas_kg_hr</td><td>Total fuel gas to heater</td><td>kg/h</td></tr>
+    <tr><td>comb_air_kg_hr</td><td>Combustion air flow</td><td>kg/h</td></tr>
+  </tbody>
+</table>
+
+<h3>5. Calculations</h3>
+<h4>Target variable</h4>
+<p>For each pass: <code>skin_max[t] = max(rad_skin_p{N}_a, ..., rad_skin_p{N}_d)</code> at time t. The model predicts <code>skin_max[t + 24h]</code>.</p>
+<h4>Hours-to-475 forecast</h4>
+<p>The trained 24-hour-ahead predictor is rolled forward in 24-hour steps for 7 days. The dashboard linearly interpolates the resulting trajectory to find the time at which it crosses 475 &deg;C. If no crossing is found within 7 days, the slope between current and day-7 prediction is extrapolated.</p>
+<h4>Confidence band</h4>
+<p>Each thermocouple has THREE trained XGBoost models per TC: P10 (10th percentile), P50 (median, central forecast), and P90 (90th percentile). Trained with objective='reg:quantileerror' and quantile_alpha = 0.1 / 0.5 / 0.9. The chart band shown between P10 and P90 is the data-driven 80% prediction interval. All three models walk forward recursively and the band evolves naturally as the forecast horizon extends.</p><p>The forecast tile headline checks both the central P50 trajectory AND the upper P90 band. If P50 doesn't cross 475 but P90 does within the 7-year internal horizon, the tile reports 'Possible in N days (upper bound)'. Empirical coverage of the P10-P90 band on hold-out data ranges from ~50 to ~95% across TCs (target 80%) - reported in the About tab.</p>
+
+<h3>6. Status logic</h3>
+<table class="data">
+  <thead><tr><th>Condition</th><th>Status</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td>skin_max &gt;= 470 &deg;C</td><td>alarm</td><td>Cut throughput now; plan immediate decoke</td></tr>
+    <tr><td>predicted hours-to-475 &lt; 24 h</td><td>alarm</td><td>Reduce firing or pass throughput</td></tr>
+    <tr><td>skin_max &gt;= 460 &deg;C</td><td>advisory</td><td>Monitor closely; bring decoke forward</td></tr>
+    <tr><td>predicted hours-to-475 &lt; 72 h</td><td>advisory</td><td>Schedule intervention within 3 days</td></tr>
+    <tr><td>otherwise</td><td>ok</td><td>Continue normal monitoring</td></tr>
+  </tbody>
+</table>
+
+<h3>7. Pressure convention</h3>
+<p>Flows displayed as volumetric m&sup3;/h at metered conditions. Pressures shown in kPa (gauge or absolute as labelled). All temperatures in &deg;C.</p>
+
+<h3>8. Series conventions on charts</h3>
+<p>The history chart now shows ONE pass at a time, with each individual radiant skin thermocouple on that pass drawn as its own line. Use the 'show pass' pill bar in the chart head to switch which pass is displayed. Solid lines = historical readings per TC. Dashed lines = per-TC P50 forecast (central). Filled bands = per-TC P10-P90 quantile-regression prediction interval (data-driven, 80% nominal coverage). Dashed red horizontal = 475 &deg;C alarm. Dashed amber = 460 &deg;C advisory. The four pass-level summary tiles at the top of the page remain unaffected by the chart selection - they always reflect every pass.</p>
+
+<h3>9. Time range behaviour</h3>
+<p>The topbar has TWO independent time controls. The PAST group (7D / 30D / 90D + custom 'd back' input) drives the history x-axis backward from the latest dataset timestamp; default is 30D. The FORECAST group (+7D / +90D / +1Y + custom 'd fwd' input) drives how far forward the chart shows the prediction trajectory; default is +7D. The forecast tile values (hours-to-475, 'Not expected within 7 years' verbiage, etc.) are computed once over a fixed 7-year internal horizon and do NOT change with the FORECAST pill. The pill only changes what slice of that trajectory the chart displays. For long horizons the chart x-axis is downsampled (weekly above 90D, biweekly above 1Y) to stay readable.</p>
+
+<h3>10. Data quality and limitations</h3>
+<p>Skin thermocouples below 150 &deg;C or above 700 &deg;C are masked as sensor faults. Pass 4 of Heater 2 has wider P10-P90 bands than other passes due to TC dropouts in the source data; treat its forecasts with extra skepticism. Heater 3 has only 3 thermocouples total across the heater, so per-pass forecasting is limited to one combined pass.</p>
+
+<h3>11. Common fault modes</h3>
+<ul style="margin-left:20px">
+  <li><strong>Coke fouling</strong> - the dominant cause of skin TI drift upward. Builds slowly over months between decoke cycles.</li>
+  <li><strong>Pass flow maldistribution</strong> - one pass takes more feed than its share, runs hotter to compensate. Shows up as one pass diverging from the others.</li>
+  <li><strong>Burner imbalance / flame impingement</strong> - localized hot spot on one or two thermocouples; max-skin signal moves before pass-average.</li>
+  <li><strong>Tube creep</strong> - sustained operation above 475 &deg;C accelerates creep. The 475 &deg;C limit is set conservatively to avoid this.</li>
+  <li><strong>TC sensor drift / failure</strong> - flatlining or implausible jumps. The 150-700 &deg;C mask filters these.</li>
+</ul>
+
+<h3>12. References</h3>
+<ul style="margin-left:20px">
+  <li>API 530 - Heater Tube Thickness Calculation</li>
+  <li>API 560 - Fired Heaters for General Refinery Service</li>
+  <li>Dittus-Boelter correlation - inside-film heat transfer</li>
+  <li>NACE SP0170 - Polythionic stress corrosion cracking guidance</li>
+</ul>
+
+<h3>13. Model and training</h3>
+<p>The predictor uses a hybrid forecast composition: a linear regression on the last 30 days of skin-TI history (slope in &deg;C/day) provides the central trajectory at every forecast horizon, and three XGBoost quantile models per TC (P10, P50, P90) provide the data-driven uncertainty band. Linear extrapolation correctly extends fouling trends beyond the training-data range; the quantile band captures normal day-to-day variation around the trend. At each forecast step, the band width = P90-P50 (upper) and P50-P10 (lower) from the XGBoost quantile spread, decorating the linear central. Per-TC modelling lets the dashboard monitor every thermocouple individually. Training uses chronological 80/20 split: first 80 percent of dates train, most recent 20 percent are held-out test, which tests whether the band widths reflect real out-of-sample variation.</p><p>Turnaround and upset rows are detected and excluded from training. A turnaround row is one where the maximum skin TI across all TCs in the furnace falls below 250 &deg;C (cold furnace), dilated by 3 days each side to capture cool-down approach and warm-up startup transients. An upset row is one where the day-over-day change in max skin TI exceeds 50 &deg;C (sensor glitch or large process disturbance). Across the three furnaces, 6 to 13 percent of rows are excluded as turnaround/upset; the remaining stable-operation data trains a model that is not biased by shutdown trajectories.</p>
+<p>Decoke detection: each turnaround group is compared against the 7 days before and after. If post-restart skin TI is at least 30 &deg;C lower than pre-shutdown, the turnaround is classified as a decoke (tube cleaning happened, fouling clock resets) and a new run begins. Otherwise the shutdown is treated as a maintenance stop and the previous run continues. The engineered feature days_since_run_start counts only operating time within the current run, so different runs align at t=0 instead of being averaged together. This is critical for fouling-rate prediction: the model now sees N independent fouling curves instead of one smeared curve over 5 years. The dashboard about-tab shows decoke dates and current days-into-run per furnace.</p>
+<p>Hyperparameters: max_depth = 3, n_estimators = 80, learning_rate = 0.06, subsample = 0.85, colsample_bytree = 0.85. Three quantile models per TC (P10, P50, P90) using objective='reg:quantileerror'. Trees are dumped to a compact JSON node format and evaluated by a pure-JavaScript walker in this dashboard.</p>
+<p>Feature set per pass: pass flow, IP steam injection, convection skin TI, crossover T, pass outlet T, calculated pass duty (where available), whole-furnace radiant box T, fuel gas flow, combustion air, plus engineered features for current-skin-max, 7-day rolling mean, skin-velocity (degC/day), cumulative duty integral, and days-since-data-start (proxy for cumulative coke deposition).</p>
+<p>Retraining cadence: as new operating data accumulates, re-run train.py against the updated Excel. The dashboard will pick up the new model.json bundle on next load.</p>

@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ferriq - Membrane Analyzer</title>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
+<style>
+/* Box reset stays here; :root tokens come from theme.css (Sprint 1, 2026-05-03). */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+/* Sprint 1 cleanup: shared rules removed; theme.css provides shell, sidebar, topbar, time-pill bar, breadcrumb, content, tabs, card, kpi-section-title, banner, alert-item, chart scaffold, status-pill, table.data, upload-inline, btn family, action-bar, summary-row, config-bar (base), empty-state, manual overlay/panel (base). Below: membrane-analyzer-specific only. */
+
+/* KPI section title period-select dropdown (membrane-specific window selector) */
+.kpi-section-title .period-select{margin-left:auto;background:var(--gold-100);border:1px solid var(--border-card);border-radius:6px;padding:3px 8px;font-size:11px;font-family:var(--font-ui);color:var(--text-primary);cursor:pointer}
+
+/* KPI grid: 6-column for membrane */
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:var(--tile-gap)}
+@media(max-width:1400px){.kpi-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:780px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* KPI tile: page min-height + sub-tag + multi-row variants. kpi-row-lab is membrane-specific (lab vs online comparison). */
+.kpi-tile{min-height:108px}
+.kpi-tile .kpi-label sub{text-transform:none;font-size:0.78em;vertical-align:sub}
+.kpi-row-online{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.kpi-row-online .kpi-sublabel{font-size:10px;color:var(--text-secondary)}
+.kpi-row-online .kpi-value{font-family:var(--font-data);font-size:18px;font-weight:500;color:var(--text-primary);line-height:1.1}
+.kpi-row-online .kpi-value.dim{color:var(--text-secondary);font-size:14px}
+.kpi-diff{font-size:10px;font-weight:500;color:var(--text-secondary)}
+.kpi-diff.up{color:var(--status-ok)}
+.kpi-diff.down{color:var(--status-alarm)}
+.kpi-diff.warn{color:var(--status-advisory)}
+.kpi-row-lab{display:flex;justify-content:space-between;align-items:baseline;background:var(--gold-100);padding:3px 7px;border-radius:5px;border:1px solid var(--border-card)}
+.kpi-row-lab .lab-label{font-size:10px;color:var(--gold-700);font-weight:600}
+.kpi-row-lab .lab-value{font-size:11px;font-weight:600;color:var(--gold-700);font-family:var(--font-data)}
+.kpi-target-line{font-size:10px;color:var(--text-secondary);margin-top:auto;padding-top:2px;border-top:1px dashed var(--border-card)}
+.kpi-target-line strong{color:var(--text-primary);font-weight:500;font-family:var(--font-data)}
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <nav class="sidebar">
+    <div class="sidebar-header">
+      <a class="sidebar-logo" href="welcome-home.html" title="Home"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 290 290" width="36" height="36"><g transform="rotate(3.5,145,145)"><path d="M 231.6,95.0 L 231.6,195.0 L 145.0,245.0 L 58.4,195.0 L 58.4,95.0 L 145.0,45.0 Z" fill="none" stroke="#C8906A" stroke-width="3.5" stroke-linejoin="miter"/><path d="M 32.4,145.0 L 39.1,131.2 L 45.5,119.5 L 51.3,110.9 L 56.1,105.8 L 59.6,104.0 L 62.7,104.6 L 67.0,108.0 L 71.9,114.2 L 77.0,122.6 L 82.3,132.3 L 87.6,142.5 L 93.0,152.4 L 98.5,161.3 L 104.1,168.7 L 110.1,174.1 L 116.6,177.4 L 123.5,177.8 L 130.1,175.6 L 136.1,171.4 L 141.7,166.0 L 147.2,159.6 L 152.6,153.0 L 157.8,146.5 L 163.0,140.7 L 168.0,135.9 L 172.8,132.5 L 177.3,130.5 L 181.6,129.8 L 186.0,130.3 L 190.6,131.9 L 195.5,134.7 L 200.6,138.3 L 205.8,142.4 L 211.1,146.8 L 216.6,151.0 L 222.2,154.7 L 228.0,157.5 L 234.1,158.9 L 240.0,158.7 L 245.5,157.3 L 245.5,157.3 L 240.3,155.8 L 235.5,153.7 L 230.9,151.1 L 226.1,148.2 L 221.1,144.8 L 215.9,140.8 L 210.6,136.5 L 205.2,132.2 L 199.6,128.3 L 193.8,125.1 L 187.8,122.9 L 181.5,122.2 L 175.1,123.2 L 169.0,125.9 L 163.1,130.1 L 157.5,135.5 L 152.0,141.6 L 146.6,148.3 L 141.3,154.8 L 136.2,160.8 L 131.2,165.6 L 126.5,168.9 L 122.4,170.3 L 118.7,170.0 L 114.5,168.0 L 109.8,163.6 L 104.8,157.0 L 99.6,148.6 L 94.4,138.9 L 89.0,128.8 L 83.7,118.8 L 78.2,109.9 L 72.4,102.7 L 66.0,97.8 L 58.5,96.5 L 51.3,99.9 L 45.5,106.9 L 40.7,117.2 L 36.4,130.1 L 32.4,145.0 Z" fill="#C8906A" stroke="none"/></g></svg></a>
+      <span class="sidebar-title"><span style="color:#C8906A;font-weight:600">Fe</span>rriq</span>
+    </div>
+
+    <div class="nav-section-label">Core</div>
+    <a class="nav-item" href="welcome-home.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7.5L9 2l7 5.5V15a1.5 1.5 0 01-1.5 1.5h-11A1.5 1.5 0 012 15V7.5z"/><path d="M6.5 16.5V10h5v6.5"/></svg></span>
+      Home
+    </a>
+    <a class="nav-item active" href="dashboards.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="5.5" height="5.5" rx="1"/><rect x="10.5" y="2" width="5.5" height="5.5" rx="1"/><rect x="2" y="10.5" width="5.5" height="5.5" rx="1"/><rect x="10.5" y="10.5" width="5.5" height="5.5" rx="1"/></svg></span>
+      Dashboards
+    </a>
+
+    <a class="nav-item" href="predictors.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 13 6 9 9 11 14 5"/><polyline points="11 5 14 5 14 8"/></svg></span>
+      Predictors
+    </a>
+    <div class="nav-section-label">Monitor</div>
+    <a class="nav-item" href="alerts.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2a5 5 0 00-5 5v2.5L2.5 12.5h13L14 9.5V7a5 5 0 00-5-5z"/><path d="M7 13a2 2 0 004 0"/><line x1="9" y1="1" x2="9" y2="2"/></svg></span>
+      Alerts
+    </a>
+    <a class="nav-item" href="activity-log.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 4.5 10 10.5 7 7.5 2 12.5"/><polyline points="12 4.5 16 4.5 16 8.5"/></svg></span>
+      Activity Log
+    </a>
+
+    <div class="nav-section-label">Tools</div>
+    <a class="nav-item" href="data-export.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 11.5v3a1 1 0 01-1 1h-11a1 1 0 01-1-1v-3"/><polyline points="5 7.5 9 3.5 13 7.5"/><line x1="9" y1="3.5" x2="9" y2="12.5"/></svg></span>
+      Data Export
+    </a>
+    <a class="nav-item" href="reports.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2.5h7l3 3v10a1 1 0 01-1 1H4a1 1 0 01-1-1v-12a1 1 0 011-1z"/><polyline points="11 2.5 11 5.5 14 5.5"/><line x1="5.5" y1="9" x2="12.5" y2="9"/><line x1="5.5" y1="12" x2="10" y2="12"/></svg></span>
+      Reports
+    </a>
+
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-divider"></div>
+
+    <a class="nav-item" href="help.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><path d="M7 7a2 2 0 013.5 1.5c0 1.5-2 1.5-2 3"/><circle cx="9" cy="13.5" r="0.5" fill="currentColor" stroke="none"/></svg></span>
+      Help & Docs
+    </a>
+    <a class="nav-item" href="changelog.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="7"/><polyline points="9 5 9 9 12 10.5"/></svg></span>
+      Changelog
+    </a>
+
+    <div class="sidebar-divider"></div>
+
+    <a class="nav-item" href="settings.html">
+      <span class="nav-icon"><svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="3"/><path d="M14.7 11.1a1.2 1.2 0 00.2 1.3l.04.04a1.44 1.44 0 11-2.04 2.04l-.04-.04a1.2 1.2 0 00-1.3-.2 1.2 1.2 0 00-.72 1.1v.12a1.44 1.44 0 11-2.88 0v-.06a1.2 1.2 0 00-.78-1.1 1.2 1.2 0 00-1.3.2l-.04.04a1.44 1.44 0 11-2.04-2.04l.04-.04a1.2 1.2 0 00.2-1.3 1.2 1.2 0 00-1.1-.72H3.44a1.44 1.44 0 110-2.88h.06a1.2 1.2 0 001.1-.78 1.2 1.2 0 00-.2-1.3l-.04-.04a1.44 1.44 0 112.04-2.04l.04.04a1.2 1.2 0 001.3.2h.06a1.2 1.2 0 00.72-1.1V3.44a1.44 1.44 0 112.88 0v.06a1.2 1.2 0 00.72 1.1 1.2 1.2 0 001.3-.2l.04-.04a1.44 1.44 0 112.04 2.04l-.04.04a1.2 1.2 0 00-.2 1.3v.06a1.2 1.2 0 001.1.72h.12a1.44 1.44 0 110 2.88h-.06a1.2 1.2 0 00-1.1.72z"/></svg></span>
+      Settings
+    </a>
+
+    <div class="planned-modules"><strong>Planned modules</strong>Alerts · Activity Log · Data Export · Reports · Help · Changelog · Settings</div>
+    <div class="sidebar-user">
+      <div class="user-avatar">VP</div>
+      <div class="user-info">
+        <div class="user-name">Vedant Patel</div>
+        <div class="user-role">Engineer</div>
+      </div>
+    </div>
+  </nav>
+
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="breadcrumb"><a href="welcome-home.html">Home</a><span>/</span>Membrane Analyzer</div>
+    </div>
+    <div class="topbar-right">
+      <div class="time-range-bar" id="timeRangeBar">
+        <button class="time-pill" data-range="1h">1H</button>
+        <button class="time-pill" data-range="24h">24H</button>
+        <button class="time-pill" data-range="7d">7D</button>
+        <button class="time-pill active" data-range="30d">30D</button>
+        <button class="time-pill" data-range="90d">90D</button>
+        <span class="time-divider"></span>
+        <div class="time-custom" title="Custom range - enter a number and unit">
+          <input type="number" id="customAmount" min="1" placeholder="N"/>
+          <select id="customUnit">
+            <option value="s">sec</option>
+            <option value="m">min</option>
+            <option value="h">hr</option>
+            <option value="d" selected>day</option>
+          </select>
+        </div>
+      </div>
+      <div class="avatar">VP</div>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="config-bar">
+      <div class="config-bar-header" id="configHeader">
+        <span class="config-bar-title">Data & Configuration</span>
+        <span class="config-toggle" id="configToggle">▴</span>
+      </div>
+      <div class="config-bar-body" id="configBody">
+        <div class="config-col">
+          <h4>Data Source</h4>
+          <label class="upload-inline" for="csvInput">
+            <input type="file" id="csvInput" accept=".csv"/>
+            <span class="up-title">Upload CSV</span>
+            <span class="up-sub" id="upStatus">Demo auto-loaded</span>
+          </label>
+          <button class="btn btn-sm" id="loadDemoBtn" style="margin-top:6px;width:100%;background:var(--gold-600)">Load demo data</button>
+          <button class="btn btn-sm" id="recalcBtn" style="margin-top:4px;width:100%">Recalculate</button>
+          <button class="btn btn-sm" id="restoreDefaultsBtn" style="margin-top:4px;width:100%;background:var(--gold-200);color:var(--text-primary)">Restore Defaults</button>
+        </div>
+        <div class="config-col">
+          <h4>Design Targets</h4>
+          <div class="config-row"><label>Design Feed H<sub>2</sub> (mol %)</label><input type="number" class="config-input" id="setDesFeedH2" value="87.32" step="0.01"/></div>
+          <div class="config-row"><label>Design Permeate H<sub>2</sub> (mol %)</label><input type="number" class="config-input" id="setDesPermH2" value="95.53" step="0.01"/></div>
+          <div class="config-row"><label>Design Recovery (%)</label><input type="number" class="config-input" id="setDesRecovery" value="90.00" step="0.1"/></div>
+          <div class="config-row"><label>Design Feed Flow (Nm³/hr)</label><input type="number" class="config-input" id="setDesFlow" value="96277" step="100"/></div>
+          <div class="config-row"><label>Design Total / Non-Perm Ratio</label><input type="number" class="config-input" id="setDesRatio" value="5.6" step="0.1"/></div>
+          <div class="config-row"><label>Design Feed Pressure (kPag)</label><input type="number" class="config-input" id="setDesFeedP" value="15890" step="10"/></div>
+        </div>
+        <div class="config-col">
+          <h4>Limits & Site</h4>
+          <div class="config-row"><label>Site atm. pressure (kPa)</label><input type="number" class="config-input" id="setPatm" value="93" step="1"/></div>
+          <div class="config-row"><label>Recovery min advisory (%)</label><input type="number" class="config-input" id="limRecMin" value="75" step="1"/></div>
+          <div class="config-row"><label>Permeate H<sub>2</sub> advisory (%)</label><input type="number" class="config-input" id="limPurityAdv" value="93" step="0.1"/></div>
+          <div class="config-row"><label>Permeate H<sub>2</sub> alarm (%)</label><input type="number" class="config-input" id="limPurityAlm" value="90" step="0.1"/></div>
+          <div class="config-row"><label>Ratio alarm high</label><input type="number" class="config-input" id="limRatioAlm" value="6.4" step="0.1"/></div>
+          <div class="config-row"><label>Feed pressure deviation (%)</label><input type="number" class="config-input" id="limFeedPdev" value="5" step="0.5"/></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:4px">
+      <h1 style="font-size:22px;font-weight:700">H₂ Membrane Analyzer</h1>
+      <span style="font-size:12px;color:var(--text-secondary)">Hollow-fiber · Online vs Lab</span>
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px">Recovery, purity, feed conditions, and flow ratio tracking</p>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="data">Data & Log</button>
+      <button class="tab" data-tab="about">About</button>
+    </div>
+
+    <section class="tab-panel active" id="panel-dashboard">
+      <div class="action-bar">
+        <button class="btn btn-sm" id="btnExport" title="Export processed data to CSV">Export CSV</button>
+        <button class="btn btn-sm btn-outline" id="btnManual" title="View engineering manual">View Manual</button>
+      </div>
+
+      <div id="statusArea">
+        <div class="empty-state">
+          <h3>No data loaded</h3>
+          <p>Upload a CSV or click Load demo data in the Data &amp; Configuration panel.</p>
+        </div>
+      </div>
+
+      <div id="kpiArea" style="display:none">
+
+        <div class="kpi-section-title current">
+          <span class="pulse-dot"></span>
+          Current Values
+          <span class="meta" id="currentDateLabel">(latest reading)</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-tile accent-current">
+            <div class="kpi-label">H<sub>2</sub> Recovery</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">Online</span><span><span class="kpi-value" id="kCurRec">—</span> <span class="kpi-diff" id="kCurRecDiff">—</span></span></div>
+            <div class="kpi-row-lab"><span class="lab-label">Lab</span><span class="lab-value" id="kCurLabRec">—</span></div>
+            <div class="kpi-target-line">target <strong id="kCurRecTarget">90.00 %</strong></div>
+          </div>
+          <div class="kpi-tile accent-current">
+            <div class="kpi-label">Permeate Purity</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">Online</span><span><span class="kpi-value" id="kCurPerm">—</span> <span class="kpi-diff" id="kCurPermDiff">—</span></span></div>
+            <div class="kpi-row-lab"><span class="lab-label">Lab</span><span class="lab-value" id="kCurLabPerm">—</span></div>
+            <div class="kpi-target-line">design <strong id="kCurPermTarget">95.53 %</strong></div>
+          </div>
+          <div class="kpi-tile accent-current">
+            <div class="kpi-label">Feed H<sub>2</sub> Content</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">Online</span><span><span class="kpi-value" id="kCurFeed">—</span> <span class="kpi-diff" id="kCurFeedDiff">—</span></span></div>
+            <div class="kpi-row-lab"><span class="lab-label">Lab</span><span class="lab-value" id="kCurLabFeed">—</span></div>
+            <div class="kpi-target-line">design <strong id="kCurFeedTarget">87.32 %</strong></div>
+          </div>
+          <div class="kpi-tile accent-current">
+            <div class="kpi-label">Feed Pressure</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">Current</span><span><span class="kpi-value" id="kCurFeedP">—</span> <span class="kpi-diff" id="kCurFeedPDiff">—</span></span></div>
+            <div class="kpi-row-lab" style="visibility:hidden"><span class="lab-label">—</span><span class="lab-value">—</span></div>
+            <div class="kpi-target-line">design <strong id="kCurFeedPTarget">15,890 kPag</strong></div>
+          </div>
+          <div class="kpi-tile accent-current">
+            <div class="kpi-label">Total Feed Flow</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">Current</span><span class="kpi-value" id="kCurFlow">—</span></div>
+            <div class="kpi-row-lab" style="visibility:hidden"><span class="lab-label">—</span><span class="lab-value">—</span></div>
+            <div class="kpi-target-line">design <strong id="kCurFlowTarget">96,277 Nm³/hr</strong></div>
+          </div>
+          <div class="kpi-tile accent-current">
+            <div class="kpi-label">Total / Non-Perm Ratio</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">Current</span><span><span class="kpi-value" id="kCurRatio">—</span> <span class="kpi-diff" id="kCurRatioDiff">—</span></span></div>
+            <div class="kpi-row-lab" style="visibility:hidden"><span class="lab-label">—</span><span class="lab-value">—</span></div>
+            <div class="kpi-target-line">design <strong id="kCurRatioTarget">5.60</strong>, alarm 6.40</div>
+          </div>
+        </div>
+
+        <div class="kpi-section-title">
+          <span class="pulse-dot"></span>
+          Performance Averages
+          <span class="meta" id="avgPeriodLabel">(last 30 days)</span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi-tile accent-avg">
+            <div class="kpi-label">Avg H<sub>2</sub> Recovery</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">Online</span><span><span class="kpi-value" id="kAvgRec">—</span> <span class="kpi-diff" id="kAvgRecDiff">—</span></span></div>
+            <div class="kpi-row-lab"><span class="lab-label">Lab</span><span class="lab-value" id="kAvgLabRec">—</span></div>
+            <div class="kpi-target-line">target <strong id="kAvgRecTarget">90.00 %</strong></div>
+          </div>
+          <div class="kpi-tile accent-avg">
+            <div class="kpi-label">Avg Permeate Purity</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">Online</span><span><span class="kpi-value" id="kAvgPerm">—</span> <span class="kpi-diff" id="kAvgPermDiff">—</span></span></div>
+            <div class="kpi-row-lab"><span class="lab-label">Lab</span><span class="lab-value" id="kAvgLabPerm">—</span></div>
+            <div class="kpi-target-line">design <strong id="kAvgPermTarget">95.53 %</strong></div>
+          </div>
+          <div class="kpi-tile accent-avg">
+            <div class="kpi-label">Avg Feed H<sub>2</sub> Content</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">Online</span><span><span class="kpi-value" id="kAvgFeed">—</span> <span class="kpi-diff" id="kAvgFeedDiff">—</span></span></div>
+            <div class="kpi-row-lab"><span class="lab-label">Lab</span><span class="lab-value" id="kAvgLabFeed">—</span></div>
+            <div class="kpi-target-line">design <strong id="kAvgFeedTarget">87.32 %</strong></div>
+          </div>
+          <div class="kpi-tile accent-avg">
+            <div class="kpi-label">Avg Feed Pressure</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">Average</span><span><span class="kpi-value" id="kAvgFeedP">—</span> <span class="kpi-diff" id="kAvgFeedPDiff">—</span></span></div>
+            <div class="kpi-row-lab" style="visibility:hidden"><span class="lab-label">—</span><span class="lab-value">—</span></div>
+            <div class="kpi-target-line">design <strong id="kAvgFeedPTarget">15,890 kPag</strong></div>
+          </div>
+          <div class="kpi-tile accent-avg">
+            <div class="kpi-label">Avg Total Feed Flow</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">Average</span><span class="kpi-value" id="kAvgFlow">—</span></div>
+            <div class="kpi-row-lab" style="visibility:hidden"><span class="lab-label">—</span><span class="lab-value">—</span></div>
+            <div class="kpi-target-line">design <strong id="kAvgFlowTarget">96,277 Nm³/hr</strong></div>
+          </div>
+          <div class="kpi-tile accent-avg">
+            <div class="kpi-label">Avg Total / Non-Perm Ratio</div>
+            <div class="kpi-row-online"><span class="kpi-sublabel">Average</span><span><span class="kpi-value" id="kAvgRatio">—</span> <span class="kpi-diff" id="kAvgRatioDiff">—</span></span></div>
+            <div class="kpi-row-lab" style="visibility:hidden"><span class="lab-label">—</span><span class="lab-value">—</span></div>
+            <div class="kpi-target-line">design <strong id="kAvgRatioTarget">5.60</strong>, alarm 6.40</div>
+          </div>
+        </div>
+
+        <div class="banner status-ok" id="statusBanner">
+          <h2>Overall Status</h2>
+          <div class="banner-primary" id="statusText">OK</div>
+          <div class="banner-detail" id="statusDetail">No active alerts.</div>
+          <div id="alertList"></div>
+        </div>
+
+        <div class="chart-grid">
+          <div class="chart-box">
+            <div class="chart-head">
+              <h4>H<sub>2</sub> Purity Trends - Online vs Lab</h4>
+              <div class="axis-controls">
+                <span>Y min</span><input type="number" id="purityMin" placeholder="auto"/>
+                <span>max</span><input type="number" id="purityMax" placeholder="auto"/>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <label class="toggle-pill" style="--swatch-color:#2F6F9F"><input type="checkbox" data-chart="purity" data-idx="0" checked/><span class="swatch"></span><span class="toggle-label">Online Permeate</span></label>
+              <label class="toggle-pill" style="--swatch-color:#667085"><input type="checkbox" data-chart="purity" data-idx="1" checked/><span class="swatch"></span><span class="toggle-label">Lab Permeate</span></label>
+              <label class="toggle-pill" style="--swatch-color:#2F7F7A"><input type="checkbox" data-chart="purity" data-idx="2" checked/><span class="swatch"></span><span class="toggle-label">Online Feed</span></label>
+              <label class="toggle-pill" style="--swatch-color:#7A5AF8"><input type="checkbox" data-chart="purity" data-idx="3" checked/><span class="swatch"></span><span class="toggle-label">Lab Feed</span></label>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="chartPurity"></canvas></div>
+          </div>
+
+          <div class="chart-box">
+            <div class="chart-head">
+              <h4>H<sub>2</sub> Recovery Rate (%)</h4>
+              <div class="axis-controls">
+                <span>Y min</span><input type="number" id="recoveryMin" value="60" placeholder="auto"/>
+                <span>max</span><input type="number" id="recoveryMax" value="100" placeholder="auto"/>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <label class="toggle-pill" style="--swatch-color:#2F6F9F"><input type="checkbox" data-chart="recovery" data-idx="0" checked/><span class="swatch"></span><span class="toggle-label">Online Recovery</span></label>
+              <label class="toggle-pill" style="--swatch-color:#667085"><input type="checkbox" data-chart="recovery" data-idx="1" checked/><span class="swatch"></span><span class="toggle-label">Lab Recovery</span></label>
+              <label class="toggle-pill" style="--swatch-color:#888"><input type="checkbox" data-chart="recovery" data-idx="2" checked/><span class="swatch"></span><span class="toggle-label">Design Target</span></label>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="chartRecovery"></canvas></div>
+          </div>
+
+          <div class="chart-box full-width">
+            <div class="chart-head">
+              <h4>Flow Rates (Nm³/hr)</h4>
+              <div class="axis-controls">
+                <span>Y min</span><input type="number" id="flowMin" placeholder="auto"/>
+                <span>max</span><input type="number" id="flowMax" placeholder="auto"/>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <label class="toggle-pill" style="--swatch-color:#2F6F9F"><input type="checkbox" data-chart="flow" data-idx="0" checked/><span class="swatch"></span><span class="toggle-label">Total Feed Flow</span></label>
+              <label class="toggle-pill" style="--swatch-color:#2F7F7A"><input type="checkbox" data-chart="flow" data-idx="1" checked/><span class="swatch"></span><span class="toggle-label">Permeate Flow</span></label>
+              <label class="toggle-pill" style="--swatch-color:#667085"><input type="checkbox" data-chart="flow" data-idx="2" checked/><span class="swatch"></span><span class="toggle-label">Non-Permeate Flow</span></label>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="chartFlow"></canvas></div>
+          </div>
+
+          <div class="chart-box full-width">
+            <div class="chart-head">
+              <h4>Total Feed / Non-Permeate Ratio</h4>
+              <div class="axis-controls">
+                <span>Y min</span><input type="number" id="ratioMin" value="3" placeholder="auto"/>
+                <span>max</span><input type="number" id="ratioMax" value="8" placeholder="auto"/>
+              </div>
+            </div>
+            <div class="toggle-row">
+              <label class="toggle-pill" style="--swatch-color:#2F6F9F"><input type="checkbox" data-chart="ratio" data-idx="0" checked/><span class="swatch"></span><span class="toggle-label">Actual Ratio</span></label>
+              <label class="toggle-pill" style="--swatch-color:#888"><input type="checkbox" data-chart="ratio" data-idx="1" checked/><span class="swatch"></span><span class="toggle-label">Design (5.60)</span></label>
+              <label class="toggle-pill" style="--swatch-color:#D4432A"><input type="checkbox" data-chart="ratio" data-idx="2" checked/><span class="swatch"></span><span class="toggle-label">Alarm High (6.40)</span></label>
+            </div>
+            <div class="chart-canvas-wrap"><canvas id="chartRatio"></canvas></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <section class="tab-panel" id="panel-data">
+      <div class="card">
+        <div class="card-header">Batch summary</div>
+        <div class="card-body"><div class="summary-row" id="batchSummary"><div class="stat">No batch processed.</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">Processed rows (most recent 50)</div>
+        <div class="card-body" style="overflow-x:auto">
+          <table class="data" id="resultTable">
+            <thead><tr><th>Date</th><th>Feed Flow</th><th>Perm Flow</th><th>Non-Perm Flow</th><th>Online Perm H<sub>2</sub></th><th>Lab Perm H<sub>2</sub></th><th>Feed H<sub>2</sub> (lab)</th><th>Feed P (kPag)</th><th>Online Rec %</th><th>Lab Rec %</th><th>Ratio</th><th>Status</th></tr></thead>
+            <tbody><tr><td colspan="12" style="text-align:center;color:var(--text-secondary)">No rows processed.</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="panel-about">
+      <div class="card"><div class="card-body">
+        <h3 style="margin-top:0;font-size:15px;font-weight:600;color:var(--gold-700)">Calculations</h3>
+        <p><strong>H<sub>2</sub> Recovery (online)</strong> = (Q<sub>perm</sub> · y<sub>perm,online</sub>) / (Q<sub>feed</sub> · y<sub>feed</sub>) × 100 [%]</p>
+        <p><strong>H<sub>2</sub> Recovery (lab)</strong> = (Q<sub>perm</sub> · y<sub>perm,lab</sub>) / (Q<sub>feed</sub> · y<sub>feed,lab</sub>) × 100 [%]. Computed only on days with both lab samples.</p>
+        <p><strong>H<sub>2</sub> Purity</strong> = y<sub>perm</sub> [mol %], read directly from the permeate analyzer (online) or sample (lab).</p>
+        <p><strong>Total / Non-Permeate Ratio</strong> = Q<sub>feed</sub> / Q<sub>non-perm</sub>. Used by the recovery ratio controller. Higher ratio means more H<sub>2</sub> being permeated.</p>
+        <p><strong>Feed Pressure</strong> reported in kPag. Site atmospheric pressure default is 93 kPa. Absolute pressure = gauge + 93 kPa.</p>
+
+        <h3 style="font-size:15px;font-weight:600;color:var(--gold-700);margin-top:16px">Alert Tiers</h3>
+        <p>Ratio &gt;= alarm high (default 6.40) raises an alarm: indicates over-recovery, lower the recovery ratio controller setpoint. Online recovery below the recovery min (default 75 %) raises an advisory. Permeate purity below the advisory threshold (default 93 %) raises an advisory; below the alarm threshold (default 90 %) raises an alarm. Feed pressure deviation greater than the configured percent from design (default 5 %) raises an advisory.</p>
+
+        <h3 style="font-size:15px;font-weight:600;color:var(--gold-700);margin-top:16px">Series Conventions</h3>
+        <p>Online series are shown as continuous lines. Lab series are shown as points where samples exist.</p>
+
+        <h3 style="font-size:15px;font-weight:600;color:var(--gold-700);margin-top:16px">Scope</h3>
+        <p>Single-stage hollow-fiber H<sub>2</sub> separator, daily aggregated readings. Tracks recovery, purity, feed conditions, and the controller ratio against design and alarm bounds.</p>
+      </div></div>
+    </section>
+  </main>
+</div>
+
+<div class="manual-overlay" id="manualOverlay"></div>
+<div class="manual-panel" id="manualPanel">
+  <div class="manual-panel-header">
+    <h3>Engineering Manual - Membrane Analyzer</h3>
+    <button class="manual-panel-close" id="manualClose">&times;</button>
+  </div>
+  <div class="manual-panel-body">
+
+    <h3>1. Purpose &amp; Scope</h3>
+    <p>This dashboard provides daily performance tracking for a single-stage hollow-fiber polymeric H<sub>2</sub> membrane separator processing refinery off-gas or hydrogen-rich purge streams. Inputs are aggregated daily from the historian and from spot lab samples. Outputs are recovery, permeate purity, feed conditions, and the controller flow ratio.</p>
+    <p>The dashboard does not perform design validation. It is a performance monitor for steady-state operation against design references.</p>
+
+    <h3>2. Equipment Context</h3>
+    <p><strong>Module type:</strong> Polymeric hollow-fiber, glassy backbone (typical: polysulfone, polyimide, or polyaramide). Two parallel trains, each with multiple cans (pressure vessels) in series.</p>
+    <p><strong>Feed:</strong> Hydrogen-rich gas, ~87 mol % H<sub>2</sub>, balance light hydrocarbons (C1 - C5+) plus trace H<sub>2</sub>S, NH<sub>3</sub>, N<sub>2</sub>.</p>
+    <p><strong>Permeate:</strong> H<sub>2</sub>-enriched product. Design 95.5 mol % H<sub>2</sub>. Sent to downstream hydrotreating or recycle.</p>
+    <p><strong>Non-permeate (residue):</strong> Hydrocarbon-rich retentate. Sent to fuel gas or further recovery stages.</p>
+
+    <h3>3. Operating Envelope</h3>
+    <p><strong>Feed pressure:</strong> 15.5 - 16.0 MPa gauge (15,500 - 16,000 kPag). Driving force for permeation.</p>
+    <p><strong>Permeate pressure:</strong> ~10.3 MPa gauge. Set by downstream consumer.</p>
+    <p><strong>Feed temperature:</strong> Approximately 90 - 95 °C, controlled to keep above hydrocarbon dew point and below polymer plasticization.</p>
+    <p><strong>Total feed flow:</strong> 85,000 - 90,000 Nm³/hr (Air Products design 96,277 Nm³/hr at 90 % H<sub>2</sub> recovery).</p>
+    <p><strong>Stage cut:</strong> ~80 - 85 % at design conditions (high stage cut is consistent with the high-recovery target).</p>
+
+    <h3>4. Tag Dictionary</h3>
+    <p>Generic engine variable names. Aliases map historian headers to these canonical names.</p>
+    <table class="data" style="margin-top:8px;font-size:12px">
+      <thead><tr><th>Variable</th><th>Unit</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><code>timestamp</code></td><td>ISO 8601</td><td>Sample time</td></tr>
+        <tr><td><code>q_feed</code></td><td>Nm³/hr</td><td>Total feed flow at STP (0 °C, 101.325 kPa)</td></tr>
+        <tr><td><code>q_perm</code></td><td>Nm³/hr</td><td>Permeate flow (1st stage)</td></tr>
+        <tr><td><code>q_non_perm</code></td><td>Nm³/hr</td><td>Non-permeate flow (1st stage)</td></tr>
+        <tr><td><code>y_feed_h2_online</code></td><td>mol %</td><td>Feed H<sub>2</sub> from online gas chromatograph</td></tr>
+        <tr><td><code>y_feed_h2_lab</code></td><td>mol %</td><td>Feed H<sub>2</sub> from lab analysis (spot sample)</td></tr>
+        <tr><td><code>y_perm_h2_online</code></td><td>vol %</td><td>Permeate H<sub>2</sub> from online analyzer</td></tr>
+        <tr><td><code>y_perm_h2_lab</code></td><td>mol %</td><td>Permeate H<sub>2</sub> from lab analysis</td></tr>
+        <tr><td><code>p_feed_kpag</code></td><td>kPag</td><td>Feed gauge pressure</td></tr>
+      </tbody>
+    </table>
+    <p style="margin-top:10px"><strong>Units:</strong> Nm³/hr is normal cubic meters per hour at 0 °C, 101.325 kPa absolute (ISO 4014). Mole % and vol % are interchangeable for ideal-gas mixtures used here.</p>
+
+    <h3>5. Calculations</h3>
+
+    <p><strong>5.1 H<sub>2</sub> recovery (online).</strong> Fraction of H<sub>2</sub> in the feed reporting to the permeate, computed from continuous analyzer values:</p>
+    <p style="margin-left:12px"><code>Recovery_online = (q_perm &middot; y_perm_h2_online) / (q_feed &middot; y_feed_h2_online) &times; 100</code></p>
+    <p>Online feed H<sub>2</sub> is preferred. If the online feed analyzer is unavailable for a row, the lab feed H<sub>2</sub> is used in its place so a recovery value can still be reported.</p>
+
+    <p><strong>5.2 H<sub>2</sub> recovery (lab).</strong> Independent cross-check using lab-only values, computed only when both lab samples are present on the same day:</p>
+    <p style="margin-left:12px"><code>Recovery_lab = (q_perm &middot; y_perm_h2_lab) / (q_feed &middot; y_feed_h2_lab) &times; 100</code></p>
+    <p>A persistent gap between online and lab recovery ( &gt; 1.5 percentage points ) suggests online analyzer drift or sampling bias and warrants calibration check.</p>
+
+    <p><strong>5.3 H<sub>2</sub> purity.</strong> Direct read of the permeate H<sub>2</sub> mole fraction. Design product purity is 95.53 mol %. Online and lab readings shown side by side as a calibration check.</p>
+
+    <p><strong>5.4 Total / Non-permeate ratio.</strong> The flow ratio that the recovery ratio controller manipulates:</p>
+    <p style="margin-left:12px"><code>Ratio = q_feed / q_non_perm</code></p>
+    <p>Higher ratio means a larger fraction of feed is permeated, i.e. higher recovery. Design value 5.60. The high-ratio alarm at 6.40 indicates over-recovery: the controller is pulling too much through the membrane, which compromises permeate purity and accelerates membrane fouling.</p>
+
+    <p><strong>5.5 Stage cut (informational).</strong> Although not displayed as a KPI, stage cut <code>&theta; = q_perm / q_feed</code> is implicit in the ratio and recovery values. At design conditions <code>&theta; &asymp; 0.82</code>.</p>
+
+    <p><strong>5.6 Mass balance check.</strong> The dashboard backfills <code>q_non_perm</code> as <code>q_feed - q_perm</code> when the historian value is missing. A direct three-flow check is not shown as a KPI but is implicit in the ratio: closure within 1 % is normal.</p>
+
+    <h3>6. Status Logic</h3>
+    <p>Status is rolled up from individual checks. Order of escalation: alarm overrides advisory overrides OK.</p>
+    <p><strong>Alarm</strong></p>
+    <ul style="margin-left:18px">
+      <li>Total / non-permeate ratio at or above 6.40 (configurable). Action: lower the recovery ratio controller setpoint.</li>
+      <li>Permeate H<sub>2</sub> below 90 % (configurable). Action: check for membrane fouling, sweep contamination, or ratio over-pull.</li>
+    </ul>
+    <p><strong>Advisory</strong></p>
+    <ul style="margin-left:18px">
+      <li>Online recovery below 75 % (configurable).</li>
+      <li>Permeate H<sub>2</sub> below 93 % (configurable).</li>
+      <li>Feed pressure deviating more than 5 % from design (default design 15,890 kPag).</li>
+    </ul>
+
+    <h3>7. Pressure Convention</h3>
+    <p>All pressures are reported in kilopascal gauge (kPag). The site atmospheric pressure default is 93 kPa, configurable in the Data &amp; Configuration panel. Absolute pressure is gauge + atmospheric. For example a feed reading of 15,937 kPag corresponds to 16,030 kPa absolute (16.03 MPa absolute) at the default atmosphere.</p>
+
+    <h3>8. Series Conventions on Charts</h3>
+    <p>Online series are continuous lines. Lab series are scatter points where samples exist. Design and alarm reference lines are dashed. The chart line breaks at any timestamp where the underlying sensor returns no value, so a flat line is real data and a gap is missing data.</p>
+
+    <h3>9. Time Range Behavior</h3>
+    <p>The topbar pill bar (1H, 24H, 7D, 30D, 90D) and the inline custom range (number + unit) drive both the trend chart x-axis and the Performance Averages KPI row. The Current Values row is unaffected by the range and always reflects the latest reading in the dataset.</p>
+    <p>The chart x-axis is padded to the full requested window. If the dataset is shorter than the window, the older portion shows as blank space (the line drops to nothing) rather than being compressed onto a shorter axis.</p>
+    <p>Window cutoff is computed off the latest dataset timestamp, not off wall-clock time. Demo data and historical CSV uploads behave the same way.</p>
+
+    <h3>10. Data Quality &amp; Limitations</h3>
+    <p>Lab samples are typically collected every 3 - 5 days. Lab averages over a window are computed only over the lab-sampled days within that window and may reflect a small sample.</p>
+    <p>The lab and online permeate analyzers measure on slightly different bases (mol % via gas chromatograph vs. vol % via thermal conductivity or NDIR). For ideal-gas refinery streams the difference is well below the noise floor, so the two are compared directly.</p>
+    <p>The ratio controller variable is a calculated tag in the DCS. The dashboard recomputes it locally from the upstream flow tags, so a small numerical mismatch versus the DCS value is normal (rounding, signal averaging windows).</p>
+
+    <h3>11. Common Fault Modes</h3>
+    <p><strong>Permeate purity drift down with recovery flat:</strong> membrane fouling or partial fiber failure. Check feed for liquid carryover and permeate H<sub>2</sub>S trend.</p>
+    <p><strong>Recovery rising with ratio rising:</strong> controller over-pulling; expected when feed H<sub>2</sub> drops. Tighten ratio setpoint or accept temporary purity loss.</p>
+    <p><strong>Recovery diverges between online and lab:</strong> online feed analyzer drift. Schedule analyzer calibration; in the interim use lab-based recovery for trending.</p>
+    <p><strong>Feed pressure low:</strong> upstream compressor or recycle issue. Recovery and purity will both fall as driving force drops.</p>
+
+    <h3>12. References</h3>
+    <p>Baker, R. W. (2004). <em>Membrane Technology and Applications</em>, 2nd ed., Wiley, Ch. 8.</p>
+    <p>Wijmans, J. G. and Baker, R. W. (1995). The solution-diffusion model: a review. <em>Journal of Membrane Science</em>, 107(1-2), 1-21.</p>
+    <p>ISO 4014 - Reference conditions for industrial gas measurement.</p>
+    <p>Air Products membrane separator design data sheet (operating envelope, design recovery, design ratio).</p>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// TAG ALIASES (generic - no plant tags)
+// ═══════════════════════════════════════════════════════
+const TAG_ALIASES = {
+  timestamp:        ["timestamp","Timestamp","Date","date","Time","Date / Timestamp"],
+  q_feed:           ["q_feed","Total Feed Flow","Feed Flow","feed_flow","Total Feed Flow (Nm³/hr)"],
+  q_perm:           ["q_perm","Permeate Flow","perm_flow","Permeate Flow (Nm³/hr)"],
+  q_non_perm:       ["q_non_perm","Non-Permeate Flow","non_perm_flow","Non Permeate Flow","Non-Permeate Flow (Nm³/hr)"],
+  y_perm_h2_online: ["y_perm_h2_online","Online Permeate H2","Permeate H2 Online","online_perm_h2","Online Permeate H2 (Volume %)"],
+  y_perm_h2_lab:    ["y_perm_h2_lab","Lab Permeate H2","Permeate H2 Lab","lab_perm_h2","Lab Permeate H2 (Mole %)"],
+  y_feed_h2_lab:    ["y_feed_h2_lab","Lab Feed H2","Feed H2 Lab","lab_feed_h2","Feed H2 (Mole %)"],
+  y_feed_h2_online: ["y_feed_h2_online","Online Feed H2","Feed H2 Online","online_feed_h2","Online Feed H2 (Volume %)"],
+  p_feed_kpag:      ["p_feed_kpag","Feed Pressure","feed_p_kpag","Feed Pressure (kPag)"]
+};
+
+// ═══════════════════════════════════════════════════════
+// DEMO DATA - 48 rows from a real H2 membrane separator
+// columns: date, q_feed, q_non_perm, q_perm, y_perm_online, y_perm_lab, y_feed_lab, p_feed_kpag
+// ═══════════════════════════════════════════════════════
+const DEMO_DATA = [
+  ["2025-12-14", 85499.8, 16041.3, 72754.2, 98.07, 97.43, 89.31, 15938],
+  ["2025-12-15", 85468.3, 16032.7, 72657.9, 98.36, null, null, 15934],
+  ["2025-12-16", 84884.3, 15924.8, 71633.1, 98.20, null, null, 15915],
+  ["2025-12-17", 85004.9, 15947.0, 71250.5, 97.88, 97.18, 88.33, 15945],
+  ["2025-12-18", 85002.4, 15948.3, 71159.0, 97.70, null, null, 15954],
+  ["2025-12-19", 86086.2, 16150.8, 71855.5, 97.78, 97.29, 88.68, 15954],
+  ["2025-12-20", 87708.1, 16451.9, 72987.8, 97.31, null, null, 15856],
+  ["2025-12-21", 88008.6, 16511.1, 73269.0, 97.33, 97.40, 89.03, 15743],
+  ["2025-12-22", 86550.2, 16236.0, 71941.1, 97.10, null, null, 15958],
+  ["2025-12-23", 86007.2, 16133.1, 71258.0, 97.10, null, null, 15957],
+  ["2025-12-24", 85841.6, 16102.0, 71172.7, 97.11, null, null, 15956],
+  ["2025-12-25", 85800.1, 16097.1, 72035.6, 97.25, 96.70, 88.55, 15955],
+  ["2025-12-26", 86017.2, 16134.7, 72797.0, 97.35, null, null, 15947],
+  ["2025-12-27", 86010.6, 16133.2, 72637.0, 96.76, null, null, 15940],
+  ["2025-12-28", 86007.4, 16135.9, 72814.0, 96.47, 97.13, 88.83, 15945],
+  ["2025-12-29", 86005.5, 16136.7, 72750.8, 96.63, null, null, 15931],
+  ["2025-12-30", 85961.2, 16127.5, 72881.3, 96.97, null, null, 15931],
+  ["2025-12-31", 85944.0, 16121.3, 72973.7, 97.18, 97.11, 88.82, 15936],
+  ["2026-01-01", 85862.1, 16105.2, 72867.4, 96.98, 97.16, 88.84, 15938],
+  ["2026-01-02", 85990.2, 16128.2, 73215.9, 97.18, null, null, 15901],
+  ["2026-01-03", 85796.8, 16096.5, 73057.4, 97.21, null, null, 15926],
+  ["2026-01-04", 85841.3, 16103.2, 72843.8, 97.48, 97.22, 88.86, 15942],
+  ["2026-01-05", 86002.8, 16134.0, 72740.0, 97.46, null, null, 15940],
+  ["2026-01-06", 86005.5, 16135.4, 72856.5, 97.62, null, null, 15940],
+  ["2026-01-07", 86007.7, 16133.5, 72828.9, 97.82, null, 88.69, 15929],
+  ["2026-01-08", 86009.9, 16135.9, 72706.5, 97.34, 96.79, null, 15928],
+  ["2026-01-09", 86003.7, 16132.8, 72672.4, 96.93, null, null, 15930],
+  ["2026-01-10", 85989.4, 16134.6, 71897.4, 97.03, null, null, 15929],
+  ["2026-01-11", 85842.4, 16104.7, 71624.2, 97.02, 97.13, 88.47, 15930],
+  ["2026-01-12", 85885.7, 16118.2, 71371.0, 97.47, null, null, 15929],
+  ["2026-01-13", 85811.5, 16102.4, 70734.7, 96.94, null, null, 15929],
+  ["2026-01-14", 85991.0, 16135.6, 70721.8, 96.80, 96.08, null, 15926],
+  ["2026-01-15", 86620.0, 16252.0, 71705.0, 96.42, null, null, 15929],
+  ["2026-01-16", 87195.0, 16358.0, 72661.0, 96.10, 96.14, 89.05, 15923],
+  ["2026-01-17", 87844.0, 16479.0, 73631.0, 95.74, null, null, 15933],
+  ["2026-01-18", 88453.2, 16596.1, 74590.2, 95.36, 96.21, 89.32, 15926],
+  ["2026-01-19", 88855.8, 16668.7, 75023.4, 95.30, null, null, 15923],
+  ["2026-01-20", 88062.1, 16319.1, 73395.4, 95.21, null, null, 15936],
+  ["2026-01-21", 87965.2, 16076.7, 72396.5, 95.25, null, 87.66, 15936],
+  ["2026-01-22", 87861.3, 16199.9, 72154.7, 95.17, 96.36, 87.83, 15952],
+  ["2026-01-23", 88010.2, 16302.3, 72221.2, 95.24, null, null, 15953],
+  ["2026-01-24", 88009.8, 16282.9, 72249.5, 94.90, null, null, 15954],
+  ["2026-01-25", 88001.2, 16314.8, 72211.8, 94.64, 96.72, 88.33, 15954],
+  ["2026-01-26", 88008.1, 16296.7, 72252.6, 94.58, null, null, 15952],
+  ["2026-01-27", 88009.5, 16256.3, 72344.0, 94.55, null, null, 15944],
+  ["2026-01-28", 87844.6, 16224.1, 72212.7, 94.50, 96.41, 88.23, 15931],
+  ["2026-01-29", 87876.7, 16232.6, 72253.2, 94.49, null, null, 15958],
+  ["2026-01-30", 88005.4, 16276.6, 72346.7, 94.77, 96.34, 88.08, 15936],
+  ["2026-01-31", 88006.4, 16241.4, 72377.6, 95.05, null, null, 15931],
+  ["2026-02-01", 87857.5, 16048.0, 72472.5, 95.00, 96.27, 87.92, 15937],
+  ["2026-02-02", 87265.1, 16015.2, 71958.1, 95.38, null, null, 15938]
+];
+
+const DEFAULTS = {
+  setDesFeedH2: 87.32, setDesPermH2: 95.53, setDesRecovery: 90.00,
+  setDesFlow: 96277, setDesRatio: 5.6, setDesFeedP: 15890,
+  setPatm: 93, limRecMin: 75, limPurityAdv: 93, limPurityAlm: 90,
+  limRatioAlm: 6.4, limFeedPdev: 5
+};
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function lookup(row, canonical) {
+  const aliases = TAG_ALIASES[canonical] || [canonical];
+  for (const a of aliases) {
+    if (row[a] !== undefined && row[a] !== null && String(row[a]).trim() !== "") return row[a];
+  }
+  return null;
+}
+function num(v) {
+  if (v === null || v === undefined || v === "" || v === "—") return null;
+  if (typeof v === "number") return isNaN(v) ? null : v;
+  const n = parseFloat(String(v).replace(/,/g, "").trim());
+  return isNaN(n) ? null : n;
+}
+function fmt(v, decimals, suffix) {
+  if (v === null || v === undefined || isNaN(v)) return "—";
+  return v.toFixed(decimals) + (suffix || "");
+}
+function fmtInt(v, suffix) {
+  if (v === null || v === undefined || isNaN(v)) return "—";
+  return Math.round(v).toLocaleString() + (suffix || "");
+}
+function getCfg() {
+  const v = id => parseFloat(document.getElementById(id).value);
+  return {
+    desFeedH2: v("setDesFeedH2"), desPermH2: v("setDesPermH2"),
+    desRecovery: v("setDesRecovery"), desFlow: v("setDesFlow"),
+    desRatio: v("setDesRatio"), desFeedP: v("setDesFeedP"),
+    patm: v("setPatm"), recMin: v("limRecMin"),
+    purityAdv: v("limPurityAdv"), purityAlm: v("limPurityAlm"),
+    ratioAlm: v("limRatioAlm"), feedPdev: v("limFeedPdev")
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// MOCK ONLINE FEED H2 - synthesized from sparse lab samples
+// (client did not provide an online feed H2 historian tag)
+// Linear interpolate between lab points + small drift
+// ═══════════════════════════════════════════════════════
+function synthesizeOnlineFeedH2(rows) {
+  // Build list of (idx, lab value)
+  const samples = [];
+  rows.forEach((r, i) => { if (r.y_feed_h2_lab !== null) samples.push([i, r.y_feed_h2_lab]); });
+  if (samples.length === 0) {
+    rows.forEach(r => { r.y_feed_h2_online = null; });
+    return;
+  }
+  // Pseudo-random deterministic noise
+  let seed = 1234;
+  const rand = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+
+  for (let i = 0; i < rows.length; i++) {
+    let val;
+    if (i <= samples[0][0]) {
+      val = samples[0][1];
+    } else if (i >= samples[samples.length - 1][0]) {
+      val = samples[samples.length - 1][1];
+    } else {
+      // find bracketing samples
+      let lo = samples[0], hi = samples[samples.length - 1];
+      for (let s = 0; s < samples.length - 1; s++) {
+        if (samples[s][0] <= i && samples[s + 1][0] >= i) { lo = samples[s]; hi = samples[s + 1]; break; }
+      }
+      const span = hi[0] - lo[0];
+      const t = span > 0 ? (i - lo[0]) / span : 0;
+      val = lo[1] + (hi[1] - lo[1]) * t;
+    }
+    // small online drift +/- 0.18 mol%
+    val = val + (rand() - 0.5) * 0.36;
+    rows[i].y_feed_h2_online = Math.round(val * 100) / 100;
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// PROCESS BATCH
+// ═══════════════════════════════════════════════════════
+let currentRows = [];
+let processedRows = [];
+let charts = {};
+
+function rowsFromArray(arr) {
+  // arr is the raw DEMO_DATA shape; convert to objects
+  return arr.map(r => ({
+    timestamp: r[0],
+    q_feed: r[1],
+    q_non_perm: r[2],
+    q_perm: r[3],
+    y_perm_h2_online: r[4],
+    y_perm_h2_lab: r[5],
+    y_feed_h2_lab: r[6],
+    p_feed_kpag: r[7],
+    y_feed_h2_online: null  // synthesized below
+  }));
+}
+
+function rowsFromCsv(rawArr) {
+  // rawArr is Papa.parse result with header rows. Map by canonical.
+  return rawArr.map(r => ({
+    timestamp: lookup(r, "timestamp"),
+    q_feed: num(lookup(r, "q_feed")),
+    q_non_perm: num(lookup(r, "q_non_perm")),
+    q_perm: num(lookup(r, "q_perm")),
+    y_perm_h2_online: num(lookup(r, "y_perm_h2_online")),
+    y_perm_h2_lab: num(lookup(r, "y_perm_h2_lab")),
+    y_feed_h2_lab: num(lookup(r, "y_feed_h2_lab")),
+    p_feed_kpag: num(lookup(r, "p_feed_kpag")),
+    y_feed_h2_online: num(lookup(r, "y_feed_h2_online"))
+  }));
+}
+
+function processBatch(rows) {
+  // sort by date
+  rows.sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
+
+  // synthesize online feed H2 if not already present
+  const hasAnyOnlineFeed = rows.some(r => r.y_feed_h2_online !== null);
+  if (!hasAnyOnlineFeed) synthesizeOnlineFeedH2(rows);
+
+  // calc per-row metrics
+  rows.forEach(r => {
+    // backfill non_perm if missing
+    if (r.q_non_perm === null && r.q_feed !== null && r.q_perm !== null) {
+      r.q_non_perm = r.q_feed - r.q_perm;
+    }
+    // ratio
+    r.ratio = (r.q_non_perm && r.q_non_perm > 0) ? (r.q_feed / r.q_non_perm) : null;
+    // online recovery (uses online feed H2 if present, else lab)
+    const yFeedForOnline = r.y_feed_h2_online !== null ? r.y_feed_h2_online : r.y_feed_h2_lab;
+    if (r.q_feed && r.q_perm && r.y_perm_h2_online !== null && yFeedForOnline !== null && yFeedForOnline > 0) {
+      r.recOnline = (r.q_perm * r.y_perm_h2_online) / (r.q_feed * yFeedForOnline) * 100;
+    } else {
+      r.recOnline = null;
+    }
+    // lab recovery (only when both lab purity AND lab feed are present)
+    if (r.q_feed && r.q_perm && r.y_perm_h2_lab !== null && r.y_feed_h2_lab !== null && r.y_feed_h2_lab > 0) {
+      r.recLab = (r.q_perm * r.y_perm_h2_lab) / (r.q_feed * r.y_feed_h2_lab) * 100;
+    } else {
+      r.recLab = null;
+    }
+  });
+
+  return rows;
+}
+
+function avgOf(arr, key) {
+  const xs = arr.map(r => r[key]).filter(x => x !== null && x !== undefined && !isNaN(x));
+  if (xs.length === 0) return null;
+  return xs.reduce((s, x) => s + x, 0) / xs.length;
+}
+// Parse a range descriptor into amount + unit.
+// Pill: "1h", "24h", "7d", "30d", "90d"
+// Custom: object {custom: true, amount: N, unit: 's'|'m'|'h'|'d'}
+function parseRange(range) {
+  if (range && typeof range === "object" && range.custom) {
+    return { amount: range.amount, unit: range.unit };
+  }
+  const m = String(range || "").match(/^(\d+)([smhd])$/);
+  return m ? { amount: parseInt(m[1]), unit: m[2] } : { amount: 30, unit: "d" };
+}
+
+const UNIT_NAMES = { s: "second", m: "minute", h: "hour", d: "day" };
+function rangeLabel(range) {
+  const { amount, unit } = parseRange(range);
+  const name = UNIT_NAMES[unit] || "day";
+  return "last " + amount + " " + name + (amount === 1 ? "" : "s");
+}
+
+// Read the active range. Custom inputs override pill state if both are set.
+function getActiveRange() {
+  const amtStr = document.getElementById("customAmount").value;
+  const unit = document.getElementById("customUnit").value;
+  const amt = parseFloat(amtStr);
+  if (amtStr !== "" && !isNaN(amt) && amt > 0 && unit) {
+    return { custom: true, amount: amt, unit: unit };
+  }
+  const pill = document.querySelector(".time-pill.active");
+  return pill ? pill.dataset.range : "30d";
+}
+
+// Step a Date by N units. unit in {s, m, h, d}
+function stepDate(d, n, unit) {
+  if (unit === "s") d.setSeconds(d.getSeconds() + n);
+  else if (unit === "m") d.setMinutes(d.getMinutes() + n);
+  else if (unit === "h") d.setHours(d.getHours() + n);
+  else d.setDate(d.getDate() + n);
+}
+
+// Truncate timestamp string to the unit granularity, for matching.
+// "2026-02-01" or "2026-02-01 14:23:05" inputs both supported.
+function truncateToUnit(ts, unit) {
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return null;
+  const pad = n => String(n).padStart(2, "0");
+  const ymd = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  if (unit === "d") return ymd;
+  if (unit === "h") return ymd + " " + pad(d.getHours());
+  if (unit === "m") return ymd + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  return ymd + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+}
+
+// Format a Date as a chart label appropriate for the unit.
+function formatLabel(d, unit) {
+  const pad = n => String(n).padStart(2, "0");
+  const ymd = d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  if (unit === "d") return ymd;
+  if (unit === "h") return ymd + " " + pad(d.getHours()) + ":00";
+  if (unit === "m") return ymd + " " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+  return ymd + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+}
+
+// Build a complete axis covering the requested window from the latest
+// dataset timestamp backwards. Returns {labels, alignedRows}.
+// Missing slots are filled with all-null rows so the chart line breaks.
+function buildAxis(rows, range) {
+  if (rows.length === 0) return { labels: [], alignedRows: [] };
+  const { amount, unit } = parseRange(range);
+  const last = new Date(rows[rows.length - 1].timestamp);
+  // Build labels from (last - amount) up to last, stepping +1 unit.
+  const start = new Date(last);
+  stepDate(start, -amount, unit);
+  const labels = [];
+  for (let i = 0; i <= amount; i++) {
+    const t = new Date(start);
+    stepDate(t, i, unit);
+    labels.push(formatLabel(t, unit));
+  }
+  // Index existing rows by truncated timestamp at this unit
+  const byKey = {};
+  rows.forEach(r => {
+    const k = truncateToUnit(r.timestamp, unit);
+    if (k) byKey[k] = r;
+  });
+  // Map each label to a row or a null-filled blank
+  const alignedRows = labels.map(label => {
+    const k = truncateToUnit(label, unit);
+    if (byKey[k]) return byKey[k];
+    return {
+      timestamp: label,
+      q_feed: null, q_perm: null, q_non_perm: null,
+      y_perm_h2_online: null, y_perm_h2_lab: null,
+      y_feed_h2_lab: null, y_feed_h2_online: null,
+      p_feed_kpag: null, ratio: null,
+      recOnline: null, recLab: null
+    };
+  });
+  return { labels, alignedRows };
+}
+
+// Rows that fall inside the requested window (no padding) - used for
+// averaging KPIs honestly over real data points only.
+function filterByRange(rows, range) {
+  if (rows.length === 0) return rows.slice();
+  const { amount, unit } = parseRange(range);
+  const last = new Date(rows[rows.length - 1].timestamp);
+  const cutoff = new Date(last);
+  stepDate(cutoff, -amount, unit);
+  const win = rows.filter(r => new Date(r.timestamp) >= cutoff);
+  return win.length > 0 ? win : [rows[rows.length - 1]];
+}
+
+// ═══════════════════════════════════════════════════════
+// KPI RENDERING
+// ═══════════════════════════════════════════════════════
+function setKpiDiff(elId, actual, target, suffix, invertColor) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (actual === null || target === null || isNaN(actual) || isNaN(target)) {
+    el.textContent = "—"; el.className = "kpi-diff"; return;
+  }
+  const diff = actual - target;
+  const sign = diff >= 0 ? "+" : "";
+  el.textContent = sign + diff.toFixed(2) + (suffix || "");
+  // for ratio - higher is worse
+  if (invertColor) {
+    el.className = "kpi-diff " + (diff <= 0 ? "up" : (diff > 0.5 ? "down" : "warn"));
+  } else {
+    el.className = "kpi-diff " + (diff >= 0 ? "up" : (diff > -2 ? "warn" : "down"));
+  }
+}
+
+function updateKPIs(latest, avgRows, cfg) {
+  // Targets
+  document.getElementById("kCurRecTarget").innerHTML = "<strong>" + cfg.desRecovery.toFixed(2) + " %</strong>";
+  document.getElementById("kAvgRecTarget").innerHTML = "<strong>" + cfg.desRecovery.toFixed(2) + " %</strong>";
+  document.getElementById("kCurPermTarget").innerHTML = "<strong>" + cfg.desPermH2.toFixed(2) + " %</strong>";
+  document.getElementById("kAvgPermTarget").innerHTML = "<strong>" + cfg.desPermH2.toFixed(2) + " %</strong>";
+  document.getElementById("kCurFeedTarget").innerHTML = "<strong>" + cfg.desFeedH2.toFixed(2) + " %</strong>";
+  document.getElementById("kAvgFeedTarget").innerHTML = "<strong>" + cfg.desFeedH2.toFixed(2) + " %</strong>";
+  document.getElementById("kCurFeedPTarget").innerHTML = "<strong>" + Math.round(cfg.desFeedP).toLocaleString() + " kPag</strong>";
+  document.getElementById("kAvgFeedPTarget").innerHTML = "<strong>" + Math.round(cfg.desFeedP).toLocaleString() + " kPag</strong>";
+  document.getElementById("kCurFlowTarget").innerHTML = "<strong>" + Math.round(cfg.desFlow).toLocaleString() + " Nm³/hr</strong>";
+  document.getElementById("kAvgFlowTarget").innerHTML = "<strong>" + Math.round(cfg.desFlow).toLocaleString() + " Nm³/hr</strong>";
+  document.getElementById("kCurRatioTarget").innerHTML = "<strong>" + cfg.desRatio.toFixed(2) + "</strong>, alarm " + cfg.ratioAlm.toFixed(2);
+  document.getElementById("kAvgRatioTarget").innerHTML = "<strong>" + cfg.desRatio.toFixed(2) + "</strong>, alarm " + cfg.ratioAlm.toFixed(2);
+
+  // CURRENT ROW (latest reading)
+  document.getElementById("currentDateLabel").textContent = "(as of " + latest.timestamp + ")";
+
+  document.getElementById("kCurRec").textContent = fmt(latest.recOnline, 2, " %");
+  setKpiDiff("kCurRecDiff", latest.recOnline, cfg.desRecovery, " pts");
+  document.getElementById("kCurLabRec").textContent = latest.recLab !== null ? fmt(latest.recLab, 2, " %") : "—";
+
+  document.getElementById("kCurPerm").textContent = fmt(latest.y_perm_h2_online, 2, " %");
+  setKpiDiff("kCurPermDiff", latest.y_perm_h2_online, cfg.desPermH2, " pts");
+  document.getElementById("kCurLabPerm").textContent = latest.y_perm_h2_lab !== null ? fmt(latest.y_perm_h2_lab, 2, " %") : "—";
+
+  document.getElementById("kCurFeed").textContent = fmt(latest.y_feed_h2_online, 2, " %");
+  setKpiDiff("kCurFeedDiff", latest.y_feed_h2_online, cfg.desFeedH2, " pts");
+  document.getElementById("kCurLabFeed").textContent = latest.y_feed_h2_lab !== null ? fmt(latest.y_feed_h2_lab, 2, " %") : "—";
+
+  document.getElementById("kCurFeedP").textContent = fmtInt(latest.p_feed_kpag, " kPag");
+  if (latest.p_feed_kpag !== null) {
+    const dev = (latest.p_feed_kpag - cfg.desFeedP) / cfg.desFeedP * 100;
+    const el = document.getElementById("kCurFeedPDiff");
+    el.textContent = (dev >= 0 ? "+" : "") + dev.toFixed(2) + " %";
+    el.className = "kpi-diff " + (Math.abs(dev) < cfg.feedPdev ? "up" : "warn");
+  } else {
+    document.getElementById("kCurFeedPDiff").textContent = "—";
+  }
+
+  document.getElementById("kCurFlow").textContent = fmtInt(latest.q_feed, " Nm³/hr");
+
+  document.getElementById("kCurRatio").textContent = fmt(latest.ratio, 2, "");
+  setKpiDiff("kCurRatioDiff", latest.ratio, cfg.desRatio, "", true);
+
+  // AVERAGE ROW
+  const avgRec = avgOf(avgRows, "recOnline");
+  const avgRecLab = avgOf(avgRows.filter(r => r.recLab !== null), "recLab");
+  const avgPerm = avgOf(avgRows, "y_perm_h2_online");
+  const avgPermLab = avgOf(avgRows.filter(r => r.y_perm_h2_lab !== null), "y_perm_h2_lab");
+  const avgFeed = avgOf(avgRows, "y_feed_h2_online");
+  const avgFeedLab = avgOf(avgRows.filter(r => r.y_feed_h2_lab !== null), "y_feed_h2_lab");
+  const avgFeedP = avgOf(avgRows, "p_feed_kpag");
+  const avgFlow = avgOf(avgRows, "q_feed");
+  const avgRatio = avgOf(avgRows, "ratio");
+
+  document.getElementById("kAvgRec").textContent = fmt(avgRec, 2, " %");
+  setKpiDiff("kAvgRecDiff", avgRec, cfg.desRecovery, " pts");
+  document.getElementById("kAvgLabRec").textContent = avgRecLab !== null ? fmt(avgRecLab, 2, " %") : "—";
+
+  document.getElementById("kAvgPerm").textContent = fmt(avgPerm, 2, " %");
+  setKpiDiff("kAvgPermDiff", avgPerm, cfg.desPermH2, " pts");
+  document.getElementById("kAvgLabPerm").textContent = avgPermLab !== null ? fmt(avgPermLab, 2, " %") : "—";
+
+  document.getElementById("kAvgFeed").textContent = fmt(avgFeed, 2, " %");
+  setKpiDiff("kAvgFeedDiff", avgFeed, cfg.desFeedH2, " pts");
+  document.getElementById("kAvgLabFeed").textContent = avgFeedLab !== null ? fmt(avgFeedLab, 2, " %") : "—";
+
+  document.getElementById("kAvgFeedP").textContent = fmtInt(avgFeedP, " kPag");
+  if (avgFeedP !== null) {
+    const dev = (avgFeedP - cfg.desFeedP) / cfg.desFeedP * 100;
+    const el = document.getElementById("kAvgFeedPDiff");
+    el.textContent = (dev >= 0 ? "+" : "") + dev.toFixed(2) + " %";
+    el.className = "kpi-diff " + (Math.abs(dev) < cfg.feedPdev ? "up" : "warn");
+  } else {
+    document.getElementById("kAvgFeedPDiff").textContent = "—";
+  }
+
+  document.getElementById("kAvgFlow").textContent = fmtInt(avgFlow, " Nm³/hr");
+
+  document.getElementById("kAvgRatio").textContent = fmt(avgRatio, 2, "");
+  setKpiDiff("kAvgRatioDiff", avgRatio, cfg.desRatio, "", true);
+}
+
+// ═══════════════════════════════════════════════════════
+// STATUS BANNER
+// ═══════════════════════════════════════════════════════
+function buildAlerts(latest, cfg) {
+  const a = [];
+  if (latest.ratio !== null && latest.ratio >= cfg.ratioAlm) {
+    a.push({severity:"alarm", message:"Total / Non-Permeate ratio " + latest.ratio.toFixed(2) + " at or above alarm " + cfg.ratioAlm.toFixed(2) + " - over-recovery, lower controller setpoint.", source:"recovery ratio controller"});
+  }
+  if (latest.recOnline !== null && latest.recOnline < cfg.recMin) {
+    a.push({severity:"advisory", message:"Online recovery " + latest.recOnline.toFixed(2) + " % below floor " + cfg.recMin.toFixed(0) + " %.", source:"recovery target"});
+  }
+  if (latest.y_perm_h2_online !== null) {
+    if (latest.y_perm_h2_online < cfg.purityAlm) {
+      a.push({severity:"alarm", message:"Permeate H2 " + latest.y_perm_h2_online.toFixed(2) + " % below alarm " + cfg.purityAlm.toFixed(1) + " %.", source:"permeate analyzer"});
+    } else if (latest.y_perm_h2_online < cfg.purityAdv) {
+      a.push({severity:"advisory", message:"Permeate H2 " + latest.y_perm_h2_online.toFixed(2) + " % below advisory " + cfg.purityAdv.toFixed(1) + " %.", source:"permeate analyzer"});
+    }
+  }
+  if (latest.p_feed_kpag !== null) {
+    const dev = Math.abs((latest.p_feed_kpag - cfg.desFeedP) / cfg.desFeedP * 100);
+    if (dev > cfg.feedPdev) {
+      a.push({severity:"advisory", message:"Feed pressure " + Math.round(latest.p_feed_kpag).toLocaleString() + " kPag deviates " + dev.toFixed(2) + " % from design.", source:"feed pressure"});
+    }
+  }
+  return a;
+}
+function rollupSeverity(alerts) {
+  if (alerts.some(a => a.severity === "alarm")) return "alarm";
+  if (alerts.some(a => a.severity === "advisory")) return "advisory";
+  return "ok";
+}
+function updateStatusBanner(latest, cfg) {
+  const alerts = buildAlerts(latest, cfg);
+  const sev = rollupSeverity(alerts);
+  const banner = document.getElementById("statusBanner");
+  banner.className = "banner status-" + sev;
+  document.getElementById("statusText").textContent = sev === "ok" ? "OK" : (sev === "advisory" ? "ADVISORY" : "ALARM");
+  document.getElementById("statusDetail").textContent = alerts.length === 0 ? "All metrics within bounds." : alerts.length + " active alert" + (alerts.length === 1 ? "" : "s") + ".";
+  const list = document.getElementById("alertList");
+  list.innerHTML = "";
+  alerts.forEach(a => {
+    const div = document.createElement("div");
+    div.className = "alert-item severity-" + a.severity;
+    div.innerHTML = '<span class="dot"></span><span>' + a.message + '</span><span class="src">' + a.source + '</span>';
+    list.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════
+function isToggleOn(chartKey, idx) {
+  const cb = document.querySelector('input[data-chart="' + chartKey + '"][data-idx="' + idx + '"]');
+  return cb ? cb.checked : true;
+}
+
+function initCharts() {
+  Chart.defaults.font.family = "'IBM Plex Sans',sans-serif";
+  Chart.defaults.color = "#615E5C";
+  const baseOpts = {
+    responsive: true, maintainAspectRatio: false, spanGaps: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => {
+            const v = ctx.parsed.y;
+            if (v === null || v === undefined) return ctx.dataset.label + ": —";
+            return ctx.dataset.label + ": " + v.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+          }
+        }
+      }
+    },
+    elements: { line: { tension: 0.2, borderWidth: 2 }, point: { radius: 0, hitRadius: 10, hoverRadius: 5 } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 } },
+      y: { grid: { color: "#F0EDE8" }, ticks: { font: { size: 10 } } }
+    },
+    interaction: { mode: "index", intersect: false }
+  };
+
+  charts.purity = new Chart(document.getElementById("chartPurity"), {
+    type: "line", data: { labels: [], datasets: [] }, options: JSON.parse(JSON.stringify(baseOpts))
+  });
+  const recOpts = JSON.parse(JSON.stringify(baseOpts));
+  recOpts.scales.y.min = 60; recOpts.scales.y.max = 100;
+  charts.recovery = new Chart(document.getElementById("chartRecovery"), {
+    type: "line", data: { labels: [], datasets: [] }, options: recOpts
+  });
+  charts.flow = new Chart(document.getElementById("chartFlow"), {
+    type: "line", data: { labels: [], datasets: [] }, options: JSON.parse(JSON.stringify(baseOpts))
+  });
+  const ratioOpts = JSON.parse(JSON.stringify(baseOpts));
+  ratioOpts.scales.y.min = 3; ratioOpts.scales.y.max = 8;
+  charts.ratio = new Chart(document.getElementById("chartRatio"), {
+    type: "line", data: { labels: [], datasets: [] }, options: ratioOpts
+  });
+}
+
+function updateCharts(rows, cfg) {
+  const labels = rows.map(r => r.timestamp);
+
+  charts.purity.data.labels = labels;
+  charts.purity.data.datasets = [
+    { label: "Online Permeate", data: rows.map(r => r.y_perm_h2_online), borderColor: "#2F6F9F", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("purity", 0) },
+    { label: "Lab Permeate", data: rows.map(r => r.y_perm_h2_lab), borderColor: "#667085", backgroundColor: "#667085", showLine: false, pointRadius: 4, pointHoverRadius: 6, hidden: !isToggleOn("purity", 1) },
+    { label: "Online Feed", data: rows.map(r => r.y_feed_h2_online), borderColor: "#2F7F7A", backgroundColor: "transparent", borderWidth: 2, borderDash: [4, 3], pointRadius: 0, hidden: !isToggleOn("purity", 2) },
+    { label: "Lab Feed", data: rows.map(r => r.y_feed_h2_lab), borderColor: "#7A5AF8", backgroundColor: "#7A5AF8", showLine: false, pointRadius: 4, pointHoverRadius: 6, hidden: !isToggleOn("purity", 3) }
+  ];
+  charts.purity.update();
+
+  charts.recovery.data.labels = labels;
+  charts.recovery.data.datasets = [
+    { label: "Online Recovery", data: rows.map(r => r.recOnline), borderColor: "#2F6F9F", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("recovery", 0) },
+    { label: "Lab Recovery", data: rows.map(r => r.recLab), borderColor: "#667085", backgroundColor: "#667085", showLine: false, pointRadius: 4, pointHoverRadius: 6, hidden: !isToggleOn("recovery", 1) },
+    { label: "Design Target", data: labels.map(() => cfg.desRecovery), borderColor: "#888", borderDash: [5, 5], borderWidth: 1, pointRadius: 0, hidden: !isToggleOn("recovery", 2) }
+  ];
+  charts.recovery.update();
+
+  charts.flow.data.labels = labels;
+  charts.flow.data.datasets = [
+    { label: "Total Feed Flow", data: rows.map(r => r.q_feed), borderColor: "#2F6F9F", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("flow", 0) },
+    { label: "Permeate Flow", data: rows.map(r => r.q_perm), borderColor: "#2F7F7A", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("flow", 1) },
+    { label: "Non-Permeate Flow", data: rows.map(r => r.q_non_perm), borderColor: "#667085", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("flow", 2) }
+  ];
+  charts.flow.update();
+
+  charts.ratio.data.labels = labels;
+  charts.ratio.data.datasets = [
+    { label: "Actual Ratio", data: rows.map(r => r.ratio), borderColor: "#2F6F9F", backgroundColor: "transparent", borderWidth: 2, pointRadius: 0, hidden: !isToggleOn("ratio", 0) },
+    { label: "Design (5.60)", data: labels.map(() => cfg.desRatio), borderColor: "#888", borderDash: [5, 5], borderWidth: 1, pointRadius: 0, hidden: !isToggleOn("ratio", 1) },
+    { label: "Alarm High", data: labels.map(() => cfg.ratioAlm), borderColor: "#D4432A", borderDash: [3, 3], borderWidth: 1, pointRadius: 0, hidden: !isToggleOn("ratio", 2) }
+  ];
+  charts.ratio.update();
+}
+
+function updateScale(chartKey) {
+  const chart = charts[chartKey];
+  if (!chart) return;
+  const minV = document.getElementById(chartKey + "Min").value;
+  const maxV = document.getElementById(chartKey + "Max").value;
+  chart.options.scales.y.min = minV !== "" ? parseFloat(minV) : undefined;
+  chart.options.scales.y.max = maxV !== "" ? parseFloat(maxV) : undefined;
+  chart.update();
+}
+
+// ═══════════════════════════════════════════════════════
+// DATA & LOG TAB
+// ═══════════════════════════════════════════════════════
+function statusForRow(r, cfg) {
+  if (r.ratio !== null && r.ratio >= cfg.ratioAlm) return "alarm";
+  if (r.y_perm_h2_online !== null && r.y_perm_h2_online < cfg.purityAlm) return "alarm";
+  if (r.recOnline !== null && r.recOnline < cfg.recMin) return "advisory";
+  if (r.y_perm_h2_online !== null && r.y_perm_h2_online < cfg.purityAdv) return "advisory";
+  if (r.p_feed_kpag !== null && Math.abs((r.p_feed_kpag - cfg.desFeedP) / cfg.desFeedP * 100) > cfg.feedPdev) return "advisory";
+  return "ok";
+}
+function updateDataLog(rows, cfg) {
+  const tbody = document.querySelector("#resultTable tbody");
+  tbody.innerHTML = "";
+  const recent = rows.slice(-50).reverse();
+  recent.forEach(r => {
+    const sev = statusForRow(r, cfg);
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>" + r.timestamp + "</td>" +
+      "<td class='num'>" + fmtInt(r.q_feed) + "</td>" +
+      "<td class='num'>" + fmtInt(r.q_perm) + "</td>" +
+      "<td class='num'>" + fmtInt(r.q_non_perm) + "</td>" +
+      "<td class='num'>" + fmt(r.y_perm_h2_online, 2) + "</td>" +
+      "<td class='num'>" + (r.y_perm_h2_lab !== null ? fmt(r.y_perm_h2_lab, 2) : "—") + "</td>" +
+      "<td class='num'>" + (r.y_feed_h2_lab !== null ? fmt(r.y_feed_h2_lab, 2) : "—") + "</td>" +
+      "<td class='num'>" + fmtInt(r.p_feed_kpag) + "</td>" +
+      "<td class='num'>" + fmt(r.recOnline, 2) + "</td>" +
+      "<td class='num'>" + (r.recLab !== null ? fmt(r.recLab, 2) : "—") + "</td>" +
+      "<td class='num'>" + fmt(r.ratio, 2) + "</td>" +
+      "<td><span class='status-pill " + sev + "'><span class='marker'></span>" + sev + "</span></td>";
+    tbody.appendChild(tr);
+  });
+
+  // batch summary
+  const labCount = rows.filter(r => r.recLab !== null).length;
+  document.getElementById("batchSummary").innerHTML =
+    "<div class='stat'>Rows: <strong>" + rows.length + "</strong></div>" +
+    "<div class='stat'>Lab samples: <strong>" + labCount + "</strong></div>" +
+    "<div class='stat'>Latest: <strong>" + (rows.length ? rows[rows.length - 1].timestamp : "—") + "</strong></div>";
+}
+
+// ═══════════════════════════════════════════════════════
+// MAIN PROCESS PIPELINE
+// ═══════════════════════════════════════════════════════
+function runProcess() {
+  if (currentRows.length === 0) {
+    document.getElementById("statusArea").style.display = "block";
+    document.getElementById("kpiArea").style.display = "none";
+    return;
+  }
+  const rows = JSON.parse(JSON.stringify(currentRows));
+  const cfg = getCfg();
+  processedRows = processBatch(rows);
+  if (processedRows.length === 0) return;
+
+  document.getElementById("statusArea").style.display = "none";
+  document.getElementById("kpiArea").style.display = "block";
+
+  const latest = processedRows[processedRows.length - 1];
+  const range = getActiveRange();
+  document.getElementById("avgPeriodLabel").textContent = "(" + rangeLabel(range) + ")";
+  const windowRows = filterByRange(processedRows, range);
+  const axis = buildAxis(processedRows, range);
+
+  updateKPIs(latest, windowRows, cfg);
+  updateStatusBanner(latest, cfg);
+  updateCharts(axis.alignedRows, cfg);
+  updateDataLog(processedRows, cfg);
+}
+
+// ═══════════════════════════════════════════════════════
+// EVENT WIRING
+// ═══════════════════════════════════════════════════════
+function loadDemo() {
+  currentRows = rowsFromArray(DEMO_DATA);
+  document.getElementById("upStatus").textContent = "Demo loaded · " + DEMO_DATA.length + " rows";
+  runProcess();
+}
+
+function exportCSV() {
+  if (processedRows.length === 0) { alert("No data to export."); return; }
+  let csv = "Date,Total Feed Flow (Nm3/hr),Permeate Flow (Nm3/hr),Non-Permeate Flow (Nm3/hr),Online Permeate H2 (Vol %),Lab Permeate H2 (Mol %),Lab Feed H2 (Mol %),Online Feed H2 (Mol %),Feed Pressure (kPag),Online Recovery (%),Lab Recovery (%),Total/Non-Perm Ratio\n";
+  processedRows.forEach(r => {
+    csv += [
+      r.timestamp,
+      r.q_feed !== null ? r.q_feed.toFixed(2) : "",
+      r.q_perm !== null ? r.q_perm.toFixed(2) : "",
+      r.q_non_perm !== null ? r.q_non_perm.toFixed(2) : "",
+      r.y_perm_h2_online !== null ? r.y_perm_h2_online.toFixed(4) : "",
+      r.y_perm_h2_lab !== null ? r.y_perm_h2_lab.toFixed(4) : "",
+      r.y_feed_h2_lab !== null ? r.y_feed_h2_lab.toFixed(4) : "",
+      r.y_feed_h2_online !== null ? r.y_feed_h2_online.toFixed(4) : "",
+      r.p_feed_kpag !== null ? r.p_feed_kpag.toFixed(0) : "",
+      r.recOnline !== null ? r.recOnline.toFixed(4) : "",
+      r.recLab !== null ? r.recLab.toFixed(4) : "",
+      r.ratio !== null ? r.ratio.toFixed(4) : ""
+    ].join(",") + "\n";
+  });
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "membrane_performance.csv";
+  link.click();
+}
+
+function restoreDefaults() {
+  for (const k in DEFAULTS) {
+    const el = document.getElementById(k);
+    if (el) el.value = DEFAULTS[k];
+  }
+  // chart axis defaults
+  document.getElementById("recoveryMin").value = "60";
+  document.getElementById("recoveryMax").value = "100";
+  document.getElementById("ratioMin").value = "3";
+  document.getElementById("ratioMax").value = "8";
+  document.getElementById("purityMin").value = "";
+  document.getElementById("purityMax").value = "";
+  document.getElementById("flowMin").value = "";
+  document.getElementById("flowMax").value = "";
+  // Reset time range to 30D pill, clear any custom range
+  document.querySelectorAll(".time-pill").forEach(p => p.classList.remove("active"));
+  const def = document.querySelector('.time-pill[data-range="30d"]');
+  if (def) def.classList.add("active");
+  document.getElementById("customAmount").value = "";
+  document.getElementById("customUnit").value = "d";
+  document.getElementById("timeRangeBar").classList.remove("custom-active");
+  ["recovery", "ratio", "purity", "flow"].forEach(updateScale);
+  runProcess();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initCharts();
+
+  // Tab switching
+  document.querySelectorAll(".tab").forEach(t => {
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      t.classList.add("active");
+      document.getElementById("panel-" + t.dataset.tab).classList.add("active");
+    });
+  });
+
+  // Config bar collapse
+  document.getElementById("configHeader").addEventListener("click", () => {
+    const body = document.getElementById("configBody");
+    body.classList.toggle("collapsed");
+    document.getElementById("configToggle").textContent = body.classList.contains("collapsed") ? "▾" : "▴";
+  });
+
+  // Buttons
+  document.getElementById("loadDemoBtn").addEventListener("click", loadDemo);
+  document.getElementById("recalcBtn").addEventListener("click", runProcess);
+  document.getElementById("restoreDefaultsBtn").addEventListener("click", restoreDefaults);
+  document.getElementById("btnExport").addEventListener("click", exportCSV);
+
+  // CSV upload
+  document.getElementById("csvInput").addEventListener("change", e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    document.getElementById("upStatus").textContent = "Parsing...";
+    Papa.parse(f, {
+      header: true, skipEmptyLines: true,
+      complete: r => {
+        currentRows = rowsFromCsv(r.data);
+        document.getElementById("upStatus").textContent = f.name + " · " + currentRows.length + " rows";
+        runProcess();
+      }
+    });
+  });
+
+  // Manual panel
+  const overlay = document.getElementById("manualOverlay");
+  const panel = document.getElementById("manualPanel");
+  document.getElementById("btnManual").addEventListener("click", () => {
+    overlay.style.display = "block"; panel.classList.add("open");
+  });
+  document.getElementById("manualClose").addEventListener("click", () => {
+    overlay.style.display = "none"; panel.classList.remove("open");
+  });
+  overlay.addEventListener("click", () => {
+    overlay.style.display = "none"; panel.classList.remove("open");
+  });
+
+  // Live recalc on config input change
+  document.querySelectorAll(".config-input").forEach(el => {
+    el.addEventListener("change", runProcess);
+  });
+  // Time-range pills (drives BOTH charts and Performance Averages window).
+  // Clicking a pill clears any custom range input.
+  document.querySelectorAll(".time-pill").forEach(p => {
+    p.addEventListener("click", () => {
+      document.querySelectorAll(".time-pill").forEach(x => x.classList.remove("active"));
+      p.classList.add("active");
+      document.getElementById("customAmount").value = "";
+      document.getElementById("timeRangeBar").classList.remove("custom-active");
+      runProcess();
+    });
+  });
+
+  // Custom range inputs - take over as active when amount has a value.
+  function applyCustom() {
+    const amtEl = document.getElementById("customAmount");
+    const bar = document.getElementById("timeRangeBar");
+    const v = amtEl.value;
+    if (v !== "" && parseFloat(v) > 0) {
+      bar.classList.add("custom-active");
+    } else {
+      bar.classList.remove("custom-active");
+    }
+    runProcess();
+  }
+  document.getElementById("customAmount").addEventListener("input", applyCustom);
+  document.getElementById("customUnit").addEventListener("change", applyCustom);
+
+  // Chart toggles
+  document.querySelectorAll('input[type="checkbox"][data-chart]').forEach(cb => {
+    cb.addEventListener("change", () => {
+      const k = cb.dataset.chart;
+      const idx = parseInt(cb.dataset.idx);
+      if (charts[k]) {
+        charts[k].setDatasetVisibility(idx, cb.checked);
+        charts[k].update();
+      }
+    });
+  });
+
+  // Y-axis scale inputs
+  ["purity", "recovery", "flow", "ratio"].forEach(key => {
+    ["Min", "Max"].forEach(suffix => {
+      const el = document.getElementById(key + suffix.toLowerCase());
+      if (el) el.addEventListener("change", () => updateScale(key));
+    });
+  });
+
+  // Auto-load demo
+  loadDemo();
+});
+</script>
+</body>
+</html>

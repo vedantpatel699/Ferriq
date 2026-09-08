@@ -80,7 +80,8 @@ export interface Prediction {
 
 /** The three terminology classes the user's spec requires kept separate;
  * never conflated in UI copy. */
-export type DataQualityKind = "data-quality" | "calculation-assumption" | "model-limitation";
+export type DataQualityKind =
+  "data-quality" | "calculation-assumption" | "model-limitation";
 
 export interface DataQualityState {
   kind: DataQualityKind;

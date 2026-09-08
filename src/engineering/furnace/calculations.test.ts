@@ -3,7 +3,12 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import {
-  evalTreeNode, predictTreeModel, statusForSkin, forecastPass, type FurnaceModelBundle, type TreeNode,
+  evalTreeNode,
+  predictTreeModel,
+  statusForSkin,
+  forecastPass,
+  type FurnaceModelBundle,
+  type TreeNode,
 } from "./calculations";
 
 describe("Furnace Skin TI Predictor — XGBoost tree walker", () => {
@@ -20,7 +25,11 @@ describe("Furnace Skin TI Predictor — XGBoost tree walker", () => {
     expect(evalTreeNode(tree, {})).toBe(-1);
   });
   it("predictTreeModel sums base_score plus every tree's contribution", () => {
-    const model = { trees: [tree, tree], base_score: 100, feature_names: ["x"] };
+    const model = {
+      trees: [tree, tree],
+      base_score: 100,
+      feature_names: ["x"],
+    };
     expect(predictTreeModel(model, { x: 5 })).toBe(100 + -1 + -1);
     expect(predictTreeModel(model, { x: 15 })).toBe(100 + 2 + 2);
   });
@@ -42,19 +51,28 @@ describe("Furnace Skin TI Predictor — status classification", () => {
 });
 
 describe("Furnace Skin TI Predictor — forecastPass smoke test against the real trained model", () => {
-  const modelPath = resolve(dirname(fileURLToPath(import.meta.url)), "../../../public/data/furnace-skin-temp-model.json");
-  const bundle: FurnaceModelBundle = JSON.parse(readFileSync(modelPath, "utf-8"));
+  const modelPath = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    "../../../public/data/furnace-skin-temp-model.json",
+  );
+  const bundle: FurnaceModelBundle = JSON.parse(
+    readFileSync(modelPath, "utf-8"),
+  );
 
   it("loads the real model.json bundle and produces a finite, internally-consistent forecast for heater_1 pass 1", () => {
     const furnace = bundle.furnaces["heater_1"];
     expect(furnace).toBeDefined();
 
-    const tcAliases = Object.keys(furnace.tc_models).filter((a) => furnace.tc_models[a].pass === 1);
+    const tcAliases = Object.keys(furnace.tc_models).filter(
+      (a) => furnace.tc_models[a].pass === 1,
+    );
     expect(tcAliases.length).toBeGreaterThan(0);
 
     const historyByAlias: Record<string, number[]> = {};
     for (const alias of tcAliases) {
-      historyByAlias[alias] = furnace.history.map((row) => row[alias] as number).filter((v) => v !== null && v !== undefined);
+      historyByAlias[alias] = furnace.history
+        .map((row) => row[alias] as number)
+        .filter((v) => v !== null && v !== undefined);
     }
     // Current operating state: the numeric non-history fields a feature
     // vector might reference (flow/fire-rate style drivers), taken from
@@ -66,7 +84,13 @@ describe("Furnace Skin TI Predictor — forecastPass smoke test against the real
       if (typeof v === "number") currentState[k] = v;
     }
 
-    const result = forecastPass(furnace, 1, currentState, historyByAlias, bundle.alarm_threshold_c);
+    const result = forecastPass(
+      furnace,
+      1,
+      currentState,
+      historyByAlias,
+      bundle.alarm_threshold_c,
+    );
     expect(result).not.toBeNull();
     if (!result) return;
 
@@ -74,7 +98,12 @@ describe("Furnace Skin TI Predictor — forecastPass smoke test against the real
     expect(result.forecast.length).toBe(2555);
     expect(result.forecast.every((f) => Number.isFinite(f.value))).toBe(true);
     // P10 <= P50 <= P90 at every step (band never inverted)
-    expect(result.forecast.every((f) => f.p10 <= f.p50 + 1e-6 && f.p50 <= f.p90 + 1e-6)).toBe(true);
-    if (result.hoursToAlarm !== null) expect(result.hoursToAlarm).toBeGreaterThan(0);
+    expect(
+      result.forecast.every(
+        (f) => f.p10 <= f.p50 + 1e-6 && f.p50 <= f.p90 + 1e-6,
+      ),
+    ).toBe(true);
+    if (result.hoursToAlarm !== null)
+      expect(result.hoursToAlarm).toBeGreaterThan(0);
   });
 });

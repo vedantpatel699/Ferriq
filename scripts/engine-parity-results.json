@@ -1,0 +1,115 @@
+{
+  "revision": "audit-remediation",
+  "method": "Original pure functions extracted directly and compared with TypeScript using Node stripping/VM. Relative/absolute tolerance 1e-9. Full published heater/exchanger/membrane rows plus edge cases, twelve economics cases and all nine furnace passes. Blower comparison covers representative pure-function inputs. This is not a complete equivalence proof.",
+  "results": [
+    {
+      "name": "Blower pure power, pressure and efficiency functions",
+      "status": "PASS",
+      "comparisons": 16,
+      "detail": "Representative normal and edge inputs; batch parsing/forward-fill not included."
+    },
+    {
+      "name": "Heater all current demo rows plus missing/zero-input cases",
+      "status": "PASS",
+      "comparisons": 1386,
+      "detail": "63 rows, 22 derived outputs per row."
+    },
+    {
+      "name": "Exchanger all demo rows, crossover, missing inputs and F edge cases",
+      "status": "PASS",
+      "comparisons": 3915,
+      "detail": "230 rows, 17 derived outputs; five F cases."
+    },
+    {
+      "name": "Membrane original batch versus current row engine",
+      "status": "PASS",
+      "comparisons": 212,
+      "detail": "53 rows including deterministic synthetic feed and missing/zero flow."
+    },
+    {
+      "name": "Crude to Profit constants and full model across four process combinations",
+      "status": "PASS",
+      "comparisons": 3391,
+      "detail": "12 complete model cases, including all output streams, byproducts and economics. No market fetch performed."
+    },
+    {
+      "name": "Furnace all bundled passes: P10/P50/P90 and threshold horizons",
+      "status": "PASS",
+      "comparisons": 23054,
+      "detail": {
+        "passes": 9,
+        "daysPerPass": 2555,
+        "equalCentralSteps": 22995,
+        "unequalBandSteps": 0,
+        "differences": [],
+        "detail": [
+          {
+            "furnace": "Heater 1 (atmospheric residue, 4-pass)",
+            "pass": 1,
+            "cadence": 24,
+            "current": 430.69,
+            "hoursToAlarm": 14748.126619770397
+          },
+          {
+            "furnace": "Heater 1 (atmospheric residue, 4-pass)",
+            "pass": 2,
+            "cadence": 24,
+            "current": 426.23,
+            "hoursToAlarm": 19633.20994104018
+          },
+          {
+            "furnace": "Heater 1 (atmospheric residue, 4-pass)",
+            "pass": 3,
+            "cadence": 24,
+            "current": 470.45,
+            "hoursToAlarm": 1584.1154069579745
+          },
+          {
+            "furnace": "Heater 1 (atmospheric residue, 4-pass)",
+            "pass": 4,
+            "cadence": 24,
+            "current": 423.48,
+            "hoursToAlarm": 16156.911627906933
+          },
+          {
+            "furnace": "Heater 2 (vacuum tower, 4-pass)",
+            "pass": 1,
+            "cadence": 4,
+            "current": 409.12,
+            "hoursToAlarm": 16178.359227198564
+          },
+          {
+            "furnace": "Heater 2 (vacuum tower, 4-pass)",
+            "pass": 2,
+            "cadence": 4,
+            "current": 434.41,
+            "hoursToAlarm": 10634.133286971719
+          },
+          {
+            "furnace": "Heater 2 (vacuum tower, 4-pass)",
+            "pass": 3,
+            "cadence": 4,
+            "current": 410.37,
+            "hoursToAlarm": 12519.920836715253
+          },
+          {
+            "furnace": "Heater 2 (vacuum tower, 4-pass)",
+            "pass": 4,
+            "cadence": 4,
+            "current": 428.28,
+            "hoursToAlarm": 6174.510626147273
+          },
+          {
+            "furnace": "Heater 3 (atmospheric, limited instrumentation)",
+            "pass": 1,
+            "cadence": 4,
+            "current": 366.77,
+            "hoursToAlarm": 33225.72908079643
+          }
+        ],
+        "restoredOutput": "Per-step drivenBy thermocouple identity is included in TS results"
+      }
+    }
+  ],
+  "comparisons": 31974
+}

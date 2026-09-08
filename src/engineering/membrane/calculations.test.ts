@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { calcMembraneRow, buildMembraneAlerts, rollUpMembraneSeverity, synthesizeOnlineFeedH2, DEFAULT_MEMBRANE_CONFIG } from "./calculations";
+import {
+  calcMembraneRow,
+  buildMembraneAlerts,
+  rollUpMembraneSeverity,
+  synthesizeOnlineFeedH2,
+  DEFAULT_MEMBRANE_CONFIG,
+} from "./calculations";
 
 // Golden values are hand-derived from the live membrane-analyzer.html
 // engine's actual recovery/ratio model — NOT from backend-membrane-
@@ -8,9 +14,13 @@ import { calcMembraneRow, buildMembraneAlerts, rollUpMembraneSeverity, synthesiz
 describe("Membrane Analyzer — live-engine recovery/ratio model", () => {
   const baseRow = {
     timestamp: "2026-02-01T08:30:00",
-    feedFlowNm3Hr: 5000, nonPermeateFlowNm3Hr: null, permeateFlowNm3Hr: 3000,
-    permeateH2OnlinePct: 95.0, permeateH2LabPct: 94.5,
-    feedH2LabPct: 87.0, feedH2OnlinePct: null,
+    feedFlowNm3Hr: 5000,
+    nonPermeateFlowNm3Hr: null,
+    permeateFlowNm3Hr: 3000,
+    permeateH2OnlinePct: 95.0,
+    permeateH2LabPct: 94.5,
+    feedH2LabPct: 87.0,
+    feedH2OnlinePct: null,
     feedPressureKpag: 15890,
   };
 
@@ -36,11 +46,20 @@ describe("Membrane Analyzer — live-engine recovery/ratio model", () => {
   });
 
   it("ratio at/above 6.4 alarms as over-recovery", () => {
-    const overRecovery = { ...baseRow, permeateFlowNm3Hr: 4300, nonPermeateFlowNm3Hr: 700 };
+    const overRecovery = {
+      ...baseRow,
+      permeateFlowNm3Hr: 4300,
+      nonPermeateFlowNm3Hr: 700,
+    };
     const result = calcMembraneRow(overRecovery);
     expect(result.ratio as number).toBeCloseTo(5000 / 700, 3);
     const alerts = buildMembraneAlerts(result, DEFAULT_MEMBRANE_CONFIG);
-    expect(alerts.some((a) => a.source === "recovery ratio controller" && a.severity === "alarm")).toBe(true);
+    expect(
+      alerts.some(
+        (a) =>
+          a.source === "recovery ratio controller" && a.severity === "alarm",
+      ),
+    ).toBe(true);
     expect(rollUpMembraneSeverity(alerts)).toBe("alarm");
   });
 
@@ -48,7 +67,11 @@ describe("Membrane Analyzer — live-engine recovery/ratio model", () => {
     const lowPurity = { ...baseRow, permeateH2OnlinePct: 88.0 };
     const result = calcMembraneRow(lowPurity);
     const alerts = buildMembraneAlerts(result, DEFAULT_MEMBRANE_CONFIG);
-    expect(alerts.some((a) => a.source === "permeate analyzer" && a.severity === "alarm")).toBe(true);
+    expect(
+      alerts.some(
+        (a) => a.source === "permeate analyzer" && a.severity === "alarm",
+      ),
+    ).toBe(true);
   });
 
   it("synthesizeOnlineFeedH2 interpolates between lab samples deterministically", () => {
