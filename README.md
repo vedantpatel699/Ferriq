@@ -1,5 +1,7 @@
 # Ferriq
 
+Current remediation: see [REMEDIATION.md](REMEDIATION.md), [QUALITY.md](QUALITY.md), and [DATABASE.md](DATABASE.md). Data storage is static GitHub Pages JSON plus browser-local IndexedDB. No external backend is required.
+
 Industrial engineering surveillance for process equipment — proactive
 monitoring (detecting change and degradation) rather than an operator-style
 alarm screen. Built with Vite, React, and TypeScript.

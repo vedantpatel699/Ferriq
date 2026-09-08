@@ -9,7 +9,7 @@ const STORAGE_KEY = "ferriq.settings.v1";
 
 export interface FerriqSettings {
   shiftStartHour: number; // 0-23, day-shift start
-  shiftEndHour: number;   // 0-23, day-shift end (night shift is the complement)
+  shiftEndHour: number; // 0-23, day-shift end (night shift is the complement)
 }
 
 export const DEFAULT_FERRIQ_SETTINGS: FerriqSettings = {

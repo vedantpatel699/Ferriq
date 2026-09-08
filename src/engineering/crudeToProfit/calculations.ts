@@ -4,13 +4,33 @@
 // finalProductSlate → economics → runModel).
 
 import {
-  CRUDES, PRIMARY_CUTS, RHC_PRODUCTS, PRODUCTS, SIMDIST_STREAMS,
-  CRUDE_PROPERTIES, M3_TO_BBL, RHC_FEED_DENSITY_KG_M3, RHC_PRODUCT_DENSITY_KG_M3,
-  LPG_LIQUID_DENSITY_KG_M3, FCC_FEED_DENSITY_KG_M3, LC_FINER_YIELD_WTPCT,
-  GAS_OIL_KEYS, GAS_OIL_SPLIT, FCC_YIELD_WTPCT, FCC_PRODUCT_DENSITY_KG_M3,
-  FCC_PRODUCT_RANGE_C, PRODUCT_RANGE_C, RESIDUE_UNIT_LABELS, GAS_OIL_UNIT_LABELS,
-  HOURS_PER_DAY, OPERATING_DAYS_PER_YEAR,
-  type CrudeCode, type ProductCode, type ResidueUnit, type GasOilUnit, type CrudeToProfitConfig,
+  CRUDES,
+  PRIMARY_CUTS,
+  RHC_PRODUCTS,
+  PRODUCTS,
+  SIMDIST_STREAMS,
+  CRUDE_PROPERTIES,
+  M3_TO_BBL,
+  RHC_FEED_DENSITY_KG_M3,
+  RHC_PRODUCT_DENSITY_KG_M3,
+  LPG_LIQUID_DENSITY_KG_M3,
+  FCC_FEED_DENSITY_KG_M3,
+  LC_FINER_YIELD_WTPCT,
+  GAS_OIL_KEYS,
+  GAS_OIL_SPLIT,
+  FCC_YIELD_WTPCT,
+  FCC_PRODUCT_DENSITY_KG_M3,
+  FCC_PRODUCT_RANGE_C,
+  PRODUCT_RANGE_C,
+  RESIDUE_UNIT_LABELS,
+  GAS_OIL_UNIT_LABELS,
+  HOURS_PER_DAY,
+  OPERATING_DAYS_PER_YEAR,
+  type CrudeCode,
+  type ProductCode,
+  type ResidueUnit,
+  type GasOilUnit,
+  type CrudeToProfitConfig,
 } from "./data";
 
 export function zeroSlate(): Record<ProductCode, number> {
@@ -20,11 +40,25 @@ export function zeroSlate(): Record<ProductCode, number> {
 }
 
 export interface BlendResult {
-  per_crude: Record<CrudeCode, { flow_m3hr: number; blend_pct: number; flow_bblhr: number; sulfur_kghr: number; density_kg_m3: number; sulfur_wtpct: number }>;
-  total_flow_m3hr: number; total_flow_bblhr: number; total_sulfur_kghr: number;
+  per_crude: Record<
+    CrudeCode,
+    {
+      flow_m3hr: number;
+      blend_pct: number;
+      flow_bblhr: number;
+      sulfur_kghr: number;
+      density_kg_m3: number;
+      sulfur_wtpct: number;
+    }
+  >;
+  total_flow_m3hr: number;
+  total_flow_bblhr: number;
+  total_sulfur_kghr: number;
 }
 
-export function blendCrudes(crudeFlows: Partial<Record<CrudeCode, number>>): BlendResult {
+export function blendCrudes(
+  crudeFlows: Partial<Record<CrudeCode, number>>,
+): BlendResult {
   let total = 0;
   for (const c of CRUDES) total += crudeFlows[c] || 0.0;
   const perCrude = {} as BlendResult["per_crude"];
@@ -36,21 +70,31 @@ export function blendCrudes(crudeFlows: Partial<Record<CrudeCode, number>>): Ble
       blend_pct: total ? (flow / total) * 100.0 : 0.0,
       flow_bblhr: flow * M3_TO_BBL,
       sulfur_kghr: (props.density_kg_m3 * flow * props.sulfur_wtpct) / 100.0,
-      density_kg_m3: props.density_kg_m3, sulfur_wtpct: props.sulfur_wtpct,
+      density_kg_m3: props.density_kg_m3,
+      sulfur_wtpct: props.sulfur_wtpct,
     };
   }
   let totalSulfur = 0;
   for (const c of CRUDES) totalSulfur += perCrude[c].sulfur_kghr;
-  return { per_crude: perCrude, total_flow_m3hr: total, total_flow_bblhr: total * M3_TO_BBL, total_sulfur_kghr: totalSulfur };
+  return {
+    per_crude: perCrude,
+    total_flow_m3hr: total,
+    total_flow_bblhr: total * M3_TO_BBL,
+    total_sulfur_kghr: totalSulfur,
+  };
 }
 
 export interface PrimarySplitResult {
   per_crude: Record<CrudeCode, Record<string, number>>;
   totals_m3hr: Record<string, number>;
-  hydrotreater_feed_m3hr: number; hydrocracker_feed_m3hr: number;
+  hydrotreater_feed_m3hr: number;
+  hydrocracker_feed_m3hr: number;
 }
 
-export function primarySplit(crudeFlows: Partial<Record<CrudeCode, number>>, cfg: CrudeToProfitConfig): PrimarySplitResult {
+export function primarySplit(
+  crudeFlows: Partial<Record<CrudeCode, number>>,
+  cfg: CrudeToProfitConfig,
+): PrimarySplitResult {
   const table = cfg.primary_yield_volpct;
   const perCrude = {} as PrimarySplitResult["per_crude"];
   const totals: Record<string, number> = {};
@@ -65,7 +109,8 @@ export function primarySplit(crudeFlows: Partial<Record<CrudeCode, number>>, cfg
     for (const cut of PRIMARY_CUTS) totals[cut] += cuts[cut];
   }
   return {
-    per_crude: perCrude, totals_m3hr: totals,
+    per_crude: perCrude,
+    totals_m3hr: totals,
     hydrotreater_feed_m3hr: totals.naphtha + totals.ago,
     hydrocracker_feed_m3hr: totals.lvgo + totals.mvgo + totals.hvgo,
   };
@@ -75,18 +120,27 @@ export function primarySplit(crudeFlows: Partial<Record<CrudeCode, number>>, cfg
  *  gas = 7.80 + 0.144·CCR; naphtha = 11.29 + 0.343·CCR; coke = 1.60·CCR;
  *  gas oil = remainder (closes to 100 by construction). */
 export function cokerYieldWtpct(ccr: number): Record<string, number> {
-  const gas = 7.80 + 0.144 * ccr;
+  const gas = 7.8 + 0.144 * ccr;
   const naphtha = 11.29 + 0.343 * ccr;
-  const coke = 1.60 * ccr;
+  const coke = 1.6 * ccr;
   const gasOil = 100.0 - (gas + naphtha + coke);
-  const out: Record<string, number> = { rhc_naphtha: naphtha, unconverted_residue: 0.0, lpg_fuel_gas: gas, coke };
+  const out: Record<string, number> = {
+    rhc_naphtha: naphtha,
+    unconverted_residue: 0.0,
+    lpg_fuel_gas: gas,
+    coke,
+  };
   for (const k of GAS_OIL_KEYS) out[k] = gasOil * GAS_OIL_SPLIT[k];
   return out;
 }
 
-export function residueUnitYieldWtpct(unit: ResidueUnit, cfg: CrudeToProfitConfig): Record<string, number> {
+export function residueUnitYieldWtpct(
+  unit: ResidueUnit,
+  cfg: CrudeToProfitConfig,
+): Record<string, number> {
   if (unit === "lc_finer") return { ...LC_FINER_YIELD_WTPCT };
-  if (unit === "delayed_coker") return cokerYieldWtpct(cfg.coker_feed_ccr_wtpct);
+  if (unit === "delayed_coker")
+    return cokerYieldWtpct(cfg.coker_feed_ccr_wtpct);
   throw new Error(`unknown residue unit: ${unit}`);
 }
 
@@ -95,12 +149,17 @@ export interface RhcSplitResult {
   byproducts: RhcByproducts;
 }
 export interface RhcByproducts {
-  unit: ResidueUnit; unit_label: string;
-  feed_m3hr: number; feed_kghr: number;
-  coke_kghr: number; coke_wtpct: number;
-  lpg_fuel_gas_kghr: number; lpg_fuel_gas_wtpct: number;
+  unit: ResidueUnit;
+  unit_label: string;
+  feed_m3hr: number;
+  feed_kghr: number;
+  coke_kghr: number;
+  coke_wtpct: number;
+  lpg_fuel_gas_kghr: number;
+  lpg_fuel_gas_wtpct: number;
   lpg_recovered_m3hr: number;
-  yield_sum_wtpct: number; yield_wtpct: Record<string, number>;
+  yield_sum_wtpct: number;
+  yield_wtpct: Record<string, number>;
 }
 
 /** Residue conversion unit split (LC Finer or delayed coker). Coke is a
@@ -108,31 +167,48 @@ export interface RhcByproducts {
  *  volume balance; both are carried in mass under `byproducts` (a coker
  *  turns roughly a quarter of its feed to coke, so dropping it would lose
  *  a quarter of the feed). */
-export function rhcSplit(vrM3hr: number, cfg: CrudeToProfitConfig, unit?: ResidueUnit): RhcSplitResult {
+export function rhcSplit(
+  vrM3hr: number,
+  cfg: CrudeToProfitConfig,
+  unit?: ResidueUnit,
+): RhcSplitResult {
   const resolvedUnit = unit || cfg.residue_unit;
   const table = residueUnitYieldWtpct(resolvedUnit, cfg);
   const feedKghr = vrM3hr * RHC_FEED_DENSITY_KG_M3;
   const factor = feedKghr / RHC_PRODUCT_DENSITY_KG_M3;
   const out: Record<string, number> = {};
-  for (const p of RHC_PRODUCTS) out[p] = factor * (table[p] || 0) / 100.0;
-  const cokePct = table.coke || 0, gasPct = table.lpg_fuel_gas || 0;
+  for (const p of RHC_PRODUCTS) out[p] = (factor * (table[p] || 0)) / 100.0;
+  const cokePct = table.coke || 0,
+    gasPct = table.lpg_fuel_gas || 0;
   const byproducts: RhcByproducts = {
-    unit: resolvedUnit, unit_label: RESIDUE_UNIT_LABELS[resolvedUnit],
-    feed_m3hr: vrM3hr, feed_kghr: feedKghr,
-    coke_kghr: (feedKghr * cokePct) / 100.0, coke_wtpct: cokePct,
-    lpg_fuel_gas_kghr: (feedKghr * gasPct) / 100.0, lpg_fuel_gas_wtpct: gasPct,
-    lpg_recovered_m3hr: ((feedKghr * gasPct) / 100.0) * cfg.lpg_fuel_gas_recovered / LPG_LIQUID_DENSITY_KG_M3,
+    unit: resolvedUnit,
+    unit_label: RESIDUE_UNIT_LABELS[resolvedUnit],
+    feed_m3hr: vrM3hr,
+    feed_kghr: feedKghr,
+    coke_kghr: (feedKghr * cokePct) / 100.0,
+    coke_wtpct: cokePct,
+    lpg_fuel_gas_kghr: (feedKghr * gasPct) / 100.0,
+    lpg_fuel_gas_wtpct: gasPct,
+    lpg_recovered_m3hr:
+      (((feedKghr * gasPct) / 100.0) * cfg.lpg_fuel_gas_recovered) /
+      LPG_LIQUID_DENSITY_KG_M3,
     yield_sum_wtpct: Object.values(table).reduce((a, b) => a + b, 0),
     yield_wtpct: table,
   };
   return { ...out, byproducts };
 }
 
-export function simdistStreamFeeds(primaryTotals: Record<string, number>, rhcProducts: RhcSplitResult): Record<string, number> {
+export function simdistStreamFeeds(
+  primaryTotals: Record<string, number>,
+  rhcProducts: RhcSplitResult,
+): Record<string, number> {
   return {
     srvr: 0.0,
     diesel: rhcProducts.diesel as number,
-    naphtha: primaryTotals.naphtha + primaryTotals.ago + (rhcProducts.rhc_naphtha as number),
+    naphtha:
+      primaryTotals.naphtha +
+      primaryTotals.ago +
+      (rhcProducts.rhc_naphtha as number),
     lvgo: primaryTotals.lvgo + (rhcProducts.rhc_lvgo as number),
     mvgo: primaryTotals.mvgo + (rhcProducts.rhc_mvgo as number),
     hvgo: primaryTotals.hvgo,
@@ -145,7 +221,10 @@ export interface SimdistResult {
   totals_m3hr: Record<ProductCode, number>;
 }
 
-export function simdistDirectProducts(streamFeeds: Record<string, number>, cfg: CrudeToProfitConfig): SimdistResult {
+export function simdistDirectProducts(
+  streamFeeds: Record<string, number>,
+  cfg: CrudeToProfitConfig,
+): SimdistResult {
   const splits = cfg.simdist_split_volpct;
   const perStream = {} as SimdistResult["per_stream"];
   const totals = zeroSlate();
@@ -164,7 +243,10 @@ export function simdistDirectProducts(streamFeeds: Record<string, number>, cfg: 
  *  overlap (assumes material is even across a product's boiling range,
  *  which a real distillation curve is not — good enough to compare
  *  processes, not to quote a single cut in isolation). */
-export function rangeOverlapSplit(lo: number, hi: number): Record<ProductCode, number> {
+export function rangeOverlapSplit(
+  lo: number,
+  hi: number,
+): Record<ProductCode, number> {
   const shares: Record<string, number> = {};
   for (const [cut, [a, b]] of Object.entries(PRODUCT_RANGE_C)) {
     if (cut === "lpg") continue;
@@ -172,20 +254,26 @@ export function rangeOverlapSplit(lo: number, hi: number): Record<ProductCode, n
     if (ov > 0) shares[cut] = ov;
   }
   const tot = Object.values(shares).reduce((x, y) => x + y, 0);
-  return Object.fromEntries(Object.entries(shares).map(([k, v]) => [k, v / tot])) as Record<ProductCode, number>;
+  return Object.fromEntries(
+    Object.entries(shares).map(([k, v]) => [k, v / tot]),
+  ) as Record<ProductCode, number>;
 }
 
 export function fccGasOilYieldVolpct(): Record<ProductCode, number> {
   const vol: Record<string, number> = {};
   for (const p of ["lpg", "gasoline", "lco", "slurry"]) {
-    vol[p] = (FCC_YIELD_WTPCT[p as keyof typeof FCC_YIELD_WTPCT] * FCC_FEED_DENSITY_KG_M3) / FCC_PRODUCT_DENSITY_KG_M3[p];
+    vol[p] =
+      (FCC_YIELD_WTPCT[p as keyof typeof FCC_YIELD_WTPCT] *
+        FCC_FEED_DENSITY_KG_M3) /
+      FCC_PRODUCT_DENSITY_KG_M3[p];
   }
   const slate = zeroSlate();
   slate.lpg = vol.lpg;
   for (const p of ["gasoline", "lco", "slurry"] as const) {
     const [lo, hi] = FCC_PRODUCT_RANGE_C[p];
     const shares = rangeOverlapSplit(lo, hi);
-    for (const [cut, sh] of Object.entries(shares)) slate[cut as ProductCode] += vol[p] * sh;
+    for (const [cut, sh] of Object.entries(shares))
+      slate[cut as ProductCode] += vol[p] * sh;
   }
   return slate;
 }
@@ -193,26 +281,45 @@ export function fccGasOilYieldVolpct(): Record<ProductCode, number> {
 const FCC_GAS_OIL_YIELD_VOLPCT = fccGasOilYieldVolpct();
 
 export interface HchtByproducts {
-  unit: GasOilUnit; unit_label: string; feed_m3hr: number; feed_kghr?: number;
-  coke_kghr: number; coke_wtpct?: number; dry_gas_kghr: number; dry_gas_wtpct?: number;
+  unit: GasOilUnit;
+  unit_label: string;
+  feed_m3hr: number;
+  feed_kghr?: number;
+  coke_kghr: number;
+  coke_wtpct?: number;
+  dry_gas_kghr: number;
+  dry_gas_wtpct?: number;
   liquid_volume_yield_volpct: number;
 }
-export type HchtSplitResult = Record<ProductCode, number> & { byproducts: HchtByproducts };
+export type HchtSplitResult = Record<ProductCode, number> & {
+  byproducts: HchtByproducts;
+};
 
 /** Gas-oil conversion unit (hydrocracker/hydrotreater on UCO, or FCC). */
-export function hchtSplit(ucoM3hr: number, cfg: CrudeToProfitConfig, unit?: GasOilUnit): HchtSplitResult {
+export function hchtSplit(
+  ucoM3hr: number,
+  cfg: CrudeToProfitConfig,
+  unit?: GasOilUnit,
+): HchtSplitResult {
   const resolvedUnit = unit || cfg.gas_oil_unit;
   const out = {} as Record<ProductCode, number>;
 
   if (resolvedUnit === "fcc") {
-    for (const p of PRODUCTS) out[p] = (ucoM3hr * FCC_GAS_OIL_YIELD_VOLPCT[p]) / 100.0;
+    for (const p of PRODUCTS)
+      out[p] = (ucoM3hr * FCC_GAS_OIL_YIELD_VOLPCT[p]) / 100.0;
     const feedKghr = ucoM3hr * FCC_FEED_DENSITY_KG_M3;
     const byproducts: HchtByproducts = {
-      unit: resolvedUnit, unit_label: GAS_OIL_UNIT_LABELS[resolvedUnit],
-      feed_m3hr: ucoM3hr, feed_kghr: feedKghr,
-      coke_kghr: (feedKghr * FCC_YIELD_WTPCT.coke) / 100.0, coke_wtpct: FCC_YIELD_WTPCT.coke,
-      dry_gas_kghr: (feedKghr * FCC_YIELD_WTPCT.dry_gas) / 100.0, dry_gas_wtpct: FCC_YIELD_WTPCT.dry_gas,
-      liquid_volume_yield_volpct: Object.values(FCC_GAS_OIL_YIELD_VOLPCT).reduce((a, b) => a + b, 0),
+      unit: resolvedUnit,
+      unit_label: GAS_OIL_UNIT_LABELS[resolvedUnit],
+      feed_m3hr: ucoM3hr,
+      feed_kghr: feedKghr,
+      coke_kghr: (feedKghr * FCC_YIELD_WTPCT.coke) / 100.0,
+      coke_wtpct: FCC_YIELD_WTPCT.coke,
+      dry_gas_kghr: (feedKghr * FCC_YIELD_WTPCT.dry_gas) / 100.0,
+      dry_gas_wtpct: FCC_YIELD_WTPCT.dry_gas,
+      liquid_volume_yield_volpct: Object.values(
+        FCC_GAS_OIL_YIELD_VOLPCT,
+      ).reduce((a, b) => a + b, 0),
     };
     return { ...out, byproducts };
   }
@@ -220,13 +327,21 @@ export function hchtSplit(ucoM3hr: number, cfg: CrudeToProfitConfig, unit?: GasO
   const y = cfg.hcht_yield_volpct;
   const lpgPct = y.c3 + y.ic4 + y.nc4;
   const pct: Record<ProductCode, number> = {
-    lpg: lpgPct, naphtha: y.naphtha, swing_naphtha: y.swing_naphtha,
-    kerosene: y.kerosene, diesel: y.diesel, swing_diesel: y.swing_diesel, uco: y.uco,
+    lpg: lpgPct,
+    naphtha: y.naphtha,
+    swing_naphtha: y.swing_naphtha,
+    kerosene: y.kerosene,
+    diesel: y.diesel,
+    swing_diesel: y.swing_diesel,
+    uco: y.uco,
   };
   for (const p of PRODUCTS) out[p] = (ucoM3hr * pct[p]) / 100.0;
   const byproducts: HchtByproducts = {
-    unit: resolvedUnit, unit_label: GAS_OIL_UNIT_LABELS[resolvedUnit],
-    feed_m3hr: ucoM3hr, coke_kghr: 0.0, dry_gas_kghr: 0.0,
+    unit: resolvedUnit,
+    unit_label: GAS_OIL_UNIT_LABELS[resolvedUnit],
+    feed_m3hr: ucoM3hr,
+    coke_kghr: 0.0,
+    dry_gas_kghr: 0.0,
     liquid_volume_yield_volpct: Object.values(pct).reduce((a, b) => a + b, 0),
   };
   return { ...out, byproducts };
@@ -245,13 +360,19 @@ export function finalProductSlate(
 }
 
 export interface EconomicsResult {
-  crude_cost_low_cad_hr: number; crude_cost_high_cad_hr: number;
-  revenue_low_cad_hr: number; revenue_high_cad_hr: number;
-  margin_low_cad_hr: number; margin_high_cad_hr: number;
-  margin_low_mcad_yr: number; margin_high_mcad_yr: number;
+  crude_cost_low_cad_hr: number;
+  crude_cost_high_cad_hr: number;
+  revenue_low_cad_hr: number;
+  revenue_high_cad_hr: number;
+  margin_low_cad_hr: number;
+  margin_high_cad_hr: number;
+  margin_low_mcad_yr: number;
+  margin_high_mcad_yr: number;
   has_market_case: boolean;
-  crude_cost_market_cad_hr?: number; revenue_market_cad_hr?: number;
-  margin_market_cad_hr?: number; margin_market_mcad_yr?: number;
+  crude_cost_market_cad_hr?: number;
+  revenue_market_cad_hr?: number;
+  margin_market_cad_hr?: number;
+  margin_market_mcad_yr?: number;
 }
 
 /** Three pricing cases: low/high (fixed assumptions, always available,
@@ -266,10 +387,14 @@ export function economics(
   marketProduct: Partial<Record<ProductCode, number>> | null,
 ): EconomicsResult {
   const crudeCost = (prices: Record<CrudeCode, number>) => {
-    let s = 0; for (const c of CRUDES) s += (crudeFlows[c] || 0.0) * prices[c]; return s;
+    let s = 0;
+    for (const c of CRUDES) s += (crudeFlows[c] || 0.0) * prices[c];
+    return s;
   };
   const revenue = (prices: Record<ProductCode, number>) => {
-    let s = 0; for (const p of PRODUCTS) s += (productSlate[p] || 0.0) * prices[p]; return s;
+    let s = 0;
+    for (const p of PRODUCTS) s += (productSlate[p] || 0.0) * prices[p];
+    return s;
   };
   const costLow = crudeCost(cfg.crude_price_low_cad_m3);
   const costHigh = crudeCost(cfg.crude_price_high_cad_m3);
@@ -280,16 +405,22 @@ export function economics(
   const annual = (HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR) / 1e6;
 
   const out: EconomicsResult = {
-    crude_cost_low_cad_hr: costLow, crude_cost_high_cad_hr: costHigh,
-    revenue_low_cad_hr: revLow, revenue_high_cad_hr: revHigh,
-    margin_low_cad_hr: marginLow, margin_high_cad_hr: marginHigh,
-    margin_low_mcad_yr: marginLow * annual, margin_high_mcad_yr: marginHigh * annual,
+    crude_cost_low_cad_hr: costLow,
+    crude_cost_high_cad_hr: costHigh,
+    revenue_low_cad_hr: revLow,
+    revenue_high_cad_hr: revHigh,
+    margin_low_cad_hr: marginLow,
+    margin_high_cad_hr: marginHigh,
+    margin_low_mcad_yr: marginLow * annual,
+    margin_high_mcad_yr: marginHigh * annual,
     has_market_case: false,
   };
 
-  const haveAll = marketCrude && marketProduct
-    && CRUDES.every((c) => marketCrude[c] != null)
-    && PRODUCTS.every((p) => marketProduct[p] != null);
+  const haveAll =
+    marketCrude &&
+    marketProduct &&
+    CRUDES.every((c) => marketCrude[c] != null) &&
+    PRODUCTS.every((p) => marketProduct[p] != null);
   if (haveAll) {
     const costMarket = crudeCost(marketCrude as Record<CrudeCode, number>);
     const revMarket = revenue(marketProduct as Record<ProductCode, number>);
@@ -339,11 +470,18 @@ export function runModel(
   const slate = finalProductSlate(direct.totals_m3hr, hc, byproducts);
   const econ = economics(crudeFlows, slate, cfg, marketCrude, marketProduct);
   return {
-    blend, primary, rhc_products_m3hr: rhc, simdist_stream_feeds_m3hr: feeds,
-    direct_products: direct, hc_reactor_products_m3hr: hc,
-    product_slate_m3hr: slate, workbook_slate_m3hr: workbookSlate,
-    byproducts, residue_unit: byproducts.unit,
-    gas_oil_unit: gasOilByproducts.unit, gas_oil_byproducts: gasOilByproducts,
+    blend,
+    primary,
+    rhc_products_m3hr: rhc,
+    simdist_stream_feeds_m3hr: feeds,
+    direct_products: direct,
+    hc_reactor_products_m3hr: hc,
+    product_slate_m3hr: slate,
+    workbook_slate_m3hr: workbookSlate,
+    byproducts,
+    residue_unit: byproducts.unit,
+    gas_oil_unit: gasOilByproducts.unit,
+    gas_oil_byproducts: gasOilByproducts,
     economics: econ,
   };
 }

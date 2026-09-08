@@ -7,7 +7,7 @@
 
 import { DateTime } from "luxon";
 import type { TimeRangeId, TimeRange } from "../engineering/types";
-import { getFerriqSettings } from "./settingsStore";
+import { getFerriqSettings, type FerriqSettings } from "./settingsStore";
 
 /** Site/plant timezone. Ferriq's engineering defaults (atmospheric
  *  pressure, etc.) reference an Alberta installation; site time follows
@@ -22,42 +22,85 @@ export function nowInSiteZone(): DateTime {
  *  boundaries (Settings page) — not simply "the last N hours". Reads live
  *  from the persisted settings store, so a Settings change takes effect
  *  everywhere immediately. */
-export function currentShiftWindow(now: DateTime): { start: DateTime; end: DateTime; label: string } {
-  const { shiftStartHour, shiftEndHour } = getFerriqSettings();
+export function currentShiftWindow(
+  now: DateTime,
+  settings: FerriqSettings = getFerriqSettings(),
+): { start: DateTime; end: DateTime; label: string } {
+  const { shiftStartHour, shiftEndHour } = settings;
   const siteNow = now.setZone(SITE_TIMEZONE);
-  const todayDayStart = siteNow.set({ hour: shiftStartHour, minute: 0, second: 0, millisecond: 0 });
-  const todayDayEnd = siteNow.set({ hour: shiftEndHour, minute: 0, second: 0, millisecond: 0 });
+  const todayDayStart = siteNow.set({
+    hour: shiftStartHour,
+    minute: 0,
+    second: 0,
+    millisecond: 0,
+  });
+  const todayDayEnd = siteNow.set({
+    hour: shiftEndHour,
+    minute: 0,
+    second: 0,
+    millisecond: 0,
+  });
 
   if (siteNow >= todayDayStart && siteNow < todayDayEnd) {
     return { start: todayDayStart, end: todayDayEnd, label: "Day" };
   }
   // Night shift: 19:00 today -> 07:00 tomorrow, or 19:00 yesterday -> 07:00 today
   if (siteNow >= todayDayEnd) {
-    return { start: todayDayEnd, end: todayDayStart.plus({ days: 1 }), label: "Night" };
+    return {
+      start: todayDayEnd,
+      end: todayDayStart.plus({ days: 1 }),
+      label: "Night",
+    };
   }
-  return { start: todayDayEnd.minus({ days: 1 }), end: todayDayStart, label: "Night" };
+  return {
+    start: todayDayEnd.minus({ days: 1 }),
+    end: todayDayStart,
+    label: "Night",
+  };
 }
 
-export interface CustomRangeInput { start: Date; end: Date }
+export interface CustomRangeInput {
+  start: Date;
+  end: Date;
+}
 
-export function resolveTimeRange(id: TimeRangeId, now: DateTime, custom?: CustomRangeInput): TimeRange {
+export function resolveTimeRange(
+  id: TimeRangeId,
+  now: DateTime,
+  custom?: CustomRangeInput,
+  settings: FerriqSettings = getFerriqSettings(),
+): TimeRange {
   const siteNow = now.setZone(SITE_TIMEZONE);
   if (id === "shift") {
-    const { start, end } = currentShiftWindow(siteNow);
+    const { start, end } = currentShiftWindow(siteNow, settings);
     return { id, start: start.toJSDate(), end: end.toJSDate() };
   }
-  if (id === "24h") return { id, start: siteNow.minus({ hours: 24 }).toJSDate(), end: siteNow.toJSDate() };
-  if (id === "7d") return { id, start: siteNow.minus({ days: 7 }).toJSDate(), end: siteNow.toJSDate() };
+  if (id === "24h")
+    return {
+      id,
+      start: siteNow.minus({ hours: 24 }).toJSDate(),
+      end: siteNow.toJSDate(),
+    };
+  if (id === "7d")
+    return {
+      id,
+      start: siteNow.minus({ days: 7 }).toJSDate(),
+      end: siteNow.toJSDate(),
+    };
   // custom
   if (custom) return { id, start: custom.start, end: custom.end };
-  return { id, start: siteNow.minus({ days: 7 }).toJSDate(), end: siteNow.toJSDate() };
+  return {
+    id,
+    start: siteNow.minus({ days: 7 }).toJSDate(),
+    end: siteNow.toJSDate(),
+  };
 }
 
 export function rangeContextLabel(range: TimeRange): string {
   const start = DateTime.fromJSDate(range.start).setZone(SITE_TIMEZONE);
   const end = DateTime.fromJSDate(range.end).setZone(SITE_TIMEZONE);
   if (range.id === "shift") {
-    return `${currentShiftWindow(DateTime.now()).label} shift ${start.toFormat("HH:mm")}–${end.toFormat("HH:mm")}`;
+    return `${start.hasSame(end, "day") ? "Day" : "Night"} shift ${start.toFormat("HH:mm")}–${end.toFormat("HH:mm")}`;
   }
   if (range.id === "custom") {
     return `${start.toFormat("LLL d, HH:mm")} – ${end.toFormat("LLL d, HH:mm")}`;
@@ -66,5 +109,8 @@ export function rangeContextLabel(range: TimeRange): string {
 }
 
 export const TIME_RANGE_LABELS: Record<TimeRangeId, string> = {
-  shift: "Shift", "24h": "24H", "7d": "7D", custom: "Custom",
+  shift: "Shift",
+  "24h": "24H",
+  "7d": "7D",
+  custom: "Custom",
 };

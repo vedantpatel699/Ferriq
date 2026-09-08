@@ -16,12 +16,24 @@ export interface MetricCardProps {
 /** One "key metric" tile — identity, current value + unit, and up to two
  *  facts (reference/deviation, period change). Formulas and standards
  *  citations belong in CalculationBasisDialog, not here. */
-export function MetricCard({ label, value, unit, emphasis, state, facts, method }: MetricCardProps) {
+export function MetricCard({
+  label,
+  value,
+  unit,
+  emphasis,
+  state,
+  facts,
+  method,
+}: MetricCardProps) {
   return (
     <div className={`metric-card${emphasis ? " emphasis" : ""}`}>
       <div className="metric-top">
         <div className="metric-label">{label}</div>
-        {state && <span className={`state-pill ${state}`}>{state.toUpperCase().replace("-", " ")}</span>}
+        {state && (
+          <span className={`state-pill ${state}`}>
+            {state.toUpperCase().replace("-", " ")}
+          </span>
+        )}
       </div>
       <div className="metric-value-row">
         <span className="metric-value">{value}</span>

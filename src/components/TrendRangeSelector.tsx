@@ -1,78 +1,96 @@
 import { useState } from "react";
 import type { TimeRangeId } from "../engineering/types";
-import { TIME_RANGE_LABELS } from "../lib/timeRange";
-
-export interface TrendRangeSelectorProps {
+import { DateTime } from "luxon";
+export function TrendRangeSelector({
+  value,
+  onChange,
+  includeCustom = true,
+  contextLabel,
+  onApplyCustom,
+}: {
   value: TimeRangeId;
   onChange: (id: TimeRangeId) => void;
-  /** Detailed equipment dashboards get Shift/24H/7D/Custom; Home and
-   *  Watchlist intentionally omit Custom (no advanced investigation
-   *  controls on the surveillance-oriented pages). */
   includeCustom?: boolean;
   contextLabel?: string;
-  onApplyCustom?: (start: string, end: string) => void;
-  customStart?: string;
-  customEnd?: string;
-}
-
-/** Shift / 24H / 7D / Custom control. Changing the value must actually
- *  drive chart data and period deltas in the caller — this component only
- *  owns the pill UI and the custom-range popover form. */
-export function TrendRangeSelector({
-  value, onChange, includeCustom = true, contextLabel, onApplyCustom, customStart, customEnd,
-}: TrendRangeSelectorProps) {
-  const [customOpen, setCustomOpen] = useState(false);
-  const [startDraft, setStartDraft] = useState(customStart ?? "");
-  const [endDraft, setEndDraft] = useState(customEnd ?? "");
-
-  const ids: TimeRangeId[] = includeCustom ? ["shift", "24h", "7d", "custom"] : ["shift", "24h", "7d"];
-
+  onApplyCustom?: (s: string, e: string) => void;
+}) {
+  const [open, setOpen] = useState(false),
+    [start, setStart] = useState(""),
+    [end, setEnd] = useState(""),
+    [error, setError] = useState("");
   return (
     <div className="range-block">
       <div className="range-caption">Trend window</div>
-      <div className="range-seg" role="group" aria-label="Trend observation window">
-        {ids.map((id) => (
+      <div
+        className="range-seg"
+        role="group"
+        aria-label="Trend observation window"
+      >
+        {(
+          [
+            "shift",
+            "24h",
+            "7d",
+            ...(includeCustom ? ["custom"] : []),
+          ] as TimeRangeId[]
+        ).map((id) => (
           <button
-            key={id}
             type="button"
             className={`range-opt${value === id ? " active" : ""}`}
+            aria-pressed={value === id}
+            aria-expanded={id === "custom" ? open : undefined}
+            key={id}
             onClick={() => {
-              if (id === "custom") setCustomOpen((o) => !o);
-              else { onChange(id); setCustomOpen(false); }
+              if (id === "custom") setOpen(!open);
+              else {
+                onChange(id);
+                setOpen(false);
+              }
             }}
           >
-            {TIME_RANGE_LABELS[id]}
+            {{ shift: "Shift", "24h": "24H", "7d": "7D", custom: "Custom" }[id]}
           </button>
         ))}
       </div>
-      {contextLabel && <div className="range-context">{contextLabel}</div>}
-      {customOpen && (
-        <div className="custom-panel">
-          <div className="custom-row">
-            <label htmlFor="custom-start">Start</label>
-            <div className="custom-inputs">
-              <input id="custom-start" type="datetime-local" value={startDraft} onChange={(e) => setStartDraft(e.target.value)} />
-            </div>
-          </div>
-          <div className="custom-row">
-            <label htmlFor="custom-end">End</label>
-            <div className="custom-inputs">
-              <input id="custom-end" type="datetime-local" value={endDraft} onChange={(e) => setEndDraft(e.target.value)} />
-            </div>
-          </div>
-          <button
-            type="button"
-            className="custom-apply"
-            onClick={() => {
-              if (!startDraft || !endDraft) return;
-              onApplyCustom?.(startDraft, endDraft);
-              onChange("custom");
-              setCustomOpen(false);
-            }}
-          >
-            Apply
-          </button>
-        </div>
+      {contextLabel && <p className="range-context">{contextLabel}</p>}
+      {open && (
+        <form
+          className="custom-panel"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const s = DateTime.fromISO(start, { zone: "America/Edmonton" }),
+              t = DateTime.fromISO(end, { zone: "America/Edmonton" });
+            if (!s.isValid || !t.isValid || s >= t) {
+              setError("Enter a valid start before the end (Edmonton time).");
+              return;
+            }
+            onApplyCustom?.(start, end);
+            onChange("custom");
+            setError("");
+            setOpen(false);
+          }}
+        >
+          <label>
+            Start (Edmonton)
+            <input
+              type="datetime-local"
+              required
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+            />
+          </label>
+          <label>
+            End (Edmonton)
+            <input
+              type="datetime-local"
+              required
+              value={end}
+              onChange={(e) => setEnd(e.target.value)}
+            />
+          </label>
+          {error && <p role="alert">{error}</p>}
+          <button>Apply</button>
+        </form>
       )}
     </div>
   );

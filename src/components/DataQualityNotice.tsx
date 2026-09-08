@@ -21,7 +21,10 @@ export function DataQualityNotice({ items }: { items: DataQualityState[] }) {
   return (
     <>
       {items.map((item, i) => (
-        <div className={`callout${KIND_CLASS[item.kind] ? ` ${KIND_CLASS[item.kind]}` : ""}`} key={i}>
+        <div
+          className={`callout${KIND_CLASS[item.kind] ? ` ${KIND_CLASS[item.kind]}` : ""}`}
+          key={i}
+        >
           <strong>{KIND_LABEL[item.kind]}</strong> {item.message}
         </div>
       ))}

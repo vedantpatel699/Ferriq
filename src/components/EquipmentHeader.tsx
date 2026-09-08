@@ -11,14 +11,22 @@ export interface EquipmentHeaderProps {
   rangeControl?: ReactNode;
 }
 
-export function EquipmentHeader({ name, meta, freshness, state, rangeControl }: EquipmentHeaderProps) {
+export function EquipmentHeader({
+  name,
+  meta,
+  freshness,
+  state,
+  rangeControl,
+}: EquipmentHeaderProps) {
   return (
     <>
-      <div className="crumb"><Link to="/">Home</Link> / {name}</div>
+      <div className="crumb">
+        <Link to="/">Home</Link> / {name}
+      </div>
       <div className="top-row">
         <div className="top-left">
           <div className="asset-title-row">
-            <span className="asset-name">{name}</span>
+            <h1 className="asset-name">{name}</h1>
             <StatusBadge state={state} />
           </div>
           <div className="asset-meta">{meta}</div>

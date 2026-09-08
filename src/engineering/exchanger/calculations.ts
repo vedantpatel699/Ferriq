@@ -44,7 +44,11 @@ const EPSILON = 1e-9;
  *  method). Returns null on temperature crossover or numerical breakdown
  *  (mirrors the live engine's null-propagation contract exactly — do not
  *  substitute a default F when this returns null). */
-export function lmtdCorrectionF(P: number, R: number, N: number): number | null {
+export function lmtdCorrectionF(
+  P: number,
+  R: number,
+  N: number,
+): number | null {
   if (P >= 1.0 || P * R >= 1.0) return null;
   N = Math.round(N);
   if (N <= 0) return null;
@@ -80,41 +84,88 @@ export function lmtdCorrectionF(P: number, R: number, N: number): number | null 
 
 export interface ExchangerRowInput {
   timestamp: string;
-  hotInC: number; hotOutC: number; hotFlowKgHr: number; hotCpKjKgK: number;
-  coldInC: number; coldOutC: number; coldFlowKgHr: number; coldCpKjKgK: number;
-  shellDpBar: number; tubeDpBar: number;
+  hotInC: number;
+  hotOutC: number;
+  hotFlowKgHr: number;
+  hotCpKjKgK: number;
+  coldInC: number;
+  coldOutC: number;
+  coldFlowKgHr: number;
+  coldCpKjKgK: number;
+  shellDpBar: number;
+  tubeDpBar: number;
 }
 
 export interface ExchangerRowResult {
   timestamp: string;
-  qHotKw: number | null; qColdKw: number | null; qAvgKw: number | null; qAvgMw: number | null;
+  qHotKw: number | null;
+  qColdKw: number | null;
+  qAvgKw: number | null;
+  qAvgMw: number | null;
   imbalancePct: number | null;
-  lmtdC: number | null; lmtdEffC: number | null;
-  pRatio: number | null; rRatio: number | null; fFactor: number | null;
-  uDirtyWm2k: number | null; rfE4: number | null; effectivenessPct: number | null;
-  approachHotC: number | null; approachColdC: number | null;
+  lmtdC: number | null;
+  lmtdEffC: number | null;
+  pRatio: number | null;
+  rRatio: number | null;
+  fFactor: number | null;
+  uDirtyWm2k: number | null;
+  rfE4: number | null;
+  effectivenessPct: number | null;
+  approachHotC: number | null;
+  approachColdC: number | null;
   dutyDeviationPct: number | null;
   crossover: boolean;
-  shellDpBar: number; tubeDpBar: number;
+  shellDpBar: number;
+  tubeDpBar: number;
 }
 
 /** Mirrors the live engine's calcRow. Does not abort on missing/invalid
  *  inputs or a temperature crossover — returns nulls for what can't be
  *  computed and sets `crossover`, matching the live per-row contract so a
  *  bad row doesn't halt the batch. */
-export function calcExchangerRow(r: ExchangerRowInput, cfg: ExchangerConfig): ExchangerRowResult {
+export function calcExchangerRow(
+  r: ExchangerRowInput,
+  cfg: ExchangerConfig,
+): ExchangerRowResult {
   const out: ExchangerRowResult = {
     timestamp: r.timestamp,
-    qHotKw: null, qColdKw: null, qAvgKw: null, qAvgMw: null,
-    imbalancePct: null, lmtdC: null, lmtdEffC: null,
-    pRatio: null, rRatio: null, fFactor: null,
-    uDirtyWm2k: null, rfE4: null, effectivenessPct: null,
-    approachHotC: null, approachColdC: null, dutyDeviationPct: null,
-    crossover: false, shellDpBar: r.shellDpBar, tubeDpBar: r.tubeDpBar,
+    qHotKw: null,
+    qColdKw: null,
+    qAvgKw: null,
+    qAvgMw: null,
+    imbalancePct: null,
+    lmtdC: null,
+    lmtdEffC: null,
+    pRatio: null,
+    rRatio: null,
+    fFactor: null,
+    uDirtyWm2k: null,
+    rfE4: null,
+    effectivenessPct: null,
+    approachHotC: null,
+    approachColdC: null,
+    dutyDeviationPct: null,
+    crossover: false,
+    shellDpBar: r.shellDpBar,
+    tubeDpBar: r.tubeDpBar,
   };
 
-  const { hotInC: thIn, hotOutC: thOut, coldInC: tcIn, coldOutC: tcOut, hotFlowKgHr: mh, hotCpKjKgK: cph, coldFlowKgHr: mc, coldCpKjKgK: cpc } = r;
-  if ([thIn, thOut, tcIn, tcOut, mh, cph, mc, cpc].some((x) => x === null || Number.isNaN(x))) return out;
+  const {
+    hotInC: thIn,
+    hotOutC: thOut,
+    coldInC: tcIn,
+    coldOutC: tcOut,
+    hotFlowKgHr: mh,
+    hotCpKjKgK: cph,
+    coldFlowKgHr: mc,
+    coldCpKjKgK: cpc,
+  } = r;
+  if (
+    [thIn, thOut, tcIn, tcOut, mh, cph, mc, cpc].some(
+      (x) => x === null || Number.isNaN(x),
+    )
+  )
+    return out;
 
   out.qHotKw = (mh * cph * (thIn - thOut)) / 3600;
   out.qColdKw = (mc * cpc * (tcOut - tcIn)) / 3600;
@@ -122,7 +173,8 @@ export function calcExchangerRow(r: ExchangerRowInput, cfg: ExchangerConfig): Ex
   out.qAvgMw = out.qAvgKw / 1000;
 
   if (Math.abs(out.qAvgKw) > EPSILON) {
-    out.imbalancePct = (Math.abs(out.qHotKw - out.qColdKw) / Math.abs(out.qAvgKw)) * 100;
+    out.imbalancePct =
+      (Math.abs(out.qHotKw - out.qColdKw) / Math.abs(out.qAvgKw)) * 100;
   }
 
   const cHot = (mh * cph) / 3600;
@@ -139,15 +191,23 @@ export function calcExchangerRow(r: ExchangerRowInput, cfg: ExchangerConfig): Ex
 
   const dT1 = thIn - tcOut;
   const dT2 = thOut - tcIn;
-  if (dT1 <= 0 || dT2 <= 0) { out.crossover = true; return out; }
-  out.lmtdC = Math.abs(dT1 - dT2) > EPSILON ? (dT1 - dT2) / Math.log(dT1 / dT2) : dT1;
+  if (dT1 <= 0 || dT2 <= 0) {
+    out.crossover = true;
+    return out;
+  }
+  out.lmtdC =
+    Math.abs(dT1 - dT2) > EPSILON ? (dT1 - dT2) / Math.log(dT1 / dT2) : dT1;
 
   const rDen = tcOut - tcIn;
   const pDen = thIn - tcIn;
   out.rRatio = Math.abs(rDen) > EPSILON ? (thIn - thOut) / rDen : null;
   out.pRatio = Math.abs(pDen) > EPSILON ? (tcOut - tcIn) / pDen : null;
-  if (out.pRatio !== null && out.rRatio !== null) out.fFactor = lmtdCorrectionF(out.pRatio, out.rRatio, cfg.nShell);
-  if (out.fFactor === null) { out.crossover = true; return out; }
+  if (out.pRatio !== null && out.rRatio !== null)
+    out.fFactor = lmtdCorrectionF(out.pRatio, out.rRatio, cfg.nShell);
+  if (out.fFactor === null) {
+    out.crossover = true;
+    return out;
+  }
   out.lmtdEffC = out.lmtdC * out.fFactor;
 
   const denom = cfg.areaM2 * out.fFactor * out.lmtdC;
@@ -157,42 +217,93 @@ export function calcExchangerRow(r: ExchangerRowInput, cfg: ExchangerConfig): Ex
     out.rfE4 = (1 / out.uDirtyWm2k - 1 / cfg.uCleanWm2k) * 1e4;
   }
 
-  if (cfg.designQMw !== 0) out.dutyDeviationPct = ((out.qAvgMw - cfg.designQMw) / cfg.designQMw) * 100;
+  if (cfg.designQMw !== 0)
+    out.dutyDeviationPct = ((out.qAvgMw - cfg.designQMw) / cfg.designQMw) * 100;
 
   return out;
 }
 
-export function buildExchangerAlerts(row: ExchangerRowResult, cfg: ExchangerConfig): EngineeringAlert[] {
+export function buildExchangerAlerts(
+  row: ExchangerRowResult,
+  cfg: ExchangerConfig,
+): EngineeringAlert[] {
   const alerts: EngineeringAlert[] = [];
   if (row.crossover) {
-    alerts.push({ severity: "alarm", message: "Temperature crossover detected (F-factor undefined). Check sensor labels and inlet/outlet swap.", source: "LMTD / F-factor" });
+    alerts.push({
+      severity: "alarm",
+      message:
+        "Temperature crossover detected (F-factor undefined). Check sensor labels and inlet/outlet swap.",
+      source: "LMTD / F-factor",
+    });
   }
   if (row.rfE4 !== null && row.rfE4 >= cfg.rfAlarmE4) {
-    alerts.push({ severity: "alarm", message: `Fouling R_f ${row.rfE4.toFixed(2)}×10⁻⁴ at or above alarm ${cfg.rfAlarmE4.toFixed(1)} - schedule clean.`, source: "fouling" });
+    alerts.push({
+      severity: "alarm",
+      message: `Fouling R_f ${row.rfE4.toFixed(2)}×10⁻⁴ at or above alarm ${cfg.rfAlarmE4.toFixed(1)} - schedule clean.`,
+      source: "fouling",
+    });
   } else if (row.rfE4 !== null && row.rfE4 >= cfg.rfAdvisoryE4) {
-    alerts.push({ severity: "advisory", message: `Fouling R_f ${row.rfE4.toFixed(2)}×10⁻⁴ above advisory ${cfg.rfAdvisoryE4.toFixed(1)}.`, source: "fouling" });
+    alerts.push({
+      severity: "advisory",
+      message: `Fouling R_f ${row.rfE4.toFixed(2)}×10⁻⁴ above advisory ${cfg.rfAdvisoryE4.toFixed(1)}.`,
+      source: "fouling",
+    });
   }
   if (row.dutyDeviationPct !== null) {
     const abs = Math.abs(row.dutyDeviationPct);
-    if (abs >= cfg.dutyAlarmPct) alerts.push({ severity: "alarm", message: `Duty deviation ${row.dutyDeviationPct.toFixed(2)} % at or above alarm ±${cfg.dutyAlarmPct.toFixed(0)} %.`, source: "duty vs design" });
-    else if (abs >= cfg.dutyAdvisoryPct) alerts.push({ severity: "advisory", message: `Duty deviation ${row.dutyDeviationPct.toFixed(2)} % above advisory ±${cfg.dutyAdvisoryPct.toFixed(0)} %.`, source: "duty vs design" });
+    if (abs >= cfg.dutyAlarmPct)
+      alerts.push({
+        severity: "alarm",
+        message: `Duty deviation ${row.dutyDeviationPct.toFixed(2)} % at or above alarm ±${cfg.dutyAlarmPct.toFixed(0)} %.`,
+        source: "duty vs design",
+      });
+    else if (abs >= cfg.dutyAdvisoryPct)
+      alerts.push({
+        severity: "advisory",
+        message: `Duty deviation ${row.dutyDeviationPct.toFixed(2)} % above advisory ±${cfg.dutyAdvisoryPct.toFixed(0)} %.`,
+        source: "duty vs design",
+      });
   }
-  if (row.effectivenessPct !== null && row.effectivenessPct < cfg.effAdvisoryPct) {
-    alerts.push({ severity: "advisory", message: `Effectiveness ε ${row.effectivenessPct.toFixed(1)} % below advisory ${cfg.effAdvisoryPct.toFixed(0)} %.`, source: "effectiveness" });
+  if (
+    row.effectivenessPct !== null &&
+    row.effectivenessPct < cfg.effAdvisoryPct
+  ) {
+    alerts.push({
+      severity: "advisory",
+      message: `Effectiveness ε ${row.effectivenessPct.toFixed(1)} % below advisory ${cfg.effAdvisoryPct.toFixed(0)} %.`,
+      source: "effectiveness",
+    });
   }
-  if (row.imbalancePct !== null && row.imbalancePct > cfg.imbalanceAdvisoryPct) {
-    alerts.push({ severity: "advisory", message: `Q imbalance ${row.imbalancePct.toFixed(2)} % above advisory ${cfg.imbalanceAdvisoryPct.toFixed(0)} %.`, source: "energy balance" });
+  if (
+    row.imbalancePct !== null &&
+    row.imbalancePct > cfg.imbalanceAdvisoryPct
+  ) {
+    alerts.push({
+      severity: "advisory",
+      message: `Q imbalance ${row.imbalancePct.toFixed(2)} % above advisory ${cfg.imbalanceAdvisoryPct.toFixed(0)} %.`,
+      source: "energy balance",
+    });
   }
   if (row.approachHotC !== null && row.approachHotC < cfg.approachMinC) {
-    alerts.push({ severity: "advisory", message: `Hot end approach ${row.approachHotC.toFixed(1)} °C below minimum ${cfg.approachMinC.toFixed(0)} °C.`, source: "approach" });
+    alerts.push({
+      severity: "advisory",
+      message: `Hot end approach ${row.approachHotC.toFixed(1)} °C below minimum ${cfg.approachMinC.toFixed(0)} °C.`,
+      source: "approach",
+    });
   }
   if (row.approachColdC !== null && row.approachColdC < cfg.approachMinC) {
-    alerts.push({ severity: "advisory", message: `Cold end approach ${row.approachColdC.toFixed(1)} °C below minimum ${cfg.approachMinC.toFixed(0)} °C.`, source: "approach" });
+    alerts.push({
+      severity: "advisory",
+      message: `Cold end approach ${row.approachColdC.toFixed(1)} °C below minimum ${cfg.approachMinC.toFixed(0)} °C.`,
+      source: "approach",
+    });
   }
   return alerts;
 }
 
-export function rollUpExchangerSeverity(alerts: EngineeringAlert[]): RawSeverity {
+export function rollUpExchangerSeverity(
+  alerts: EngineeringAlert[],
+): RawSeverity {
   if (alerts.some((a) => a.severity === "alarm")) return "alarm";
   if (alerts.some((a) => a.severity === "advisory")) return "advisory";
   return "ok";
