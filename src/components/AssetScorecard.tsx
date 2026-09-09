@@ -1,53 +1,40 @@
 import { useState } from "react";
 import type { Metric, Reading } from "../engineering/catalog";
 import { formatNumber } from "../lib/format";
+import { family, metricFacts, windowAverage, healthScore } from "../poc/blower";
 export function AssetScorecard({
   metrics,
   latest,
   windowRows,
   selected,
   onSelect,
+  baseline,
 }: {
   metrics: Metric[];
   latest: Reading;
   windowRows: Reading[];
   selected: string;
   onSelect: (key: string) => void;
+  baseline?: Reading[];
 }) {
   const [all, setAll] = useState(false);
-  const rows = metrics.map((m) => {
-    const raw = latest.values[m.key],
-      value = typeof raw === "number" && Number.isFinite(raw) ? raw : null;
-    const samples = windowRows
-      .map((r) => r.values[m.key])
-      .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
-    const average = samples.length
-      ? samples.reduce((a, b) => a + b, 0) / samples.length
-      : null;
-    const crossed = (m.limits ?? [])
-      .filter((l) => value !== null && value >= l.value)
-      .at(-1);
-    const fallback =
-      (m.key === "efficiencyHeadlinePct" &&
-        String(latest.values.efficiencyMethodUsed).includes("fallback")) ||
-      (m.key === "t1CUsed" && latest.values.t1Source !== "measured");
-    return {
-      m,
-      value,
-      average,
-      state:
-        value === null
-          ? "Missing"
-          : crossed
-            ? crossed.name
-            : "Within reference",
-      fallback,
-      flagged: value === null || !!crossed || fallback,
-    };
-  });
-  const shown = all ? rows : rows.filter((r) => r.flagged);
+  const rows = metrics.map((m) => ({
+    m,
+    ...metricFacts(m, latest),
+    average: windowAverage(m, windowRows),
+  }));
+  const score = healthScore(metrics, windowRows),
+    bScore = baseline ? healthScore(metrics, baseline) : null;
+  const lastB = baseline?.at(-1);
+  const stable = ["Mechanical", "Aerodynamic", "Load"].map((name) => ({
+    name,
+    rows: rows.filter((r) => family(r.m.key) === name && !r.flagged),
+  }));
   return (
-    <section className="card card-body" aria-label="Asset health scorecard">
+    <section
+      className="card card-body scorecard"
+      aria-label="Asset health scorecard"
+    >
       <div className="section-heading-row">
         <h2>Asset health scorecard</h2>
         <div role="group" aria-label="Scorecard metrics">
@@ -59,11 +46,40 @@ export function AssetScorecard({
           </button>
         </div>
       </div>
-      <p className="source-note">
-        {rows.filter((r) => r.flagged).length} flagged metrics ·{" "}
-        {rows.filter((r) => !r.flagged).length} other metrics. Quality markers
-        belong to each metric. No numerical health score is configured.
+      <p>
+        <strong>{latest.state.replaceAll("-", " ").toUpperCase()}</strong> ·{" "}
+        {latest.alerts[0]?.message ??
+          (latest.quality.length
+            ? (latest.quality.find((q) => /^(Missing|Stale):/.test(q)) ??
+              latest.quality[0])
+            : "No configured condition is exceeded.")}
       </p>
+      <div className="scorecard-context">
+        <span>
+          {rows.filter((r) => r.quality?.state === "Stale").length} stale ·{" "}
+          {rows.filter((r) => r.quality?.state === "Missing").length} missing ·{" "}
+          {rows.filter((r) => r.quality?.state === "Fallback").length} fallback
+          metrics
+        </span>
+        <details>
+          <summary>
+            POC health index A: {formatNumber(score.score, 0)} / 100
+            {bScore
+              ? ` · B: ${formatNumber(bScore.score, 0)} · Δ ${formatNumber(score.score !== null && bScore.score !== null ? score.score - bScore.score : null, 0)}`
+              : ""}
+          </summary>
+          <p>{score.formula}</p>
+          <p>
+            Portfolio rubric, not plant-calibrated: each scored vibration,
+            bearing temperature, pressure-rise, filter-drop or bypass condition
+            deducts 14 advisory / 28 alarm / 45 trip points. Bearing rise over 2
+            °C in the selected window deducts 4 points. Missing or stale scored
+            inputs make the index unavailable; there is no invented quality
+            penalty.
+          </p>
+          {bScore && <p>Baseline: {bScore.formula}</p>}
+        </details>
+      </div>
       <div
         className="table-scroll"
         tabIndex={0}
@@ -71,17 +87,33 @@ export function AssetScorecard({
         aria-label="Asset health metrics"
       >
         <table>
-          <caption>Latest reading and selected-window average</caption>
+          <caption>
+            {baseline
+              ? "A current versus B clean-filter baseline"
+              : "Latest reading and selected-window average"}
+          </caption>
           <thead>
             <tr>
-              {[
-                "Metric",
-                "Latest",
-                "Window avg",
-                "Limit / reference",
-                "Delta to reference",
-                "State / quality",
-              ].map((h) => (
+              {(baseline
+                ? [
+                    "Metric",
+                    "A latest",
+                    "B latest",
+                    "A avg",
+                    "B avg",
+                    "Δ avg",
+                    "Limit / reference",
+                    "State change / quality",
+                  ]
+                : [
+                    "Metric",
+                    "Latest",
+                    "Window avg",
+                    "Limit / reference",
+                    "Delta to reference",
+                    "State / quality",
+                  ]
+              ).map((h) => (
                 <th scope="col" key={h}>
                   {h}
                 </th>
@@ -89,49 +121,115 @@ export function AssetScorecard({
             </tr>
           </thead>
           <tbody>
-            {shown.map(({ m, value, average, state, fallback }) => {
-              const limit = m.limits?.[0]?.value ?? m.reference;
-              return (
-                <tr
-                  key={m.key}
-                  className={selected === m.key ? "scorecard-selected" : ""}
-                >
-                  <th scope="row">
-                    <button
-                      aria-pressed={selected === m.key}
-                      onClick={() => onSelect(m.key)}
+            {rows
+              .filter((r) => all || r.flagged)
+              .map(
+                ({ m, value, average, state, quality, severity, reliable }) => {
+                  const limit = m.limits?.[0]?.value ?? m.reference,
+                    b = lastB ? metricFacts(m, lastB) : null,
+                    bAvg = baseline ? windowAverage(m, baseline) : null;
+                  const unit = m.unit === "%" ? "pp" : m.unit;
+                  return (
+                    <tr
+                      key={m.key}
+                      className={selected === m.key ? "scorecard-selected" : ""}
                     >
-                      {m.label}
-                    </button>
-                  </th>
-                  <td>
-                    {formatNumber(value, 2)} {m.unit}
-                  </td>
-                  <td>
-                    {formatNumber(average, 2)} {m.unit}
-                  </td>
-                  <td>
-                    {limit === undefined
-                      ? "Not configured"
-                      : formatNumber(limit, 2) + " " + m.unit}
-                  </td>
-                  <td>
-                    {value === null || limit === undefined
-                      ? "—"
-                      : formatNumber(value - limit, 2) +
-                        " " +
-                        (m.unit === "%" ? "pp" : m.unit)}
-                  </td>
-                  <td>
-                    {state}
-                    {fallback ? " · Fallback used" : ""}
-                  </td>
-                </tr>
-              );
-            })}
+                      <th scope="row">
+                        <button
+                          aria-pressed={selected === m.key}
+                          onClick={() => onSelect(m.key)}
+                        >
+                          {m.label}
+                        </button>
+                        <small>{family(m.key)}</small>
+                      </th>
+                      <td className="num">
+                        {formatNumber(value, 2)} {m.unit}
+                        {quality?.state === "Stale" && (
+                          <small>Last reported, held</small>
+                        )}
+                      </td>
+                      {baseline && (
+                        <td className="num baseline-cell">
+                          {formatNumber(b?.value, 2)} {m.unit}
+                        </td>
+                      )}
+                      <td className="num">
+                        {formatNumber(average, 2)} {m.unit}
+                      </td>
+                      {baseline && (
+                        <>
+                          <td className="num baseline-cell">
+                            {formatNumber(bAvg, 2)} {m.unit}
+                          </td>
+                          <td className="num">
+                            {formatNumber(
+                              average !== null && bAvg !== null
+                                ? average - bAvg
+                                : null,
+                              2,
+                            )}{" "}
+                            {unit}
+                          </td>
+                        </>
+                      )}
+                      <td className="num">
+                        {limit === undefined
+                          ? "Not configured"
+                          : formatNumber(limit, 2) + " " + m.unit}
+                      </td>
+                      {!baseline && (
+                        <td className="num">
+                          {formatNumber(
+                            reliable && limit !== undefined
+                              ? value! - limit
+                              : null,
+                            2,
+                          )}{" "}
+                          {unit}
+                        </td>
+                      )}
+                      <td>
+                        {baseline && b && <span>{b.state} → </span>}
+                        <span className={"metric-state severity-" + severity}>
+                          {state}
+                        </span>
+                        {quality && (
+                          <span
+                            className={
+                              "quality-marker quality-" +
+                              quality.state.toLowerCase()
+                            }
+                            title={quality.reason}
+                          >
+                            {quality.state === "Fallback"
+                              ? "ƒ"
+                              : quality.state === "Stale"
+                                ? "◷"
+                                : "⚑"}{" "}
+                            {quality.state}
+                            {quality.lastFresh
+                              ? ` · ${((latest.epoch - Date.parse(quality.lastFresh)) / 3600000).toFixed(1)} h old`
+                              : ""}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                },
+              )}
           </tbody>
         </table>
       </div>
+      {!all && (
+        <div className="stable-families">
+          {stable.map((f) => (
+            <span key={f.name}>
+              {f.name}: {f.rows.length} unflagged metrics
+            </span>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

@@ -55,7 +55,13 @@ export interface Metric {
   referenceLabel?: string;
   limits?: { name: string; value: number }[];
 }
+export interface QualityMark {
+  state: "Missing" | "Stale" | "Fallback";
+  reason: string;
+  lastFresh?: string;
+}
 export interface Reading {
+  qualityByMetric?: Record<string, QualityMark>;
   timestamp: string;
   epoch: number;
   values: Row;
@@ -227,6 +233,36 @@ export function normalizeRows(id: EquipmentId, raw: Row[]): Row[] {
                 " needs the expected number of numeric or null probe values.",
             );
         }
+      if (
+        r._quality !== undefined &&
+        r._quality !== null &&
+        r._quality !== ""
+      ) {
+        const marks =
+          typeof r._quality === "string" ? JSON.parse(r._quality) : r._quality;
+        if (!marks || typeof marks !== "object" || Array.isArray(marks))
+          throw Error("Invalid per-metric quality metadata.");
+        for (const [k, v] of Object.entries(marks)) {
+          const q = v as QualityMark;
+          if (
+            !q ||
+            !["Missing", "Stale", "Fallback"].includes(q.state) ||
+            typeof q.reason !== "string" ||
+            q.reason.length > 500 ||
+            k.length > 100
+          )
+            throw Error("Invalid quality marker.");
+          if (
+            q.state === "Stale" &&
+            (!Number.isFinite(timestamp(q.lastFresh)) ||
+              timestamp(q.lastFresh) > timestamp(out.timestamp))
+          )
+            throw Error(
+              "Stale quality needs a valid last-fresh timestamp no later than the observation.",
+            );
+        }
+        out._quality = marks;
+      }
       return out;
     })
     .sort((a, b) => timestamp(a.timestamp) - timestamp(b.timestamp));
@@ -395,6 +431,57 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
       quality.push(
         "Primary result is unavailable; review missing or invalid inputs.",
       );
+    const qualityByMetric: Record<string, QualityMark> = {
+      ...((raw._quality as Record<string, QualityMark>) ?? {}),
+    };
+    if (id === "air-blower") {
+      for (const key of [
+        "efficiencyHeadlinePct",
+        "efficiencyPolytropicPct",
+        "efficiencyIsentropicPct",
+        "maxBearingTempC",
+        "maxVibrationMms",
+      ])
+        if (typeof values[key] !== "number" || !Number.isFinite(values[key]))
+          qualityByMetric[key] = {
+            state: "Missing",
+            reason: "Required measurements are unavailable.",
+          };
+      if (String(values.efficiencyMethodUsed).includes("fallback"))
+        qualityByMetric.efficiencyHeadlinePct = {
+          state: "Fallback",
+          reason:
+            "Fluid-power indicator replaces unavailable thermodynamic efficiency.",
+        };
+      if (values.t1Source && values.t1Source !== "measured")
+        for (const key of [
+          "t1CUsed",
+          "efficiencyHeadlinePct",
+          "efficiencyPolytropicPct",
+          "efficiencyIsentropicPct",
+        ])
+          if (!qualityByMetric[key])
+            qualityByMetric[key] = {
+              state: "Fallback",
+              reason:
+                "Suction temperature uses " + String(values.t1Source) + ".",
+            };
+      for (const [key, pattern] of [
+        ["maxBearingTempC", /^Bearing T/i],
+        ["maxVibrationMms", /^Vibration/i],
+      ] as const) {
+        const q = qualityByMetric[key];
+        if (q && (q.state === "Stale" || q.state === "Missing")) {
+          alerts = alerts.filter((a) => !pattern.test(a.message));
+          quality.push(
+            `${q.state}: ${key === "maxBearingTempC" ? "Bearing temperature" : "Vibration"} state not reliable. ${q.lastFresh ? `Last fresh ${q.lastFresh}; age ${((epoch - timestamp(q.lastFresh)) / 3600000).toFixed(1)} h. ` : ""}${q.reason}`,
+          );
+        }
+      }
+    }
+    const unreliable = Object.values(qualityByMetric).some(
+      (q) => q.state === "Stale" || q.state === "Missing",
+    );
     const rank = { trip: 3, alarm: 3, advisory: 2, ok: 0 };
     alerts.sort((a, b) => rank[b.severity] - rank[a.severity]);
     return {
@@ -403,7 +490,11 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
       values,
       alerts: alerts.map((a) => ({ ...a, message: reviewMessage(a.message) })),
       quality,
-      state: stateFromAlerts(alerts, !finite || Boolean(values.drop)),
+      qualityByMetric,
+      state: stateFromAlerts(
+        alerts,
+        !finite || Boolean(values.drop) || unreliable,
+      ),
     };
   });
 }
@@ -463,7 +554,9 @@ export function metricsFor(
                 ? [{ name: "Design maximum", value: lim.blowerDpMaxBar }]
                 : m.key === "filterDpBar"
                   ? [{ name: "Maximum", value: lim.filterDpMaxBar }]
-                  : undefined,
+                  : m.key === "bypassOpPct"
+                    ? [{ name: "Maximum", value: lim.bypassOpenMaxPct }]
+                    : undefined,
       };
     });
   if (id === "fired-heater") {

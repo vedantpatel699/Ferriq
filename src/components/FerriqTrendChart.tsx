@@ -6,6 +6,7 @@ import {
   TooltipComponent,
   DataZoomComponent,
   MarkLineComponent,
+  MarkAreaComponent,
   AriaComponent,
   BrushComponent,
 } from "echarts/components";
@@ -19,6 +20,7 @@ echarts.use([
   TooltipComponent,
   DataZoomComponent,
   MarkLineComponent,
+  MarkAreaComponent,
   AriaComponent,
   BrushComponent,
   CanvasRenderer,
@@ -29,12 +31,18 @@ export interface ChartSeries {
   kind: ChartSeriesKind;
   data: [number, number | null][];
   color?: string;
+  dash?: "solid" | "dashed" | "dotted";
+  symbol?: "rect" | "emptyCircle";
 }
 export interface ChartConstraintLine {
   name: string;
   value: number;
 }
 export interface FerriqTrendChartProps {
+  elapsed?: boolean;
+  sourceTimes?: Record<string, Record<number, number>>;
+  xBounds?: [number, number];
+  verticalMarkers?: { name: string; value: number }[];
   series: ChartSeries[];
   unit: string;
   constraints?: ChartConstraintLine[];
@@ -64,6 +72,10 @@ export function FerriqTrendChart({
   digits = 2,
   bounds,
   uncertainty,
+  elapsed = false,
+  sourceTimes,
+  xBounds,
+  verticalMarkers = [],
 }: FerriqTrendChartProps) {
   const container = useRef<HTMLDivElement>(null),
     chart = useRef<echarts.ECharts | null>(null);
@@ -97,11 +109,16 @@ export function FerriqTrendChart({
         id: s.name,
         name: s.name,
         type: "line",
-        showSymbol: false,
+        showSymbol: !!s.symbol,
+        symbol: s.symbol,
+        symbolSize: (_: unknown, p: { dataIndex: number }) =>
+          p.dataIndex % Math.max(1, Math.ceil(s.data.length / 25)) === 0
+            ? 4
+            : 0,
         connectNulls: false,
         lineStyle: {
-          width: s.kind === "measured" ? 2.5 : 1.8,
-          type: s.kind === "measured" ? "solid" : "dashed",
+          width: s.kind === "baseline" ? 1.8 : 2.5,
+          type: s.dash ?? (s.kind === "measured" ? "solid" : "dashed"),
           color:
             s.color ??
             (s.kind === "baseline"
@@ -126,6 +143,7 @@ export function FerriqTrendChart({
                 symbol: "none",
                 silent: true,
                 label: {
+                  show: verticalMarkers.length === 0,
                   formatter: "Observation cutoff",
                   position: "insideEndTop",
                 },
@@ -172,7 +190,7 @@ export function FerriqTrendChart({
         animation: false,
         aria: {
           enabled: true,
-          description: `${title}. ${unit}. Dates in America/Edmonton. An accessible table follows the chart.`,
+          description: `${title}. ${unit}. ${elapsed ? "Elapsed time alignment." : "Dates in America/Edmonton."} An accessible table follows the chart.`,
         },
         grid: { left: 80, right: 35, top: 42, bottom: 80, containLabel: false },
         tooltip: {
@@ -206,24 +224,34 @@ export function FerriqTrendChart({
                   })[c]!,
               );
             return (
-              `<strong>${time(rows[0].value[0])} · Edmonton</strong>` +
+              `<strong>${elapsed ? "Day " + formatNumber(rows[0].value[0] / 86400000, 2) : time(rows[0].value[0]) + " · Edmonton"}</strong>` +
               rows
                 .map(
                   (p) =>
-                    `<br>${p.marker}${safe(p.seriesName)}: <strong>${formatNumber(p.value[1], digits)} ${safe(unit)}</strong>`,
+                    `<br>${p.marker}${safe(p.seriesName)}: <strong>${formatNumber(p.value[1], digits)} ${safe(unit)}</strong>${sourceTimes?.[p.seriesName]?.[p.value[0]] !== undefined ? " · " + time(sourceTimes[p.seriesName][p.value[0]]) + " Edmonton" : ""}`,
                 )
-                .join("")
+                .join("") +
+              (elapsed &&
+              rows.length === 2 &&
+              finite(rows[0].value[1]) &&
+              finite(rows[1].value[1])
+                ? `<br>Δ A − B: ${formatNumber(rows[0].value[1] - rows[1].value[1], digits)} ${safe(unit === "%" ? "pp" : unit)}`
+                : "")
             );
           },
         },
         xAxis: {
-          type: "time",
+          type: elapsed ? "value" : "time",
+          min: xBounds?.[0],
+          max: xBounds?.[1],
           axisLabel: {
             hideOverlap: true,
             formatter: (v: number) =>
-              DateTime.fromMillis(v, { zone: "America/Edmonton" }).toFormat(
-                "LLL d\nHH:mm",
-              ),
+              elapsed
+                ? `Day ${formatNumber(v / 86400000, 1)}`
+                : DateTime.fromMillis(v, { zone: "America/Edmonton" }).toFormat(
+                    "LLL d\nHH:mm",
+                  ),
           },
         },
         yAxis: {
@@ -242,13 +270,31 @@ export function FerriqTrendChart({
         series: [
           ...band,
           ...lines,
-          ...(constraints.length
+          ...(constraints.length || verticalMarkers.length
             ? [
                 {
                   id: "constraints",
                   name: "Constraints",
                   type: "line",
                   data: [],
+                  markArea: verticalMarkers.length
+                    ? {
+                        silent: true,
+                        itemStyle: { color: "#6670850d" },
+                        data: [
+                          [
+                            { xAxis: verticalMarkers[0].value },
+                            {
+                              xAxis: Math.max(
+                                ...series.flatMap((s) =>
+                                  s.data.map((p) => p[0]),
+                                ),
+                              ),
+                            },
+                          ],
+                        ],
+                      }
+                    : undefined,
                   markLine: {
                     symbol: "none",
                     silent: true,
@@ -258,10 +304,24 @@ export function FerriqTrendChart({
                       formatter: (p: { name: string; value: number }) =>
                         `${p.name} ${formatNumber(p.value, digits)}`,
                     },
-                    data: constraints.map((c) => ({
-                      name: c.name,
-                      yAxis: c.value,
-                    })),
+                    data: [
+                      ...constraints.map((c) => ({
+                        name: c.name,
+                        yAxis: c.value,
+                      })),
+                      ...verticalMarkers.map((m) => ({
+                        name: m.name,
+                        xAxis: m.value,
+                        label: {
+                          formatter: m.name,
+                          position: "insideEndTop",
+                          rotate: 0,
+                          align: "left",
+                          offset: [6, 8],
+                          fontSize: 11,
+                        },
+                      })),
+                    ],
                   },
                 },
               ]
@@ -280,6 +340,10 @@ export function FerriqTrendChart({
     digits,
     bounds,
     uncertainty,
+    elapsed,
+    sourceTimes,
+    xBounds,
+    verticalMarkers,
   ]);
   function view(start: number, end: number) {
     const width = Math.min(100, Math.max(2, end - start));
@@ -295,7 +359,10 @@ export function FerriqTrendChart({
   ].sort((a, b) => a - b);
   const rows = times.map((t) =>
     Object.fromEntries([
-      ["Time (America/Edmonton)", time(t)],
+      [
+        elapsed ? "Elapsed day" : "Time (America/Edmonton)",
+        elapsed ? formatNumber(t / 86400000, 3) : time(t),
+      ],
       ...series.map((s) => [
         `${s.name} (${unit})`,
         s.data.find((p) => p[0] === t)?.[1] ?? null,

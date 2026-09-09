@@ -1,3 +1,11 @@
+import { BuildReport } from "./BuildReport";
+import {
+  demoBlower,
+  cleanBaseline,
+  alignComparison,
+  metricFacts,
+  windowAverage,
+} from "../poc/blower";
 import { AssetScorecard } from "./AssetScorecard";
 import { useMemo, useState } from "react";
 import { DateTime } from "luxon";
@@ -37,8 +45,13 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
     rows = useMemo(() => calculate(id, data), [id, data]),
     latest = rows.at(-1)!;
   const metrics = metricsFor(id, data.config, latest);
+  const [compare, setCompare] = useState(false);
+  const baselineRows = useMemo(
+    () => (id === "air-blower" ? cleanBaseline(data.config) : []),
+    [id, data.config],
+  );
   const [tab, setTab] = useState("Overview"),
-    [range, setRange] = useState<TimeRangeId>("24h"),
+    [range, setRange] = useState<TimeRangeId>("30d"),
     [custom, setCustom] = useState<{ start: Date; end: Date }>(),
     [metricKey, setMetricKey] = useState(""),
     [drawer, setDrawer] = useState(false),
@@ -51,6 +64,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
     [pending, setPending] = useState<Row[] | null>(null),
     [filename, setFilename] = useState(""),
     [bounds, setBounds] = useState<{ min?: number; max?: number }>({});
+  const FindingTag = id === "air-blower" ? "details" : "section";
   const finding = latest.alerts[0]?.message ?? "";
   const conditionKey = /Vibration/i.test(finding)
     ? "maxVibrationMms"
@@ -80,6 +94,28 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
   const selected = rows.filter(
     (r) => r.epoch >= +period.start && r.epoch <= +period.end,
   );
+  const baselineWindow = baselineRows.filter(
+    (r) =>
+      r.epoch >=
+      (baselineRows.at(-1)?.epoch ?? 0) - (+period.end - +period.start),
+  );
+  const comparison = compare
+    ? alignComparison(selected, baselineWindow, metric)
+    : [];
+  const sourceTimes = compare
+    ? {
+        "A current": Object.fromEntries(
+          comparison
+            .filter((p) => p.aTime !== null)
+            .map((p) => [p.elapsed, p.aTime!]),
+        ),
+        "B clean-filter baseline": Object.fromEntries(
+          comparison
+            .filter((p) => p.bTime !== null)
+            .map((p) => [p.elapsed, p.bTime!]),
+        ),
+      }
+    : undefined;
   const series: ChartSeries[] = [
     {
       name: metric.label,
@@ -127,11 +163,76 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
           kind: "measured",
           data: selected.map((r) => [
             r.epoch,
-            (r.values[field + train] as (number | null)[] | undefined)?.[i] ??
-              null,
+            !metricFacts(metric, r).reliable
+              ? null
+              : ((r.values[field + train] as (number | null)[] | undefined)?.[
+                  i
+                ] ?? null),
           ]),
         });
   }
+  if (id === "air-blower" && !compare) {
+    const statePoints = (state: "Stale" | "Fallback") =>
+      selected.map(
+        (r) =>
+          [
+            r.epoch,
+            r.qualityByMetric?.[metric.key]?.state === state
+              ? Number(r.values[metric.key])
+              : null,
+          ] as [number, number | null],
+      );
+    if (
+      selected.some((r) => r.qualityByMetric?.[metric.key]?.state === "Stale")
+    ) {
+      series[0].data = selected.map((r) => [
+        r.epoch,
+        r.qualityByMetric?.[metric.key]?.state === "Stale"
+          ? null
+          : typeof r.values[metric.key] === "number"
+            ? Number(r.values[metric.key])
+            : null,
+      ]);
+      series.push({
+        name: "Stale held value (not a fresh measurement)",
+        kind: "measured",
+        dash: "dotted",
+        color: "#667085",
+        data: statePoints("Stale"),
+      });
+    }
+    if (
+      selected.some(
+        (r) => r.qualityByMetric?.[metric.key]?.state === "Fallback",
+      )
+    )
+      series.push({
+        name: "Fallback computation",
+        kind: "measured",
+        symbol: "emptyCircle",
+        color: "#667085",
+        data: statePoints("Fallback"),
+      });
+  }
+  if (compare)
+    series.splice(
+      0,
+      series.length,
+      {
+        name: "A current",
+        kind: "measured",
+        color: "#2F6F9F",
+        symbol: "rect",
+        data: comparison.map((p) => [p.elapsed, p.a]),
+      },
+      {
+        name: "B clean-filter baseline",
+        kind: "baseline",
+        color: "#2F6F9F",
+        symbol: "emptyCircle",
+        data: comparison.map((p) => [p.elapsed, p.b]),
+      },
+    );
   const limits = [
     ...(metric.limits ?? []),
     ...(metric.reference !== undefined
@@ -216,6 +317,93 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
           />
         }
       />
+      <div className="action-bar">
+        <BuildReport
+          asset={identities[id].name + " " + identities[id].tag}
+          source={data.source + " · configuration version " + resource.version}
+          summary={
+            latest.alerts[0]?.message ??
+            latest.quality.find((q) => /^(Missing|Stale):/.test(q)) ??
+            latest.quality[0] ??
+            "No configured condition is exceeded."
+          }
+          period={
+            rangeContextLabel(period) +
+            (compare ? " · Compared with simulated clean-filter baseline" : "")
+          }
+          quality={[
+            ...latest.quality,
+            ...(compare
+              ? [
+                  "Baseline B is a canned POC simulation, not a maintenance-verified clean-filter observation.",
+                ]
+              : []),
+          ]}
+          rows={metrics.map((m) => ({
+            metric: m.label,
+            latest: metricFacts(m, latest).value,
+            windowAverage: windowAverage(m, selected),
+            unit: m.unit,
+            state:
+              id === "air-blower" ? metricFacts(m, latest).state : latest.state,
+            quality: metricFacts(m, latest).quality?.state ?? "Valid",
+            ...(compare
+              ? { baselineAverage: windowAverage(m, baselineWindow) }
+              : {}),
+          }))}
+        />
+        {id === "air-blower" && (
+          <>
+            <button aria-pressed={compare} onClick={() => setCompare(!compare)}>
+              {compare ? "Compare: Clean-filter baseline" : "Compare: Off"}
+            </button>
+            <details>
+              <summary>POC demo data</summary>
+              <p>
+                Explicit simulations for the client walkthrough. Original
+                published data can be restored under Advanced.
+              </p>
+              {(["current", "stale", "missing"] as const).map((kind) => (
+                <button
+                  key={kind}
+                  disabled={busy}
+                  onClick={() =>
+                    void action(async () => {
+                      const demo = demoBlower(kind);
+                      await save(
+                        id,
+                        demo,
+                        "POC demo " + kind,
+                        resource.version,
+                      );
+                      setCustom({
+                        start: new Date(String(demo.rows[0].timestamp)),
+                        end: new Date(String(demo.rows.at(-1)!.timestamp)),
+                      });
+                      setRange("custom");
+                      setMetricKey("maxBearingTempC");
+                    })
+                  }
+                >
+                  Load {kind} POC demo
+                </button>
+              ))}
+            </details>
+          </>
+        )}
+      </div>
+      {compare && (
+        <p className="source-note">
+          B: simulated clean-filter baseline ·{" "}
+          {new Date(baselineWindow[0]?.epoch ?? 0).toISOString().slice(0, 10)}–
+          {new Date(baselineWindow.at(-1)?.epoch ?? 0)
+            .toISOString()
+            .slice(0, 10)}
+          . Both datasets use the current configuration. Alignment uses elapsed
+          time from each first observation; unmatched samples have no delta and
+          are never interpolated.
+        </p>
+      )}
       <div className="page-tabs" role="group" aria-label="Equipment views">
         {["Overview", "Data & Log", "Configuration", "Engineering manual"].map(
           (t) => (
@@ -230,7 +418,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
                 }
               }}
             >
-              {t}
+              {t === "Configuration" ? "Advanced" : t}
             </button>
           ),
         )}
@@ -242,10 +430,15 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
       )}
       {tab === "Overview" && (
         <>
-          <section className="finding">
+          <FindingTag className="finding">
+            {id === "air-blower" && (
+              <summary>Engineering conditions and data-quality notes</summary>
+            )}
             <h2>
               {latest.alerts[0]?.message ??
-                "Within configured reference limits"}
+                (latest.state === "data-issue"
+                  ? "Measurements require data-quality review"
+                  : "Within configured reference limits")}
             </h2>
             {latest.quality.map((q) => (
               <p className="quality-note" key={q}>
@@ -266,7 +459,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
                 </ul>
               </details>
             )}
-          </section>
+          </FindingTag>
           <div className="section-heading-row">
             <h2>Current measurements</h2>
             <button onClick={() => setDrawer(true)}>
@@ -280,6 +473,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
           {id === "air-blower" ? (
             <AssetScorecard
               metrics={metrics}
+              baseline={compare ? baselineWindow : undefined}
               latest={latest}
               windowRows={selected}
               selected={metric.key}
@@ -342,8 +536,15 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
               . Gaps are not filled.
             </p>
             <FerriqTrendChart
-              key={range + metric.key + String(+period.start)}
+              key={String(compare) + range + metric.key + String(+period.start)}
               title={metric.label}
+              elapsed={compare}
+              sourceTimes={sourceTimes}
+              xBounds={
+                compare
+                  ? [0, Math.max(1, ...comparison.map((p) => p.elapsed))]
+                  : [+period.start, +period.end]
+              }
               series={series}
               unit={metric.unit}
               constraints={limits}
@@ -369,6 +570,27 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
               {metric.unit === "%" ? "pp" : metric.unit} (first to last
               observation).
             </p>
+            {compare && (
+              <details>
+                <summary>Comparison data and original timestamps</summary>
+                <DataTable
+                  rows={comparison.map((p) => ({
+                    elapsedDay: p.elapsed / 86400000,
+                    currentTime: p.aTime
+                      ? new Date(p.aTime).toISOString()
+                      : null,
+                    baselineTime: p.bTime
+                      ? new Date(p.bTime).toISOString()
+                      : null,
+                    current: p.a,
+                    baseline: p.b,
+                    delta: p.delta,
+                    unit: metric.unit,
+                  }))}
+                  caption="Elapsed comparison without interpolation"
+                />
+              </details>
+            )}
             <details>
               <summary>Axis bounds</summary>
               {bounds.min !== undefined &&
@@ -484,57 +706,63 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
               Export dataset & configuration
             </button>
           </div>
-          <label>
-            Import input CSV
-            <input
-              type="file"
-              accept=".csv"
-              onChange={async (e) => {
-                try {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  if (f.size > 16 * 1024 * 1024)
-                    throw Error("File exceeds 16 MB.");
-                  setPending(normalizeRows(id, parseCsv(await f.text())));
-                  setFilename(f.name);
-                  setNotice("Review the imported rows before applying.");
-                } catch (e) {
-                  setPending(null);
-                  setNotice((e as Error).message);
-                }
-              }}
-            />
-          </label>
-          {pending && (
-            <>
-              <DataTable
-                rows={pending.slice(0, 5)}
-                caption={`${filename}: preview (${pending.length} rows)`}
-              />
-              <button
-                disabled={busy}
-                onClick={() =>
-                  void action(async () => {
-                    await save(
-                      id,
-                      {
-                        ...data,
-                        rows: pending,
-                        source: "Imported CSV: " + filename,
-                        importedAt: new Date().toISOString(),
-                      },
-                      "import",
-                      resource.version,
-                    );
+          <details className="advanced-panel">
+            <summary>Replace input data</summary>
+            <p>
+              Imported observations replace this browser's dataset after review.
+            </p>
+            <label>
+              Import input CSV
+              <input
+                type="file"
+                accept=".csv"
+                onChange={async (e) => {
+                  try {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    if (f.size > 16 * 1024 * 1024)
+                      throw Error("File exceeds 16 MB.");
+                    setPending(normalizeRows(id, parseCsv(await f.text())));
+                    setFilename(f.name);
+                    setNotice("Review the imported rows before applying.");
+                  } catch (e) {
                     setPending(null);
-                  })
-                }
-              >
-                Apply imported dataset
-              </button>
-              <button onClick={() => setPending(null)}>Cancel import</button>
-            </>
-          )}
+                    setNotice((e as Error).message);
+                  }
+                }}
+              />
+            </label>
+            {pending && (
+              <>
+                <DataTable
+                  rows={pending.slice(0, 5)}
+                  caption={`${filename}: preview (${pending.length} rows)`}
+                />
+                <button
+                  disabled={busy}
+                  onClick={() =>
+                    void action(async () => {
+                      await save(
+                        id,
+                        {
+                          ...data,
+                          rows: pending,
+                          source: "Imported CSV: " + filename,
+                          importedAt: new Date().toISOString(),
+                        },
+                        "import",
+                        resource.version,
+                      );
+                      setPending(null);
+                    })
+                  }
+                >
+                  Apply imported dataset
+                </button>
+                <button onClick={() => setPending(null)}>Cancel import</button>
+              </>
+            )}
+          </details>
           <DataTable
             rows={selected.map((r) => r.values)}
             caption="Selected observation window"
@@ -554,123 +782,132 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
         <>
           <h2>Engineering configuration</h2>
           <p>
-            These are model assumptions and reference limits, not personal
-            display preferences. Saved changes apply consistently across this
-            browser's overview and detail pages.
+            Saved configuration version {resource.version}. The dashboard uses
+            these saved assumptions automatically.
           </p>
-          {id === "air-blower" && (
+          <details className="advanced-panel">
+            <summary>Edit engineering configuration</summary>
             <p>
-              Blower mode: auto, A or B. Efficiency method: polytropic,
-              isentropic or fluid. Gamma must exceed1; power factor must be
-              between0 and1.
+              These are model assumptions and reference limits, not personal
+              display preferences. Saved changes apply consistently across this
+              browser's overview and detail pages.
             </p>
-          )}
-          {id === "fired-heater" && (
-            <>
-              <label>
-                Fuel blend
-                <select
-                  value={String((draft as Row).fuelCase)}
-                  onChange={(e) =>
+            {id === "air-blower" && (
+              <p>
+                Blower mode: auto, A or B. Efficiency method: polytropic,
+                isentropic or fluid. Gamma must exceed 1; power factor must be
+                between 0 and 1.
+              </p>
+            )}
+            {id === "fired-heater" && (
+              <>
+                <label>
+                  Fuel blend
+                  <select
+                    value={String((draft as Row).fuelCase)}
+                    onChange={(e) =>
+                      setDraft(
+                        (d) =>
+                          ({
+                            ...(d as object),
+                            fuelCase: e.target.value,
+                            ...(e.target.value === "Custom"
+                              ? {
+                                  customCase: structuredClone(
+                                    FUEL_GAS_CASES[
+                                      "Sheet Reference Case (83.64%)"
+                                    ],
+                                  ),
+                                }
+                              : {}),
+                          }) as unknown as ConfigValue,
+                      )
+                    }
+                  >
+                    {Object.keys(FUEL_GAS_CASES).map((k) => (
+                      <option key={k}>{k}</option>
+                    ))}
+                    <option>Custom</option>
+                  </select>
+                </label>
+                <details>
+                  <summary>
+                    Fuel component properties and preset compositions
+                  </summary>
+                  <DataTable
+                    rows={Object.entries(FUEL_COMPONENT_PROPS).map(
+                      ([component, v]) => ({ component, ...v }),
+                    )}
+                    caption="Fuel components"
+                  />
+                  <DataTable
+                    rows={Object.entries(FUEL_GAS_CASES).map(([blend, v]) => ({
+                      blend,
+                      ...v,
+                    }))}
+                    caption="Fuel blend cases"
+                  />
+                </details>
+                {String((draft as Row).fuelCase) === "Custom" && (
+                  <button
+                    onClick={() => {
+                      const d = draft as Row,
+                        c = d.customCase as {
+                          fractions: Record<string, number>;
+                        };
+                      const p = calcCompositionProps(c.fractions);
+                      setDraft({
+                        ...d,
+                        customCase: {
+                          ...c,
+                          averageMw: p.averageMw,
+                          lhvMjKg: p.lhvMjKg,
+                        },
+                      } as ConfigValue);
+                    }}
+                  >
+                    Recalculate custom molecular weight & LHV
+                  </button>
+                )}
+              </>
+            )}
+            <ConfigEditor value={draft} onChange={setDraft} />
+            <div className="action-bar">
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void action(async () => {
+                    await save(
+                      id,
+                      { ...data, config: draft },
+                      "configuration",
+                      draftVersion,
+                    );
+                    setDraftVersion(draftVersion + 1);
+                  })
+                }
+              >
+                Save configuration
+              </button>
+              <button
+                disabled={busy}
+                onClick={() =>
+                  void action(async () => {
+                    await reset(id);
+                    setDraftVersion(1);
                     setDraft(
-                      (d) =>
-                        ({
-                          ...(d as object),
-                          fuelCase: e.target.value,
-                          ...(e.target.value === "Custom"
-                            ? {
-                                customCase: structuredClone(
-                                  FUEL_GAS_CASES[
-                                    "Sheet Reference Case (83.64%)"
-                                  ],
-                                ),
-                              }
-                            : {}),
-                        }) as unknown as ConfigValue,
-                    )
-                  }
-                >
-                  {Object.keys(FUEL_GAS_CASES).map((k) => (
-                    <option key={k}>{k}</option>
-                  ))}
-                  <option>Custom</option>
-                </select>
-              </label>
-              <details>
-                <summary>
-                  Fuel component properties and preset compositions
-                </summary>
-                <DataTable
-                  rows={Object.entries(FUEL_COMPONENT_PROPS).map(
-                    ([component, v]) => ({ component, ...v }),
-                  )}
-                  caption="Fuel components"
-                />
-                <DataTable
-                  rows={Object.entries(FUEL_GAS_CASES).map(([blend, v]) => ({
-                    blend,
-                    ...v,
-                  }))}
-                  caption="Fuel blend cases"
-                />
-              </details>
-              {String((draft as Row).fuelCase) === "Custom" && (
-                <button
-                  onClick={() => {
-                    const d = draft as Row,
-                      c = d.customCase as { fractions: Record<string, number> };
-                    const p = calcCompositionProps(c.fractions);
-                    setDraft({
-                      ...d,
-                      customCase: {
-                        ...c,
-                        averageMw: p.averageMw,
-                        lhvMjKg: p.lhvMjKg,
-                      },
-                    } as ConfigValue);
-                  }}
-                >
-                  Recalculate custom molecular weight & LHV
-                </button>
-              )}
-            </>
-          )}
-          <ConfigEditor value={draft} onChange={setDraft} />
-          <div className="action-bar">
-            <button
-              disabled={busy}
-              onClick={() =>
-                void action(async () => {
-                  await save(
-                    id,
-                    { ...data, config: draft },
-                    "configuration",
-                    draftVersion,
-                  );
-                  setDraftVersion(draftVersion + 1);
-                })
-              }
-            >
-              Save configuration
-            </button>
-            <button
-              disabled={busy}
-              onClick={() =>
-                void action(async () => {
-                  await reset(id);
-                  setDraftVersion(1);
-                  setDraft(
-                    structuredClone(
-                      published.find((r) => r.key === id)!
-                        .data as EquipmentData,
-                    ).config as ConfigValue,
-                  );
-                })
-              }
-            >
-              Restore published dataset & configuration
-            </button>
-          </div>
+                      structuredClone(
+                        published.find((r) => r.key === id)!
+                          .data as EquipmentData,
+                      ).config as ConfigValue,
+                    );
+                  })
+                }
+              >
+                Restore published dataset & configuration
+              </button>
+            </div>
+          </details>
         </>
       )}
       {tab === "Engineering manual" && manual}
