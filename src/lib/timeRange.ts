@@ -75,18 +75,20 @@ export function resolveTimeRange(
     const { start, end } = currentShiftWindow(siteNow, settings);
     return { id, start: start.toJSDate(), end: end.toJSDate() };
   }
-  if (id === "24h")
+  if (id !== "custom") {
+    const match = id.match(/^(\d+)([hd])$/)!;
     return {
       id,
-      start: siteNow.minus({ hours: 24 }).toJSDate(),
+      start: siteNow
+        .minus(
+          match[2] === "h"
+            ? { hours: Number(match[1]) }
+            : { days: Number(match[1]) },
+        )
+        .toJSDate(),
       end: siteNow.toJSDate(),
     };
-  if (id === "7d")
-    return {
-      id,
-      start: siteNow.minus({ days: 7 }).toJSDate(),
-      end: siteNow.toJSDate(),
-    };
+  }
   // custom
   if (custom) return { id, start: custom.start, end: custom.end };
   return {
@@ -105,12 +107,15 @@ export function rangeContextLabel(range: TimeRange): string {
   if (range.id === "custom") {
     return `${start.toFormat("LLL d, HH:mm")} – ${end.toFormat("LLL d, HH:mm")}`;
   }
-  return "";
+  return `${TIME_RANGE_LABELS[range.id]} · ${start.toFormat("LLL d, yyyy HH:mm")} to ${end.toFormat("LLL d, yyyy HH:mm")} Edmonton`;
 }
 
 export const TIME_RANGE_LABELS: Record<TimeRangeId, string> = {
   shift: "Shift",
+  "1h": "1H",
   "24h": "24H",
+  "30d": "30D",
+  "90d": "90D",
   "7d": "7D",
   custom: "Custom",
 };

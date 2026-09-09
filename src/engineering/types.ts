@@ -88,7 +88,8 @@ export interface DataQualityState {
   message: string;
 }
 
-export type TimeRangeId = "shift" | "24h" | "7d" | "custom";
+export type TimeRangeId =
+  "shift" | "1h" | "24h" | "7d" | "30d" | "90d" | "custom";
 
 export interface TimeRange {
   id: TimeRangeId;

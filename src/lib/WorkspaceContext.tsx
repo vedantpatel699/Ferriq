@@ -14,9 +14,42 @@ import {
 import {
   readLocal,
   saveLocal,
+  saveLocalBatch,
   resetLocal,
   localHistory,
 } from "./localDatabase";
+let publishedRequest:
+  Promise<{ revision: string; resources: Resource[] }> | undefined;
+function readPublished() {
+  return (publishedRequest ??= Promise.all([
+    fetch(`${import.meta.env.BASE_URL}data/workspace.json`),
+    fetch(`${import.meta.env.BASE_URL}data/furnace-skin-temp-model.json`),
+  ])
+    .then(async ([response, model]) => {
+      if (!response.ok || !model.ok)
+        throw Error("Published workspace could not be loaded.");
+      const base = (await response.json()) as {
+        revision: string;
+        resources: Resource[];
+      };
+      return {
+        ...base,
+        resources: [
+          ...base.resources,
+          {
+            key: "furnace-model",
+            version: 1,
+            data: await model.json(),
+            updatedAt: base.revision,
+          },
+        ],
+      };
+    })
+    .catch((e) => {
+      publishedRequest = undefined;
+      throw e;
+    }));
+}
 const Context = createContext<WorkspaceContextValue | null>(null);
 type WorkspaceContextValue = {
   snapshot: WorkspaceSnapshot;
@@ -27,6 +60,7 @@ type WorkspaceContextValue = {
     action?: string,
     expectedVersion?: number,
   ) => Promise<void>;
+  importResources: (resources: Resource[]) => Promise<void>;
   refresh: () => Promise<void>;
   reset: (key: string) => Promise<void>;
   history: typeof localHistory;
@@ -48,24 +82,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [error, setError] = useState("");
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch(
-        `${import.meta.env.BASE_URL}data/workspace.json`,
-      );
-      if (!response.ok) throw Error("Published database could not be loaded.");
-      const base = (await response.json()) as {
-        revision: string;
-        resources: Resource[];
-      };
-      const model = await fetch(
-        `${import.meta.env.BASE_URL}data/furnace-skin-temp-model.json`,
-      );
-      if (!model.ok) throw Error("Published model could not be loaded.");
-      base.resources.push({
-        key: "furnace-model",
-        version: 1,
-        data: await model.json(),
-        updatedAt: base.revision,
-      });
+      const base = await readPublished();
       const local = await readLocal();
       const resources = base.resources.map(
         (r) => local.resources.find((d) => d.key === r.key) ?? r,
@@ -128,6 +145,21 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           const channel = new BroadcastChannel("ferriq-workspace");
           channel.postMessage("changed");
           channel.close();
+        },
+        importResources: async (resources) => {
+          const entries = resources.map((r) => {
+            const current = snapshot.resources.find((v) => v.key === r.key);
+            if (!current) throw Error("Unknown resource: " + r.key);
+            return {
+              resource: { ...current, data: validateResource(r.key, r.data) },
+              expected: current.version,
+            };
+          });
+          await saveLocalBatch(entries, "backup import");
+          const channel = new BroadcastChannel("ferriq-workspace");
+          channel.postMessage("changed");
+          channel.close();
+          await refresh();
         },
         history: localHistory,
       }}

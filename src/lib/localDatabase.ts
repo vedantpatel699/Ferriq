@@ -45,6 +45,13 @@ export async function saveLocal(
   expected: number,
   action: string,
 ) {
+  return saveLocalBatch([{ resource, expected }], action);
+}
+/** One transaction prevents a backup conflict or quota failure from leaving a partial restore. */
+export async function saveLocalBatch(
+  entries: { resource: Resource; expected: number }[],
+  action: string,
+) {
   const db = await open();
   try {
     await new Promise<void>((resolve, reject) => {
@@ -56,30 +63,39 @@ export async function saveLocal(
       tx.oncomplete = () => resolve();
       tx.onabort = () => reject(new Error(error));
       tx.onerror = () => {};
-      const store = tx.objectStore("resources");
-      const req = store.get(resource.key);
-      req.onsuccess = () => {
-        const prior = req.result as Resource | undefined;
-        if ((prior?.version ?? 1) !== expected) {
-          error =
-            "This resource changed in another tab. Reload its latest version before saving.";
+      const store = tx.objectStore("resources"),
+        seen = new Set<string>();
+      for (const { resource, expected } of entries) {
+        if (seen.has(resource.key)) {
+          error = "Duplicate resource: " + resource.key;
           tx.abort();
           return;
         }
-        const date = new Date().toISOString(),
-          version = expected + 1;
-        const next = { ...resource, version, updatedAt: date };
-        store.put(next);
-        tx.objectStore("history").put({ ...next, id: crypto.randomUUID() });
-        tx.objectStore("events").put({
-          id: crypto.randomUUID(),
-          resourceKey: resource.key,
-          version,
-          action,
-          actor: "This browser",
-          createdAt: date,
-        });
-      };
+        seen.add(resource.key);
+        const req = store.get(resource.key);
+        req.onsuccess = () => {
+          const prior = req.result as Resource | undefined;
+          if ((prior?.version ?? 1) !== expected) {
+            error =
+              "This resource changed in another tab. Reload its latest version before saving.";
+            tx.abort();
+            return;
+          }
+          const date = new Date().toISOString(),
+            version = expected + 1,
+            next = { ...resource, version, updatedAt: date };
+          store.put(next);
+          tx.objectStore("history").put({ ...next, id: crypto.randomUUID() });
+          tx.objectStore("events").put({
+            id: crypto.randomUUID(),
+            resourceKey: resource.key,
+            version,
+            action,
+            actor: "This browser",
+            createdAt: date,
+          });
+        };
+      }
     });
   } finally {
     db.close();

@@ -1,3 +1,4 @@
+import { TIME_RANGE_LABELS } from "../lib/timeRange";
 import { useState } from "react";
 import type { TimeRangeId } from "../engineering/types";
 import { DateTime } from "luxon";
@@ -29,8 +30,11 @@ export function TrendRangeSelector({
         {(
           [
             "shift",
+            "1h",
             "24h",
             "7d",
+            "30d",
+            "90d",
             ...(includeCustom ? ["custom"] : []),
           ] as TimeRangeId[]
         ).map((id) => (
@@ -48,7 +52,7 @@ export function TrendRangeSelector({
               }
             }}
           >
-            {{ shift: "Shift", "24h": "24H", "7d": "7D", custom: "Custom" }[id]}
+            {TIME_RANGE_LABELS[id]}
           </button>
         ))}
       </div>

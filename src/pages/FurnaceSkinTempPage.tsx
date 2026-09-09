@@ -1,3 +1,5 @@
+import { ScenarioWorkbench } from "../components/ScenarioWorkbench";
+import { BuildReport } from "../components/BuildReport";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { DateTime } from "luxon";
@@ -24,7 +26,10 @@ export function FurnaceSkinTempPage() {
   const furnace = bundle.furnaces[key] ?? Object.values(bundle.furnaces)[0];
   const pass = Math.max(
     1,
-    Math.min(furnace.passes, Number(params.get("pass")) || 1),
+    Math.min(
+      furnace.passes,
+      Number(params.get("pass")) || (key === "heater_1" ? 3 : 1),
+    ),
   );
   const [days, setDays] = useState(30),
     [tab, setTab] = useState("Forecast"),
@@ -90,7 +95,7 @@ export function FurnaceSkinTempPage() {
   const drivers = Object.keys(furnace.history[0]).filter((k) =>
     /flow|box|stack|outlet/.test(k),
   );
-  const selectedDriver=drivers.includes(driver)?driver:drivers[0];
+  const selectedDriver = drivers.includes(driver) ? driver : drivers[0];
   return (
     <>
       <EquipmentHeader
@@ -99,6 +104,32 @@ export function FurnaceSkinTempPage() {
         freshness={`Observation ${DateTime.fromMillis(last, { zone: "America/Edmonton" }).toFormat("LLL d, yyyy HH:mm")} Edmonton · Model trained ${bundle.trained_at}`}
         state={toEquipmentState(statusForSkin(r.skinNowC, r.hoursToAlarm))}
       />
+      <div className="action-bar">
+        <BuildReport
+          asset={furnace.label + " · Pass " + pass}
+          source={
+            "Original model " +
+            bundle.version +
+            " · trained " +
+            bundle.trained_at
+          }
+          summary={`Current maximum ${formatNumber(r.skinNowC, 1)} °C; reference ${bundle.alarm_threshold_c} °C. Forecast and POC scenario limitations accompany the chart.`}
+          period={
+            days +
+            " day display · observation cutoff " +
+            new Date(last).toISOString()
+          }
+          quality={[
+            "Baseline uses original quantile/trend engine. Any displayed flow-split scenario is simulated and not a validated intervention.",
+            "Beyond 24 h is extrapolated.",
+          ]}
+          rows={r.tcResults.map((t) => ({
+            thermocouple: t.tcAlias,
+            currentC: t.tcNow,
+            slopeCPerDay: t.slopePerDay,
+          }))}
+        />
+      </div>
       <div className="action-bar">
         <label>
           Furnace
@@ -178,46 +209,71 @@ export function FurnaceSkinTempPage() {
             Forecast reference: {bundle.alarm_threshold_c} °C. These distinct
             inherited criteria are preserved and explicitly labelled.
           </p>
-          <div className="chart-card">
-            <FerriqTrendChart
-              key={key + pass + days}
-              title="Hottest thermocouple in pass: history and forecast"
-              unit="°C"
-              digits={1}
-              nowBoundary={last}
-              series={[
-                {
-                  name: "Measured pass maximum",
-                  kind: "measured",
-                  data: measured,
-                },
-                {
-                  name: "Forecast P50 pass maximum",
-                  kind: "prediction",
-                  data: predicted,
-                },
-              ]}
-              uncertainty={{
-                lower: [
-                  [last, r.skinNowC],
-                  ...projection.map(
-                    (f) => [last + f.day * 86400000, f.p10] as [number, number],
-                  ),
-                ],
-                upper: [
-                  [last, r.skinNowC],
-                  ...projection.map(
-                    (f) => [last + f.day * 86400000, f.p90] as [number, number],
-                  ),
-                ],
-              }}
-              constraints={[
-                { name: "Measured advisory", value: 460 },
-                { name: "Measured alarm criterion", value: 470 },
-                { name: "Forecast reference", value: bundle.alarm_threshold_c },
-              ]}
+          {key === "heater_1" && pass === 3 ? (
+            <ScenarioWorkbench
+              key={key + pass + version}
+              furnace={furnace}
+              result={r}
+              threshold={bundle.alarm_threshold_c}
+              last={last}
+              days={days}
+              measured={measured}
             />
-          </div>
+          ) : (
+            <>
+              <button
+                onClick={() => setParams({ furnace: "heater_1", pass: "3" })}
+              >
+                Open Pass 3 what-if
+              </button>
+              <div className="chart-card">
+                <FerriqTrendChart
+                  key={key + pass + days}
+                  title="Hottest thermocouple in pass: history and forecast"
+                  unit="°C"
+                  digits={1}
+                  nowBoundary={last}
+                  series={[
+                    {
+                      name: "Measured pass maximum",
+                      kind: "measured",
+                      data: measured,
+                    },
+                    {
+                      name: "Forecast P50 pass maximum",
+                      kind: "prediction",
+                      data: predicted,
+                    },
+                  ]}
+                  uncertainty={{
+                    lower: [
+                      [last, r.skinNowC],
+                      ...projection.map(
+                        (f) =>
+                          [last + f.day * 86400000, f.p10] as [number, number],
+                      ),
+                    ],
+                    upper: [
+                      [last, r.skinNowC],
+                      ...projection.map(
+                        (f) =>
+                          [last + f.day * 86400000, f.p90] as [number, number],
+                      ),
+                    ],
+                  }}
+                  constraints={[
+                    { name: "Measured advisory", value: 460 },
+                    { name: "Measured alarm criterion", value: 470 },
+                    {
+                      name: "Forecast reference",
+                      value: bundle.alarm_threshold_c,
+                    },
+                  ]}
+                />
+              </div>
+            </>
+          )}
+
           <p className="source-note">
             P10–P90 is the model interval, not a guaranteed safety envelope. All
             horizon estimates use the full 2,555-day internal projection.
@@ -288,7 +344,9 @@ export function FurnaceSkinTempPage() {
                 kind: "measured",
                 data: history.map((row) => [
                   timestamp(row.t),
-                  typeof row[selectedDriver] === "number" ? Number(row[selectedDriver]) : null,
+                  typeof row[selectedDriver] === "number"
+                    ? Number(row[selectedDriver])
+                    : null,
                 ]),
               },
             ]}
@@ -370,30 +428,37 @@ export function FurnaceSkinTempPage() {
               Export displayed forecast
             </button>
           </div>
-          <label>
-            Import model JSON
-            <input
-              type="file"
-              accept=".json"
-              onChange={async (e) => {
-                try {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  if (f.size > 32 * 1024 * 1024)
-                    throw Error("Maximum model size is 32 MB.");
-                  await save(
-                    "furnace-model",
-                    JSON.parse(await f.text()),
-                    "model import",
-                    version,
-                  );
-                  setNotice("Validated model saved locally.");
-                } catch (e) {
-                  setNotice((e as Error).message);
-                }
-              }}
-            />
-          </label>
+          <details className="advanced-panel">
+            <summary>Replace model (advanced)</summary>
+            <p>
+              Keep the published model for routine review. A replacement changes
+              local forecasts after validation.
+            </p>
+            <label>
+              Import model JSON
+              <input
+                type="file"
+                accept=".json"
+                onChange={async (e) => {
+                  try {
+                    const f = e.target.files?.[0];
+                    if (!f) return;
+                    if (f.size > 32 * 1024 * 1024)
+                      throw Error("Maximum model size is 32 MB.");
+                    await save(
+                      "furnace-model",
+                      JSON.parse(await f.text()),
+                      "model import",
+                      version,
+                    );
+                    setNotice("Validated model saved locally.");
+                  } catch (e) {
+                    setNotice((e as Error).message);
+                  }
+                }}
+              />
+            </label>
+          </details>
           <DataTable rows={history} caption="Observed furnace history" />
         </>
       )}

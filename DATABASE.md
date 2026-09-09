@@ -8,7 +8,7 @@ Ferriq runs entirely on GitHub Pages. No PostgreSQL server, API service, login p
 
 ## Backup and restore
 
-Open **Database & change log → Export workspace backup**. Restore using **Import workspace backup**, review the validated resource list, then **Apply backup locally**. Imports are applied resource by resource; if one conflicts, previously applied resources remain saved and the error is displayed. Each original resource has its own restore-published action. A backup includes model/history and local configuration but not previous local audit history.
+Open **Database & change log → Export workspace backup**. Restore using **Import workspace backup**, review the validated resource list, then **Apply backup locally**. All imported resources are applied in one transaction. A conflict or storage failure cancels the whole restore and displays an error. Each original resource has its own restore-published action. A backup includes model/history and local configuration but not previous local audit history. Inspect retained local resource versions from the resource selector on the database page. Once published files have loaded, local saves keep working during a network interruption; opening or reloading the entire site still requires the published files.
 
 ## Publish a reviewed workspace
 

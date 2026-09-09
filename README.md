@@ -1,8 +1,8 @@
 # Ferriq
 
-Current remediation: see [REMEDIATION.md](REMEDIATION.md), [QUALITY.md](QUALITY.md), and [DATABASE.md](DATABASE.md). Data storage is static GitHub Pages JSON plus browser-local IndexedDB. No external backend is required.
+Current remediation: see [REMEDIATION.md](REMEDIATION.md), [QUALITY.md](QUALITY.md), [DATABASE.md](DATABASE.md), and [DEMO.md](DEMO.md). Data storage is static GitHub Pages JSON plus browser-local IndexedDB. No external backend is required.
 
-Industrial engineering surveillance for process equipment — proactive
+Industrial engineering surveillance for process equipment - proactive
 monitoring (detecting change and degradation) rather than an operator-style
 alarm screen. Built with Vite, React, and TypeScript.
 
@@ -29,7 +29,7 @@ src/
   components/         shared UI: AppShell, Sidebar, MetricCard, StatusBadge,
                        FerriqTrendChart (ECharts), TrendRangeSelector,
                        CalculationBasisDialog, DataQualityNotice, ...
-  lib/                equipmentRegistry, timeRange (Shift/24H/7D/Custom),
+  lib/                equipmentRegistry, timeRange (Shift/1H/24H/7D/30D/90D/Custom),
                        settingsStore (persisted settings)
   pages/              one file per route (React Router)
 ```
@@ -39,8 +39,8 @@ from any design-spec documentation, which had drifted from what actually
 ships) and is covered by golden-value/consistency tests before any UI
 consumes it.
 
-Ferriq's own page-level engineering-state vocabulary — **NORMAL / WATCH /
-INVESTIGATE / DATA ISSUE** — is distinct from the raw physical severity
+Ferriq's own page-level engineering-state vocabulary - **NORMAL / WATCH /
+INVESTIGATE / DATA ISSUE** - is distinct from the raw physical severity
 tiers (advisory/alarm/trip) that come from underlying standards like ISO
 10816 or API 530. The raw tiers appear as reference facts (health-bar
 zone labels, chart threshold lines); they are never the page-level status
@@ -59,6 +59,4 @@ npm run test:e2e        # playwright — navigation, interactions, a11y (axe-cor
 
 ## Fonts
 
-Barlow / Barlow Condensed are self-hosted via `@fontsource` rather than
-fetched from Google Fonts — Ferriq is a plant/industrial tool that may run
-on a restricted or air-gapped network.
+IBM Plex Sans and IBM Plex Mono are bundled locally through `@fontsource`. Initial site loading requires access to the published assets. Calculations and local saves continue if the network is interrupted after loading.

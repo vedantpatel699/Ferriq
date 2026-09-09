@@ -1,3 +1,4 @@
+import { BuildReport } from "../components/BuildReport";
 import { useMemo, useState } from "react";
 import { useResource, useWorkspace } from "../lib/WorkspaceContext";
 import {
@@ -84,10 +85,37 @@ export function CrudeToProfitPage() {
   return (
     <>
       <h1>Crude to Profit</h1>
+      {result && (
+        <div className="action-bar">
+          <BuildReport
+            asset="Crude to Profit"
+            source={
+              "Scenario version " +
+              draftVersion +
+              (draft.market
+                ? " · price snapshot " +
+                  draft.market.date +
+                  " " +
+                  draft.market.source
+                : " · fixed workbook price cases")
+            }
+            summary={`Gross margin low ${formatNumber(result.economics.margin_low_cad_hr, 0)} CAD/h; high ${formatNumber(result.economics.margin_high_cad_hr, 0)} CAD/h. Operating and capital costs are excluded.`}
+            period="Current draft scenario"
+            quality={[
+              "Scenario inputs are assumptions, not live process observations.",
+            ]}
+            rows={PRODUCTS.map((p) => ({
+              product: p.replaceAll("_", " "),
+              flowM3Hr: result.product_slate_m3hr[p],
+            }))}
+          />
+        </div>
+      )}
+
       <p>
-        Original refinery yield and gross margin calculation. Draft inputs
-        recalculate immediately; save to retain this scenario. Prices are CAD/m³
-        and flows are m³/h.
+        Original refinery yield and gross margin calculation. The saved scenario
+        loads automatically. Expand Adjust scenario to explore alternatives,
+        then save to retain changes. Prices are CAD/m³ and flows are m³/h.
       </p>
       <div className="page-tabs" role="group" aria-label="Economics views">
         {[
@@ -107,64 +135,80 @@ export function CrudeToProfitPage() {
       {tab === "Overview" && (
         <>
           <h2>Crude blend</h2>
-          <div className="context-grid">
+          <div className="read-only-inputs">
             {CRUDES.map((c) => (
-              <label className="editor-field" key={c}>
-                {c} (m³/h)
-                <input
-                  type="number"
-                  min="0"
-                  step="any"
-                  required
-                  value={Number.isFinite(draft.flows[c]) ? draft.flows[c] : ""}
+              <span key={c}>
+                <strong>{c}</strong> {formatNumber(draft.flows[c], 1)} m³/h
+              </span>
+            ))}
+          </div>
+          <p>
+            {RESIDUE_UNIT_LABELS[draft.residueUnit]} ·{" "}
+            {GAS_OIL_UNIT_LABELS[draft.gasOilUnit]}
+          </p>
+          <details className="advanced-panel">
+            <summary>Adjust scenario</summary>
+            <div className="context-grid">
+              {CRUDES.map((c) => (
+                <label className="editor-field" key={c}>
+                  {c} (m³/h)
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    required
+                    value={
+                      Number.isFinite(draft.flows[c]) ? draft.flows[c] : ""
+                    }
+                    onChange={(e) =>
+                      setDraft((d) => ({
+                        ...d,
+                        flows: { ...d.flows, [c]: e.target.valueAsNumber },
+                      }))
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+            <div className="action-bar">
+              <label>
+                Residue unit
+                <select
+                  value={draft.residueUnit}
                   onChange={(e) =>
                     setDraft((d) => ({
                       ...d,
-                      flows: { ...d.flows, [c]: e.target.valueAsNumber },
+                      residueUnit: e.target.value as ResidueUnit,
                     }))
                   }
-                />
+                >
+                  {Object.entries(RESIDUE_UNIT_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
               </label>
-            ))}
-          </div>
-          <div className="action-bar">
-            <label>
-              Residue unit
-              <select
-                value={draft.residueUnit}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    residueUnit: e.target.value as ResidueUnit,
-                  }))
-                }
-              >
-                {Object.entries(RESIDUE_UNIT_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Gas-oil unit
-              <select
-                value={draft.gasOilUnit}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    gasOilUnit: e.target.value as GasOilUnit,
-                  }))
-                }
-              >
-                {Object.entries(GAS_OIL_UNIT_LABELS).map(([v, l]) => (
-                  <option key={v} value={v}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+              <label>
+                Gas-oil unit
+                <select
+                  value={draft.gasOilUnit}
+                  onChange={(e) =>
+                    setDraft((d) => ({
+                      ...d,
+                      gasOilUnit: e.target.value as GasOilUnit,
+                    }))
+                  }
+                >
+                  {Object.entries(GAS_OIL_UNIT_LABELS).map(([v, l]) => (
+                    <option key={v} value={v}>
+                      {l}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          </details>
           {result && (
             <>
               <h2>Gross margin</h2>
@@ -196,16 +240,19 @@ export function CrudeToProfitPage() {
               </p>
               <DataTable
                 rows={PRODUCTS.map((p) => ({
-                  product: p,
+                  product: p.replaceAll("_", " "),
                   flowM3Hr: result.product_slate_m3hr[p],
                   workbookFlowM3Hr: result.workbook_slate_m3hr[p],
                 }))}
                 caption="Product slate (including recovered LPG)"
               />
-              <DataTable
-                rows={flatten(result.blend)}
-                caption="Crude blend properties"
-              />
+              <details className="advanced-panel">
+                <summary>Crude blend properties</summary>
+                <DataTable
+                  rows={flatten(result.blend)}
+                  caption="Crude blend properties"
+                />
+              </details>
             </>
           )}
         </>
@@ -217,15 +264,18 @@ export function CrudeToProfitPage() {
             Yield fractions, properties, conversion assumptions, and fixed price
             cases from the HTML workbook.
           </p>
-          <ConfigEditor
-            value={draft.config as unknown as ConfigValue}
-            onChange={(v) =>
-              setDraft((d) => ({
-                ...d,
-                config: v as unknown as Scenario["config"],
-              }))
-            }
-          />
+          <details className="advanced-panel">
+            <summary>Edit model assumptions</summary>
+            <ConfigEditor
+              value={draft.config as unknown as ConfigValue}
+              onChange={(v) =>
+                setDraft((d) => ({
+                  ...d,
+                  config: v as unknown as Scenario["config"],
+                }))
+              }
+            />
+          </details>
         </>
       )}
       {tab === "Price snapshot" && (

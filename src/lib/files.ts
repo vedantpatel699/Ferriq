@@ -1,3 +1,4 @@
+import Papa from "papaparse";
 export function downloadFile(name: string, text: string, type = "text/plain") {
   const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement("a");
@@ -30,37 +31,21 @@ export function csv(rows: Record<string, unknown>[]) {
   ].join("\r\n");
 }
 export function parseCsv(text: string): Record<string, string>[] {
-  const rows: string[][] = [];
-  let row: string[] = [],
-    value = "",
-    quoted = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (c === '"') {
-      if (quoted && text[i + 1] === '"') {
-        value += '"';
-        i++;
-      } else quoted = !quoted;
-    } else if (c === "," && !quoted) {
-      row.push(value);
-      value = "";
-    } else if ((c === "\n" || c === "\r") && !quoted) {
-      if (c === "\r" && text[i + 1] === "\n") i++;
-      row.push(value);
-      if (row.some(Boolean)) rows.push(row);
-      row = [];
-      value = "";
-    } else value += c;
-  }
-  if (quoted) throw new Error("CSV has an unclosed quoted field.");
-  row.push(value);
-  if (row.some(Boolean)) rows.push(row);
-  const headers = rows.shift()?.map((s) => s.replace(/^\uFEFF/, "").trim());
-  if (!headers?.length || new Set(headers).size !== headers.length)
-    throw new Error("CSV needs unique column headers.");
+  const result = Papa.parse<string[]>(text.replace(/^\uFEFF/, ""), {
+    skipEmptyLines: "greedy",
+  });
+  if (result.errors.length) throw Error(result.errors[0].message);
+  const [rawHeaders, ...rows] = result.data;
+  const headers = rawHeaders?.map((h) => h.trim());
+  if (
+    !headers?.length ||
+    headers.some((h) => !h) ||
+    new Set(headers).size !== headers.length
+  )
+    throw Error("CSV needs unique nonempty column headers.");
   return rows.map((r, i) => {
     if (r.length !== headers.length)
-      throw new Error(
+      throw Error(
         `Row ${i + 2} has ${r.length} columns; expected ${headers.length}.`,
       );
     return Object.fromEntries(headers.map((h, j) => [h, r[j]]));

@@ -4,7 +4,8 @@ import { downloadFile } from "../lib/files";
 import { DataTable } from "../components/DataTable";
 import { validateResource, type Resource } from "../shared/workspace";
 export function DatabasePage() {
-  const { snapshot, save } = useWorkspace();
+  const { snapshot, importResources, history } = useWorkspace();
+  const [versions, setVersions] = useState<Record<string, unknown>[]>([]);
   const [pending, setPending] = useState<Resource[]>([]),
     [note, setNote] = useState("");
   return (
@@ -77,13 +78,7 @@ export function DatabasePage() {
           <button
             onClick={async () => {
               try {
-                for (const r of pending)
-                  await save(
-                    r.key,
-                    r.data,
-                    "backup import",
-                    snapshot.resources.find((v) => v.key === r.key)?.version,
-                  );
+                await importResources(pending);
                 setPending([]);
                 setNote("Backup applied locally.");
               } catch (e) {
@@ -97,6 +92,38 @@ export function DatabasePage() {
         </>
       )}
       {note && <p role="status">{note}</p>}
+      <label className="editor-field">
+        Inspect local resource versions
+        <select
+          aria-label="Inspect local resource versions"
+          defaultValue=""
+          onChange={async (e) => {
+            try {
+              setVersions(
+                (await history(e.target.value)).map((v) => ({
+                  resource: v.key,
+                  version: v.version,
+                  savedAt: v.updatedAt,
+                })),
+              );
+            } catch (e) {
+              setNote((e as Error).message);
+            }
+          }}
+        >
+          <option value="" disabled>
+            Choose resource
+          </option>
+          {snapshot.resources.map((r) => (
+            <option key={r.key} value={r.key}>
+              {r.key}
+            </option>
+          ))}
+        </select>
+      </label>
+      {versions.length > 0 && (
+        <DataTable rows={versions} caption="Retained local resource versions" />
+      )}
       <DataTable
         rows={snapshot.resources.map(({ key, version, updatedAt }) => ({
           key,
