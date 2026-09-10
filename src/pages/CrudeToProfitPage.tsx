@@ -4,6 +4,8 @@ import { useResource, useWorkspace } from "../lib/WorkspaceContext";
 import {
   CRUDES,
   PRODUCTS,
+  HOURS_PER_DAY,
+  OPERATING_DAYS_PER_YEAR,
   DEFAULT_CRUDE_TO_PROFIT_CONFIG,
   RESIDUE_UNIT_LABELS,
   GAS_OIL_UNIT_LABELS,
@@ -75,6 +77,29 @@ export function CrudeToProfitPage() {
         : null,
     [draft, valid.data, market],
   );
+  const annualFactor = (HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR) / 1e6;
+  const annualCases = result
+    ? [
+        {
+          label: "Low",
+          margin: result.economics.margin_low_mcad_yr,
+          sales: result.economics.revenue_low_cad_hr * annualFactor,
+        },
+        {
+          label: "High",
+          margin: result.economics.margin_high_mcad_yr,
+          sales: result.economics.revenue_high_cad_hr * annualFactor,
+        },
+        {
+          label: "Live market",
+          margin: result.economics.margin_market_mcad_yr,
+          sales:
+            result.economics.revenue_market_cad_hr == null
+              ? undefined
+              : result.economics.revenue_market_cad_hr * annualFactor,
+        },
+      ]
+    : [];
   async function persist() {
     try {
       await save("economics", draft, "economics scenario", draftVersion);
@@ -99,7 +124,15 @@ export function CrudeToProfitPage() {
                 ? " · price snapshot " + market.date + " " + market.source
                 : " · fixed workbook price cases")
             }
-            summary={`Gross margin low ${formatNumber(result.economics.margin_low_cad_hr, 0)} CAD/h; high ${formatNumber(result.economics.margin_high_cad_hr, 0)} CAD/h. Operating and capital costs are excluded.`}
+            summary={
+              annualCases
+                .map(
+                  (c) =>
+                    `${c.label}: annual gross margin ${formatNumber(c.margin, 2)}; annual sales revenue ${formatNumber(c.sales, 2)} million CAD/year`,
+                )
+                .join(". ") +
+              ". Workbook basis: 24 hours/day × 330 operating days/year. Operating and capital costs are excluded."
+            }
             period="Current draft scenario"
             quality={[
               "Scenario inputs are assumptions, not live process observations.",
@@ -214,17 +247,23 @@ export function CrudeToProfitPage() {
                   zero-credit default.
                 </p>
               )}
-              <h2>Gross margin</h2>
+              <h2>Annual estimate</h2>
+              <p>
+                Workbook basis: {HOURS_PER_DAY} hours/day ×{" "}
+                {OPERATING_DAYS_PER_YEAR} operating days/year (
+                {HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR} hours/year).
+              </p>
               <div className="metrics-grid">
-                {[
-                  ["Low", result.economics.margin_low_cad_hr],
-                  ["High", result.economics.margin_high_cad_hr],
-                  ["Live market", result.economics.margin_market_cad_hr],
-                ].map(([label, value]) => (
-                  <article className="metric-card" key={String(label)}>
+                {annualCases.map(({ label, margin, sales }) => (
+                  <article className="metric-card" key={label}>
                     <h3>{label} case</h3>
+                    <p>Annual gross margin</p>
                     <p className="metric-value">
-                      {formatNumber(value, 0)} <small>CAD/h</small>
+                      {formatNumber(margin, 2)} <small>million CAD/year</small>
+                    </p>
+                    <p>
+                      Annual sales revenue:{" "}
+                      <strong>{formatNumber(sales, 2)}</strong> million CAD/year
                     </p>
                   </article>
                 ))}
@@ -235,9 +274,12 @@ export function CrudeToProfitPage() {
                   : live.status}
               </p>
               <p>
-                This is product revenue less crude feed cost; operating, capital
-                and other costs are not deducted. Low/high labels retain the
-                original paired price scenarios.
+                The Excel annual figure (H54/H55) is gross margin: product sales
+                revenue less crude feed cost, multiplied by 24 × 330 ÷
+                1,000,000. Annual sales revenue above is before crude cost.
+                Operating, capital and other costs are not deducted; these are
+                not net-profit estimates. Low/High retain the client’s paired
+                price scenarios.
               </p>
               <DataTable
                 rows={PRODUCTS.map((p) => ({
@@ -261,9 +303,11 @@ export function CrudeToProfitPage() {
                 <p>
                   LC Finer: the revised sheet adds 11.99 wt% LPG/fuel gas; the
                   mass yields now total 100%. This is combined gas, not a
-                  measured recoverable LPG fraction. The current scenario credits{" "}
+                  measured recoverable LPG fraction. The current scenario
+                  credits{" "}
                   {formatNumber(draft.config.lpg_fuel_gas_recovered * 100, 0)}%
-                  as LPG. The revised default credits none until recovery is established.
+                  as LPG. The revised default credits none until recovery is
+                  established.
                 </p>
                 <p>
                   Delayed coker: at 15 wt% feed CCR, the correlation gives

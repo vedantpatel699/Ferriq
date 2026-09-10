@@ -21,7 +21,15 @@ test("three technologies and three price cases use a read-only source snapshot",
   await expect(
     page.getByText(/Live market uses published estimates/),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Annual estimate", exact: true }),
+  ).toBeVisible();
   const margins = page.locator(".metrics-grid");
+  await expect(margins).toContainText("million CAD/year");
+  await expect(margins).toContainText("Annual sales revenue");
+  await expect(margins.locator(".metric-value").first()).toHaveText(
+    "1,787.39 million CAD/year",
+  );
   const initial = (await margins.textContent())!;
   await page
     .getByLabel("Technology", { exact: true })
@@ -31,7 +39,10 @@ test("three technologies and three price cases use a read-only source snapshot",
   await expect(page.getByText(/FCC converts gas oil/)).toBeVisible();
   await page.getByLabel("Technology", { exact: true }).selectOption("lc_finer");
   await expect(margins).toHaveText(initial);
-  await page.screenshot({path:test.info().outputPath("crude-overview.png"),fullPage:true});
+  await page.screenshot({
+    path: test.info().outputPath("crude-overview.png"),
+    fullPage: true,
+  });
   await page
     .getByRole("button", { name: "Price snapshot", exact: true })
     .click();
@@ -61,10 +72,8 @@ test("unavailable or incomplete market data never replaces fixed cases", async (
   await expect(
     page.getByRole("heading", { name: "High case", exact: true }),
   ).toBeVisible();
-  const market = page
-    .locator(".metric-card")
-    .filter({
-      has: page.getByRole("heading", { name: "Live market case", exact: true }),
-    });
+  const market = page.locator(".metric-card").filter({
+    has: page.getByRole("heading", { name: "Live market case", exact: true }),
+  });
   await expect(market).toContainText("—");
 });
