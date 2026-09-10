@@ -49,14 +49,16 @@ export const SIMDIST_STREAMS = [
   "crvr",
 ] as const;
 
-export type ResidueUnit = "lc_finer" | "delayed_coker";
-export type GasOilUnit = "hydrocracker" | "fcc";
+export type ResidueUnit = "none" | "lc_finer" | "delayed_coker";
+export type GasOilUnit = "none" | "hydrocracker" | "fcc";
 
 export const RESIDUE_UNIT_LABELS: Record<ResidueUnit, string> = {
+  none: "None (residue bypass)",
   lc_finer: "LC Finer",
   delayed_coker: "Delayed coker",
 };
 export const GAS_OIL_UNIT_LABELS: Record<GasOilUnit, string> = {
+  none: "None (gas-oil bypass)",
   hydrocracker: "Hydrocracker / hydrotreater",
   fcc: "Fluid catalytic cracking",
 };

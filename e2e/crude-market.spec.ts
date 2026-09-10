@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("three technologies and three price cases use a read-only source snapshot", async ({
+test("nine routing combinations and three price cases use a read-only source snapshot", async ({
   page,
 }) => {
   await page.goto("/crude-to-profit");
@@ -27,17 +27,40 @@ test("three technologies and three price cases use a read-only source snapshot",
   const margins = page.locator(".metrics-grid");
   await expect(margins).toContainText("million CAD/year");
   await expect(margins).toContainText("Annual sales revenue");
-  await expect(margins.locator(".metric-value").first()).toHaveText(
-    "1,787.39 million CAD/year",
-  );
   const initial = (await margins.textContent())!;
-  await page
-    .getByLabel("Technology", { exact: true })
-    .selectOption("delayed_coker");
+  for (const residue of ["none", "lc_finer", "delayed_coker"]) {
+    await page
+      .getByLabel("Residue conversion", { exact: true })
+      .selectOption(residue);
+    for (const gas of ["none", "hydrocracker", "fcc"]) {
+      await page
+        .getByLabel("Gas-oil conversion", { exact: true })
+        .selectOption(gas);
+      await expect(
+        page.getByLabel("Residue conversion", { exact: true }),
+      ).toHaveValue(residue);
+      await expect(margins.locator(".metric-value").first()).toHaveText(
+        /-?[\d,]+\.\d{2} million CAD\/year/,
+      );
+    }
+  }
   await expect(margins).not.toHaveText(initial);
-  await page.getByLabel("Technology", { exact: true }).selectOption("fcc");
-  await expect(page.getByText(/FCC converts gas oil/)).toBeVisible();
-  await page.getByLabel("Technology", { exact: true }).selectOption("lc_finer");
+  await page
+    .getByText("Feed routing and yield assumptions", { exact: true })
+    .click();
+  await expect(
+    page.getByText("Coker gas-oil pool (cut split unknown)", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Residue conversion", { exact: true })
+    .selectOption("none");
+  await expect(page.getByText(/Unpriced residue:/)).toBeVisible();
+  await page
+    .getByLabel("Residue conversion", { exact: true })
+    .selectOption("lc_finer");
+  await page
+    .getByLabel("Gas-oil conversion", { exact: true })
+    .selectOption("hydrocracker");
   await expect(margins).toHaveText(initial);
   await page.screenshot({
     path: test.info().outputPath("crude-overview.png"),

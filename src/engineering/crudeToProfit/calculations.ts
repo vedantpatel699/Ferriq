@@ -1,7 +1,5 @@
-// Crude to Profit engineering module — ported verbatim from the live
-// crude-to-profit.html engine (blendCrudes → primarySplit → rhcSplit →
-// simdistStreamFeeds → simdistDirectProducts → hchtSplit →
-// finalProductSlate → economics → runModel).
+// Workbook primitives plus the current once-through routing model.
+// runWorkbookModel is retained for historical audit only.
 
 import {
   CRUDES,
@@ -450,7 +448,8 @@ export interface RunModelResult {
   economics: EconomicsResult;
 }
 
-export function runModel(
+/** Historical workbook chain, retained only for audit comparisons. */
+export function runWorkbookModel(
   crudeFlows: Partial<Record<CrudeCode, number>>,
   cfg: CrudeToProfitConfig,
   marketCrude: Partial<Record<CrudeCode, number>> | null,
@@ -483,5 +482,224 @@ export function runModel(
     gas_oil_unit: gasOilByproducts.unit,
     gas_oil_byproducts: gasOilByproducts,
     economics: econ,
+  };
+}
+
+export interface RoutedModelResult extends RunModelResult {
+  routing: {
+    stream: string;
+    destination: string;
+    flow_m3hr: number;
+    mass_kghr: number;
+  }[];
+  unpriced_residue_m3hr: number;
+  routing_basis: string;
+}
+
+/** Once-through screening network. Residue never enters a gas-oil unit.
+ * Source yield tables remain illustrative; no inter-unit recycle is assumed. */
+export function runModel(
+  crudeFlows: Partial<Record<CrudeCode, number>>,
+  cfg: CrudeToProfitConfig,
+  marketCrude: Partial<Record<CrudeCode, number>> | null,
+  marketProduct: Partial<Record<ProductCode, number>> | null,
+  residueUnit: ResidueUnit = cfg.residue_unit,
+  gasOilUnit: GasOilUnit = cfg.gas_oil_unit,
+): RoutedModelResult {
+  if (
+    !(residueUnit in RESIDUE_UNIT_LABELS) ||
+    !(gasOilUnit in GAS_OIL_UNIT_LABELS)
+  )
+    throw Error("Unknown conversion unit");
+  if (Object.values(crudeFlows).some((v) => !Number.isFinite(v) || v < 0))
+    throw Error("Feed flows must be finite and nonnegative");
+  if (
+    !Number.isFinite(cfg.lpg_fuel_gas_recovered) ||
+    cfg.lpg_fuel_gas_recovered < 0 ||
+    cfg.lpg_fuel_gas_recovered > 1
+  )
+    throw Error("LPG recovery must be between 0 and 1");
+  const blend = blendCrudes(crudeFlows),
+    primary = primarySplit(crudeFlows, cfg);
+  const vr = primary.totals_m3hr.vr;
+  let rhc = rhcSplit(residueUnit === "lc_finer" ? vr : 0, cfg, "lc_finer");
+  let residueGasOil = 0,
+    cokerNaphtha = 0,
+    heldResidue = 0;
+  if (residueUnit === "none") {
+    heldResidue = vr;
+    rhc.byproducts = {
+      ...rhc.byproducts,
+      unit: "none",
+      unit_label: RESIDUE_UNIT_LABELS.none,
+      yield_sum_wtpct: 0,
+      yield_wtpct: {},
+    };
+  } else if (residueUnit === "delayed_coker") {
+    const ccr = cfg.coker_feed_ccr_wtpct;
+    const gas = 7.8 + 0.144 * ccr,
+      naphtha = 11.29 + 0.343 * ccr,
+      coke = 1.6 * ccr;
+    const gasOil = 100 - gas - naphtha - coke;
+    if (!Number.isFinite(ccr) || ccr < 0 || gasOil < 0)
+      throw Error("Coker CCR produces invalid yields");
+    const mass = vr * RHC_FEED_DENSITY_KG_M3,
+      factor = mass / RHC_PRODUCT_DENSITY_KG_M3 / 100;
+    residueGasOil = factor * gasOil;
+    cokerNaphtha = factor * naphtha;
+    rhc.rhc_naphtha = cokerNaphtha;
+    rhc.gas_oil_pool = residueGasOil;
+    rhc.byproducts = {
+      ...rhc.byproducts,
+      unit: residueUnit,
+      unit_label: RESIDUE_UNIT_LABELS[residueUnit],
+      feed_m3hr: vr,
+      feed_kghr: mass,
+      coke_kghr: (mass * coke) / 100,
+      coke_wtpct: coke,
+      lpg_fuel_gas_kghr: (mass * gas) / 100,
+      lpg_fuel_gas_wtpct: gas,
+      lpg_recovered_m3hr:
+        (((mass * gas) / 100) * cfg.lpg_fuel_gas_recovered) /
+        LPG_LIQUID_DENSITY_KG_M3,
+      yield_sum_wtpct: 100,
+      yield_wtpct: { naphtha, gas_oil_pool: gasOil, lpg_fuel_gas: gas, coke },
+    };
+  } else {
+    residueGasOil =
+      Number(rhc.rhc_lvgo) + Number(rhc.rhc_mvgo) + Number(rhc.rhc_hvgo);
+    heldResidue = Number(rhc.unconverted_residue);
+  }
+  // Keep the client's primary light-cut distribution; do not subdivide VGO
+  // or coker gas oil using unrelated LC Finer/SimDist cut ratios.
+  const feeds = {
+    srvr: 0,
+    crvr: 0,
+    lvgo: 0,
+    mvgo: 0,
+    hvgo: 0,
+    naphtha:
+      primary.totals_m3hr.naphtha +
+      primary.totals_m3hr.ago +
+      (residueUnit === "lc_finer" ? Number(rhc.rhc_naphtha) : 0),
+    diesel: residueUnit === "lc_finer" ? Number(rhc.diesel) : 0,
+  };
+  const direct = simdistDirectProducts(feeds, cfg);
+  direct.totals_m3hr.naphtha += cokerNaphtha;
+  direct.per_stream.coker_naphtha = { ...zeroSlate(), naphtha: cokerNaphtha };
+  const straightVgo = primary.totals_m3hr.vgo,
+    heavyTail = direct.totals_m3hr.uco;
+  const pool = straightVgo + residueGasOil + heavyTail;
+  const poolMass =
+    straightVgo * FCC_FEED_DENSITY_KG_M3 +
+    (residueGasOil + heavyTail) * RHC_PRODUCT_DENSITY_KG_M3;
+  let hc: HchtSplitResult;
+  if (gasOilUnit === "none") {
+    hc = {
+      ...zeroSlate(),
+      uco: pool,
+      byproducts: {
+        unit: "none",
+        unit_label: GAS_OIL_UNIT_LABELS.none,
+        feed_m3hr: 0,
+        feed_kghr: 0,
+        coke_kghr: 0,
+        dry_gas_kghr: 0,
+        liquid_volume_yield_volpct: 0,
+      },
+    };
+  } else if (gasOilUnit === "fcc") {
+    // Native FCC product pools; do not sell FCC gasoline as jet fuel based
+    // on boiling overlap. Existing prices are explicitly named pool proxies.
+    const vol = (p: "lpg" | "gasoline" | "lco" | "slurry") =>
+      (poolMass * FCC_YIELD_WTPCT[p]) / 100 / FCC_PRODUCT_DENSITY_KG_M3[p];
+    const slate = {
+      ...zeroSlate(),
+      lpg: vol("lpg"),
+      naphtha: vol("gasoline"),
+      uco: vol("lco") + vol("slurry"),
+    };
+    hc = {
+      ...slate,
+      byproducts: {
+        unit: "fcc",
+        unit_label: GAS_OIL_UNIT_LABELS.fcc,
+        feed_m3hr: pool,
+        feed_kghr: poolMass,
+        coke_kghr: poolMass * 0.06,
+        coke_wtpct: 6,
+        dry_gas_kghr: poolMass * 0.04,
+        dry_gas_wtpct: 4,
+        liquid_volume_yield_volpct: pool
+          ? (Object.values(slate).reduce((a, b) => a + b, 0) / pool) * 100
+          : 0,
+      },
+    };
+  } else hc = hchtSplit(pool, cfg, "hydrocracker");
+  const workbookSlate = finalProductSlate(direct.totals_m3hr, hc);
+  const slate = finalProductSlate(direct.totals_m3hr, hc, rhc.byproducts);
+  const destination =
+    gasOilUnit === "none"
+      ? "Held gas oil (UCO price proxy)"
+      : GAS_OIL_UNIT_LABELS[gasOilUnit];
+  return {
+    blend,
+    primary,
+    rhc_products_m3hr: rhc,
+    simdist_stream_feeds_m3hr: feeds,
+    direct_products: direct,
+    hc_reactor_products_m3hr: hc,
+    product_slate_m3hr: slate,
+    workbook_slate_m3hr: workbookSlate,
+    byproducts: rhc.byproducts,
+    residue_unit: residueUnit,
+    gas_oil_unit: gasOilUnit,
+    gas_oil_byproducts: hc.byproducts,
+    economics: economics(crudeFlows, slate, cfg, marketCrude, marketProduct),
+    unpriced_residue_m3hr: heldResidue,
+    routing_basis:
+      "Illustrative once-through feed-specific routing; fixed yield and density assumptions",
+    routing: [
+      {
+        stream: "Primary vacuum residue",
+        destination:
+          residueUnit === "none"
+            ? "Held residue (unpriced)"
+            : RESIDUE_UNIT_LABELS[residueUnit],
+        flow_m3hr: vr,
+        mass_kghr: vr * RHC_FEED_DENSITY_KG_M3,
+      },
+      {
+        stream: "Straight-run VGO",
+        destination,
+        flow_m3hr: straightVgo,
+        mass_kghr: straightVgo * FCC_FEED_DENSITY_KG_M3,
+      },
+      {
+        stream:
+          residueUnit === "delayed_coker"
+            ? "Coker gas-oil pool (cut split unknown)"
+            : "LC Finer gas-oil fractions",
+        destination,
+        flow_m3hr: residueGasOil,
+        mass_kghr: residueGasOil * RHC_PRODUCT_DENSITY_KG_M3,
+      },
+      {
+        stream: "Distillate heavy tail",
+        destination,
+        flow_m3hr: heavyTail,
+        mass_kghr: heavyTail * RHC_PRODUCT_DENSITY_KG_M3,
+      },
+      {
+        stream: "Terminal residue inventory",
+        destination: "Held residue (unpriced)",
+        flow_m3hr: heldResidue,
+        mass_kghr:
+          heldResidue *
+          (residueUnit === "none"
+            ? RHC_FEED_DENSITY_KG_M3
+            : RHC_PRODUCT_DENSITY_KG_M3),
+      },
+    ],
   };
 }

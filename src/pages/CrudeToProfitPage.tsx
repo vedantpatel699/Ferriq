@@ -136,6 +136,9 @@ export function CrudeToProfitPage() {
             period="Current draft scenario"
             quality={[
               "Scenario inputs are assumptions, not live process observations.",
+              `${RESIDUE_UNIT_LABELS[draft.residueUnit]} + ${GAS_OIL_UNIT_LABELS[draft.gasOilUnit]}; once-through illustrative yields.`,
+              `Unpriced residue: ${formatNumber(result.unpriced_residue_m3hr, 2)} m�/h; no sales credit.`,
+              "FCC gasoline uses naphtha pricing; LCO/slurry and bypassed gas oil use UCO pricing. Pretreatment, product-quality discounts and recycle are excluded.",
             ]}
             rows={PRODUCTS.map((p) => ({
               product: p.replaceAll("_", " "),
@@ -173,43 +176,51 @@ export function CrudeToProfitPage() {
             {RESIDUE_UNIT_LABELS[draft.residueUnit]} ·{" "}
             {GAS_OIL_UNIT_LABELS[draft.gasOilUnit]}
           </p>
-          <label className="editor-field">
-            Technology
-            <select
-              aria-label="Technology"
-              value={
-                draft.gasOilUnit === "fcc"
-                  ? draft.residueUnit === "delayed_coker"
-                    ? "combined"
-                    : "fcc"
-                  : draft.residueUnit
-              }
-              onChange={(e) =>
-                setDraft((d) => ({
-                  ...d,
-                  residueUnit:
-                    e.target.value === "delayed_coker"
-                      ? "delayed_coker"
-                      : "lc_finer",
-                  gasOilUnit: e.target.value === "fcc" ? "fcc" : "hydrocracker",
-                }))
-              }
-            >
-              <option value="lc_finer">LC Finer</option>
-              <option value="delayed_coker">Delayed Coker</option>
-              <option value="fcc">FCC (Fluid Catalytic Cracking)</option>
-              {draft.residueUnit === "delayed_coker" &&
-                draft.gasOilUnit === "fcc" && (
-                  <option value="combined">
-                    Saved case: Delayed Coker + FCC
+          <div className="context-grid">
+            <label className="editor-field">
+              Residue conversion
+              <select
+                aria-label="Residue conversion"
+                value={draft.residueUnit}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    residueUnit: e.target.value as ResidueUnit,
+                  }))
+                }
+              >
+                {Object.entries(RESIDUE_UNIT_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
                   </option>
-                )}
-            </select>
-          </label>
+                ))}
+              </select>
+            </label>
+            <label className="editor-field">
+              Gas-oil conversion
+              <select
+                aria-label="Gas-oil conversion"
+                value={draft.gasOilUnit}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    gasOilUnit: e.target.value as GasOilUnit,
+                  }))
+                }
+              >
+                {Object.entries(GAS_OIL_UNIT_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <p>
-            {draft.gasOilUnit === "fcc"
-              ? "FCC converts gas oil; the selected residue unit is retained upstream. FCC yields and fuel-price allocations are illustrative assumptions, not a matched client slate."
-              : "The selected technology converts vacuum residue; the downstream hydrocracker remains in service."}
+            Vacuum residue enters the residue unit. Straight-run VGO and
+            generated gas oil enter the selected gas-oil unit independently.
+            These are illustrative once-through estimates; feed treatment and
+            unit suitability require confirmation.
           </p>
           <details className="advanced-panel">
             <summary>Adjust scenario</summary>
@@ -245,6 +256,14 @@ export function CrudeToProfitPage() {
                   of combined residue gas as saleable LPG. Recovery is
                   unverified. Restore the published scenario to use the revised
                   zero-credit default.
+                </p>
+              )}
+              {result.unpriced_residue_m3hr > 0 && (
+                <p role="status">
+                  Unpriced residue:{" "}
+                  {formatNumber(result.unpriced_residue_m3hr, 2)} m³/h. This
+                  inventory receives no sales credit. Annual estimates exclude
+                  its potential value.
                 </p>
               )}
               <h2>Annual estimate</h2>
@@ -285,12 +304,23 @@ export function CrudeToProfitPage() {
                 rows={PRODUCTS.map((p) => ({
                   product: p.replaceAll("_", " "),
                   flowM3Hr: result.product_slate_m3hr[p],
-                  workbookFlowM3Hr: result.workbook_slate_m3hr[p],
                 }))}
-                caption="Product slate (including recovered LPG)"
+                caption="Valued product pools (including recovered LPG)"
               />
               <details className="advanced-panel">
-                <summary>Yield basis and workbook differences</summary>
+                <summary>Feed routing and yield assumptions</summary>
+                <DataTable
+                  caption="Stream transfers by stage (do not sum across stages)"
+                  rows={result.routing}
+                />
+                <p>
+                  Residue-unit coke:{" "}
+                  {formatNumber(result.byproducts.coke_kghr, 1)} kg/h. FCC coke
+                  burned internally:{" "}
+                  {formatNumber(result.gas_oil_byproducts.coke_kghr, 1)} kg/h.
+                  Neither receives sales credit. Gas without verified LPG
+                  recovery receives no sales credit.
+                </p>
                 <DataTable
                   caption="Selected residue-unit mass yields"
                   rows={Object.entries(result.byproducts.yield_wtpct).map(
@@ -312,8 +342,8 @@ export function CrudeToProfitPage() {
                 <p>
                   Delayed coker: at 15 wt% feed CCR, the correlation gives
                   16.435% naphtha, 9.96% gas, 24% coke and 49.605% gas oils. Gas
-                  oils are apportioned using the LC Finer cut ratios. These
-                  derived cuts fit the client’s ranges at this CCR; they are
+                  oils remain one pool because the light/heavy split is unknown.
+                  LC Finer ratios are not used. These are illustrative
                   assumptions, not measured yields.
                 </p>
                 <p>
@@ -325,17 +355,23 @@ export function CrudeToProfitPage() {
                 </p>
                 <p>
                   FCC processes the gas-oil stream; LC Finer or coker processes
-                  vacuum residue. FCC boiling-range allocations do not establish
-                  finished-fuel quality. Applying kerosene/diesel price proxies
-                  to these cuts can overstate realizable revenue.
+                  vacuum residue. FCC gasoline uses the naphtha price proxy; LCO
+                  and slurry use the UCO price proxy. FCC does not create
+                  finished jet/diesel by boiling-range allocation. Bypassed gas
+                  oil also uses the UCO price proxy. Treatment costs and
+                  product-quality discounts are excluded.
                 </p>
                 <p>
                   Source assay yields are retained without normalization.
                   Hydrocracker liquid volume gain is retained. The model
                   corrects SimDist!AA10, which references Z9 rather than AA9 and
-                  omits direct naphtha in the sheet. The “workbook flow” column
-                  excludes additional recovered residue LPG but includes that
-                  naphtha correction.
+                  omits direct naphtha in the sheet. Routing now includes all LC
+                  Finer gas-oil fractions and explicitly holds unconverted
+                  residue. The annual formula and fixed prices follow the sheet,
+                  but revised routing changes the product quantities.
+                  Hydrocracker yields are fixed screening assumptions; coker gas
+                  oil may need pretreatment. Serial conversion and recycle are
+                  not modeled.
                 </p>
               </details>
               <details className="advanced-panel">
@@ -353,8 +389,8 @@ export function CrudeToProfitPage() {
       {tab === "Engineering manual" && (
         <>
           <p>
-            All four conversion-unit combinations use the original calculation
-            engine. Current selected units:{" "}
+            Nine independent routing combinations use the revised screening
+            model. Current selected units:{" "}
             {RESIDUE_UNIT_LABELS[draft.residueUnit]} and{" "}
             {GAS_OIL_UNIT_LABELS[draft.gasOilUnit]}. Live prices use the
             original Python pricing method, fetched during website publication
