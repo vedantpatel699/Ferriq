@@ -1,5 +1,6 @@
 import importlib.util
 import json
+import io
 import tempfile
 import unittest
 from pathlib import Path
@@ -29,6 +30,21 @@ class RefreshTest(unittest.TestCase):
             with patch.object(refresh, 'OUTPUT', output), patch.object(refresh, 'fetch', side_effect=ValueError()), self.assertRaises(SystemExit):
                 refresh.main()
             self.assertFalse(output.exists())
+
+    def test_cached_monthly_differential_preserves_date_and_uses_daily_wti(self):
+        fixture = json.loads((ROOT / 'public/data/crude-market-prices.json').read_text(encoding='utf-8'))
+        fx = io.BytesIO(json.dumps({'observations':[{'d':'2026-09-10','FXUSDCAD':{'v':'1.38'}}]}).encode())
+        unavailable = {'ok':False,'value':None,'source':'unavailable'}
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / 'prices.json'
+            output.write_text(json.dumps(fixture), encoding='utf-8')
+            with patch.object(refresh,'OUTPUT',output), patch.object(refresh.urllib.request,'urlopen',return_value=fx), patch.object(refresh.E,'fetch_alberta_oil_prices',return_value=unavailable) as monthly, patch.object(refresh.E,'fetch_wti_usd_bbl',return_value={'ok':True,'value':90,'source':'eia','detail':'2026-09-09'}), patch.object(refresh.E,'product_market_values_cad_m3',return_value=(fixture['product'],fixture['provenance']['product'])):
+                result = refresh.fetch()
+                self.assertIs(refresh.E.fetch_alberta_oil_prices, monthly)
+            self.assertEqual(result['provenance']['crude']['wti_date'],'2026-09-09')
+            self.assertEqual(result['provenance']['crude']['differential_date'],fixture['provenance']['crude']['differential_date'])
+            self.assertAlmostEqual(result['provenance']['crude']['wcs_usd_bbl'],90+fixture['provenance']['crude']['wcs_wti_differential'])
+            self.assertEqual(len(result['cachedSources']),1)
 
     def test_success_replaces_failed_refresh_marker(self):
         with tempfile.TemporaryDirectory() as temp:

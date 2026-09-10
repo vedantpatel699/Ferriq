@@ -13,6 +13,7 @@ const schema = z.object({
   refresh: z
     .object({ ok: z.boolean(), attemptedAt: z.iso.datetime({ offset: true }) })
     .optional(),
+  cachedSources: z.array(z.string()).optional(),
   provenance: z.object({
     fx: z.object({ value: price, date: z.string(), source: z.string() }),
     crude: z.object({

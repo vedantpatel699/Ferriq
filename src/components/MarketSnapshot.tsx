@@ -29,6 +29,13 @@ export function MarketSnapshot({
       <p role="status">{status}</p>
       {market && (
         <>
+          {!!market.cachedSources?.length && (
+            <p role="status">
+              Using previously verified monthly observations because a source
+              was unavailable: {market.cachedSources.join(", ")}. Daily price
+              drivers were fetched separately.
+            </p>
+          )}
           <p>
             Snapshot generated{" "}
             {market.generatedAt.slice(0, 19).replace("T", " ")} UTC. All prices

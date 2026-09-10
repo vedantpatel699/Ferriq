@@ -19,15 +19,39 @@ def fetch():
     if not math.isfinite(fx) or fx <= 0:
         raise ValueError('Invalid exchange rate')
     print('Exchange rate loaded; fetching crude estimates.')
-    crude, crude_meta = E.canadian_crude_prices_cad_m3(fx)
-    print('Crude estimates available:', sum(v is not None for v in crude.values()))
-    product, product_meta = E.product_market_values_cad_m3(fx)
-    print('Product estimates available:', sum(v is not None for v in product.values()))
+    # Alberta publishes monthly. If its endpoint fails, retain the verified
+    # monthly observation and date, while still requiring complete EIA prices.
+    prior = json.loads(OUTPUT.read_text(encoding='utf-8')) if OUTPUT.exists() else {}
+    cached_sources = []
+    original_alberta = E.fetch_alberta_oil_prices
+    def monthly_alberta(manual=None):
+        row = original_alberta(manual)
+        if row['ok']:
+            return row
+        old = prior.get('provenance', {}).get('crude', {})
+        spread, date = old.get('wcs_wti_differential'), old.get('differential_date')
+        if isinstance(spread, (int, float)) and math.isfinite(spread) and date:
+            label = 'Alberta WCS differential (' + date + ')'
+            if label not in cached_sources:
+                cached_sources.append(label)
+            return {'ok': True, 'value': {'Differential': (-spread, date)}, 'source': 'alberta_cached'}
+        return row
+    E.fetch_alberta_oil_prices = monthly_alberta
+    try:
+        crude, crude_meta = E.canadian_crude_prices_cad_m3(fx)
+        print('Crude estimates available:', sum(v is not None for v in crude.values()))
+        if not any(v is not None for v in crude.values()):
+            print('WTI available:', crude_meta.get('wti', {}).get('value') is not None,
+                  'Differential source:', crude_meta.get('differential_source', 'unknown'))
+        product, product_meta = E.product_market_values_cad_m3(fx)
+        print('Product estimates available:', sum(v is not None for v in product.values()))
+    finally:
+        E.fetch_alberta_oil_prices = original_alberta
     for keys, prices in [(E.CRUDES, crude), (E.PRODUCTS, product)]:
         if any(not isinstance(prices.get(k), (int, float)) or not math.isfinite(prices[k]) or prices[k] <= 0 for k in keys):
             raise ValueError('Incomplete upstream prices; retaining previous snapshot')
     now = datetime.now(timezone.utc).isoformat()
-    return dict(date=now[:10], generatedAt=now, source='EIA, Government of Alberta and Bank of Canada; model-derived estimates', currency='CAD', unit='CAD/m3', crude=crude, product=product,
+    return dict(cachedSources=cached_sources, date=now[:10], generatedAt=now, source='EIA, Government of Alberta and Bank of Canada; model-derived estimates', currency='CAD', unit='CAD/m3', crude=crude, product=product,
                 provenance=dict(fx=dict(value=fx, date=fx_row['d'], source=fx_url), crude=crude_meta, product=product_meta))
 
 def main():
