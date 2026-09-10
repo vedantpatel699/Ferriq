@@ -1,3 +1,19 @@
+# Active routing revision - 10 September 2026
+
+The current website uses independent residue (None / LC Finer / Delayed Coker) and gas-oil (None / Hydrocracker / FCC) choices. Earlier workbook tie-out figures below refer to `runWorkbookModel` / `run_workbook_model`, retained for audit only. They are not the new routing output.
+
+- Straight-run VGO goes directly to the selected gas-oil unit. Untreated vacuum residue never enters FCC or the gas-oil hydrocracker.
+- All LC Finer gas-oil fractions, including HVGO, enter the gas-oil pool. Unconverted residue remains unpriced inventory with an explicit warning.
+- Coker gas oil stays one pool (49.605 wt% at 15 wt% CCR). No LC Finer ratio is used to invent its light/heavy split. Routing the whole pool is a screening assumption pending feed assay, pretreatment and unit acceptance.
+- FCC native yields remain illustrative: 47% gasoline, 21% LCO, 10% slurry, 12% LPG, 4% dry gas, 6% coke by mass. Gasoline uses the naphtha price proxy; LCO/slurry use the UCO price proxy. Coke is burned internally and receives no sales credit. No FCC jet/diesel is created by boiling overlap.
+- Gas-oil bypass retains that pool and values it once at the UCO proxy. Residue bypass remains unpriced. Neither case silently discards feed.
+- Low/High fixed prices, primary assay values, primary light-cut distribution, and annualization remain from the client sheet. Annual gross margin = (product sales - crude cost) x 24 x 330 / 1e6; annual sales are shown separately. Revised routing intentionally changes volumes and annual totals.
+- No feed-specific hydrocracker calibration, hydrogen mass balance, pretreatment costs, finished-product certification, serial conversion or recycle is claimed. Original assays are not normalized; volume gain is not a refinery mass-balance proof. Streams in the routing table describe different stages and must not be summed across stages.
+
+Routing references: [Honeywell UOP gas-oil conversion](https://uop.honeywell.com/content/uop/en/us/home/industry-solutions/refining/vacuum-gas-oil-conversion.html) and [Axens hydrocracking feed flexibility](https://www.axens.net/expertise/oil-refining/high-conversion-hydrocracking). These support process compatibility, not the numerical yield assumptions. The supplied deep-research report informed this routing revision. The data were obtained from open resources.
+
+## Historical workbook audit
+
 # Crude to Profit - revised workbook audit
 
 Source: `Crude to Profit Rev 1 (1).xlsx`. The original file was read without modification. `reference/crude-workbook-rev1.json` records cell inputs, cached outputs and the source SHA-256.

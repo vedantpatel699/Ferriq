@@ -73,3 +73,27 @@ describe("Published dataset and import contracts", () => {
     expect(r.quality.join(" ")).toContain("fluid-power");
   });
 });
+
+it("accepts bypass routing and rejects impossible saved yields", () => {
+  const e = defaultResources().economics as any;
+  expect(() =>
+    validateResource("economics", {
+      ...e,
+      residueUnit: "none",
+      gasOilUnit: "none",
+    }),
+  ).not.toThrow();
+  expect(() =>
+    validateResource("economics", {
+      ...e,
+      residueUnit: "delayed_coker",
+      config: { ...e.config, coker_feed_ccr_wtpct: 100 },
+    }),
+  ).toThrow("invalid yields");
+  expect(() =>
+    validateResource("economics", {
+      ...e,
+      config: { ...e.config, lpg_fuel_gas_recovered: 2 },
+    }),
+  ).toThrow("LPG recovery");
+});

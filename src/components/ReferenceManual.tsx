@@ -43,13 +43,16 @@ export function ReferenceManual({ id }: { id: string }) {
         </p>
         {id === "crude-to-profit" && (
           <p>
-            Annual figures use Excel’s 24 hours/day × 330 operating days/year. The main annual estimate is gross margin after crude cost; annual sales revenue is shown separately, both in million CAD/year. The revised workbook adds 11.99 wt% LC Finer LPG/fuel gas. The
-            default now credits no additional saleable LPG without a verified
-            recovery fraction. The AA10 naphtha correction remains. Low and High
-            retain workbook prices; Live market uses Claude’s original Python
-            pricing method through daily static publication, with source dates
-            and proxy assumptions in Price snapshot. FCC ranges do not close to
-            100%; its retained illustrative yields are disclosed on Overview.
+            Annual figures use Excel’s 24 hours/day × 330 operating days/year.
+            The main annual estimate is gross margin after crude cost; annual
+            sales revenue is shown separately, both in million CAD/year. The
+            revised workbook adds 11.99 wt% LC Finer LPG/fuel gas. The default
+            now credits no additional saleable LPG without a verified recovery
+            fraction. The AA10 naphtha correction remains. Low and High retain
+            workbook prices; Live market uses Claude’s original Python pricing
+            method through daily static publication, with source dates and proxy
+            assumptions in Price snapshot. FCC ranges do not close to 100%; its
+            retained illustrative yields are disclosed on Overview.
             Configuration and Detailed results are hidden. The data were
             obtained from open resources.
           </p>

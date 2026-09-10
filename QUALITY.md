@@ -1,3 +1,16 @@
+# Routing release checks - 10 September 2026
+
+- 76 unit tests, including nine routing combinations, residue/FCC mass accounting, bypass, annualization and invalid saved scenarios.
+- 162 Python/TypeScript routing and price cases, 48,155 comparisons; four market-refresh tests.
+- Historical HTML comparison: 31,973 comparisons. Crude uses the explicitly retained historical workbook function; the new routing is checked separately.
+- 90 desktop/tablet browser checks passed, including all nine routing selections, annual cards, pricing reload/failure, accessibility, five equipment dashboards and persisted workspace controls.
+- Production build passes. Existing three WorkspaceContext lint warnings and large-bundle notice remain.
+- Current Python copied to the original model folder and supplied as for-sudhakar/routed_engine.py. The old handoff script remains explicitly historical.
+
+Rollback: revert this routing release if the deployed page fails to load, routing inputs do not persist, or Python/page results diverge. Fixed-price and last-good market publication remain available. Prior production commit: 0405698.
+
+## Earlier verification record
+
 # Quality verification
 
 Verified locally on Windows, Node 24 and installed Chrome, 2026-09-09.

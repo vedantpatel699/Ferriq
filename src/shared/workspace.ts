@@ -154,8 +154,8 @@ export function validateResource(key: string, input: unknown): unknown {
           FRB: z.number().nonnegative(),
         }),
         config: z.record(z.string(), z.unknown()),
-        residueUnit: z.enum(["lc_finer", "delayed_coker"]),
-        gasOilUnit: z.enum(["hydrocracker", "fcc"]),
+        residueUnit: z.enum(["none", "lc_finer", "delayed_coker"]),
+        gasOilUnit: z.enum(["none", "hydrocracker", "fcc"]),
         market: z.unknown().nullable(),
       })
       .strict()
@@ -169,6 +169,13 @@ export function validateResource(key: string, input: unknown): unknown {
           checkNumbers(n, path + "." + k);
     };
     checkNumbers(v.config, "Configuration");
+    if (Number(v.config.lpg_fuel_gas_recovered) > 1)
+      throw Error("LPG recovery must be between 0 and 1.");
+    if (
+      v.residueUnit === "delayed_coker" &&
+      80.91 - 2.087 * Number(v.config.coker_feed_ccr_wtpct) < 0
+    )
+      throw Error("Coker CCR produces invalid yields.");
     if (v.market !== null) {
       const market = z
         .object({

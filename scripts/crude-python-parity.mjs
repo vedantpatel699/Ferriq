@@ -5,12 +5,12 @@ import assert from 'node:assert/strict';
 import { stripTypeScriptTypes } from 'node:module';
 import { spawnSync } from 'node:child_process';
 const code = ['data.ts','calculations.ts'].map(file => stripTypeScriptTypes(fs.readFileSync(`src/engineering/crudeToProfit/${file}`, 'utf8'), {mode:'strip'}).replace(/^import[\s\S]*?;\s*/gm,'').replace(/\bexport\s+/g,'')).join('\n');
-const model = vm.runInNewContext(code+';({runModel,DEFAULT_CRUDE_TO_PROFIT_CONFIG,DEFAULT_CRUDE_FLOWS_M3HR,CRUDES,PRODUCTS,cokerYieldWtpct,LC_FINER_YIELD_WTPCT,FCC_YIELD_WTPCT})');
+const model = vm.runInNewContext(code+';({runModel,runWorkbookModel,DEFAULT_CRUDE_TO_PROFIT_CONFIG,DEFAULT_CRUDE_FLOWS_M3HR,CRUDES,PRODUCTS,cokerYieldWtpct,LC_FINER_YIELD_WTPCT,FCC_YIELD_WTPCT})');
 const cfg = model.DEFAULT_CRUDE_TO_PROFIT_CONFIG;
 const snapshot = JSON.parse(fs.readFileSync('public/data/crude-market-prices.json','utf8'));
 const cases=[];
 for(const flows of [model.DEFAULT_CRUDE_FLOWS_M3HR, Object.fromEntries(model.CRUDES.map(c=>[c,0])), {OSH:120,SHD:33,AWB:180,SCO:25,FRB:222}])
- for(const residue of ['lc_finer','delayed_coker']) for(const gas of ['hydrocracker','fcc'])
+ for(const residue of ['none','lc_finer','delayed_coker']) for(const gas of ['none','hydrocracker','fcc'])
   for(const recovery of [0,0.5,1]) for(const market of [null,snapshot])
    cases.push({flows,config:{...cfg,lpg_fuel_gas_recovered:recovery},residue,gas,market});
 const py=spawnSync(process.env.PYTHON || 'python',['-c',`import sys,json
@@ -36,7 +36,7 @@ function equal(a,b,path='result') {
 cases.forEach((c,i)=>equal(model.runModel(c.flows,c.config,c.market?.crude??null,c.market?.product??null,c.residue,c.gas),expected[i],`case ${i}`));
 const wb=JSON.parse(fs.readFileSync('reference/crude-workbook-rev1.json','utf8')).cells;
 const value=(sheet,cell)=>wb[sheet][cell].cached;
-const run=model.runModel(model.DEFAULT_CRUDE_FLOWS_M3HR,cfg,null,null);
+const run=model.runWorkbookModel(model.DEFAULT_CRUDE_FLOWS_M3HR,cfg,null,null);
 model.CRUDES.forEach((c,i)=>{const col=String.fromCharCode(68+i);equal(model.DEFAULT_CRUDE_FLOWS_M3HR[c],value('Sheet1',col+'5'));equal(cfg.crude_price_low_cad_m3[c],value('Sheet1',col+'40'));equal(cfg.crude_price_high_cad_m3[c],value('Sheet1',col+'41'));});
 const dropped=run.simdist_stream_feeds_m3hr.naphtha * value('SimDist','AA9')/100;
 assert.equal(wb.SimDist.AA10.input,'=$C$9*(Z9/100)');
