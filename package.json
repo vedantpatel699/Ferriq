@@ -13,7 +13,8 @@
     "data:build": "tsx scripts/build-workspace.ts",
     "data:import": "tsx scripts/import-workspace.ts",
     "test:parity": "node scripts/engine-parity.mjs",
-    "format": "prettier --write src e2e scripts/*.*ts"
+    "format": "prettier --write src e2e scripts/*.*ts",
+    "test:python": "node scripts/crude-python-parity.mjs && python -m unittest discover -s python/tests"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",

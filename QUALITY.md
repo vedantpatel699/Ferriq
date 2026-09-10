@@ -22,3 +22,9 @@ Known delivery limits: GitHub Pages provides shared published data, not shared r
 Vite reports a large main bundle (approximately 1.29 MB before compression); route splitting is a future performance improvement. Build output and node_modules are not committed. No production deployment is claimed by these local checks.
 
 Additional checks cover current/stale/missing blower simulations, 82/100 disclosed score calculation, fallback provenance, elapsed A/B comparison without interpolation, explicit Run/reset/out-of-range scenario behavior, report capture/print, offline-session saves and whole-backup rollback on version conflict. Serious/critical axe checks also cover an applied scenario and the open report drawer. Actual two-page A4 report output was rendered and visually reviewed. Original engine functions are unchanged by the UI cleanup.
+
+## Revised crude workbook and live pricing (2026-09-09)
+
+61 unit tests pass. The Python parity suite passes 72 scenarios / 19,409 comparisons, plus three snapshot failure/recovery tests. The revised workbook reconciles after the documented AA10 correction. Original engine parity passes 31,973 comparisons with its legacy LPG-recovery setting explicitly supplied. The desktop/tablet regression run passed 88 of 90 tests; after fixing the selector label and a test whitespace comparison, all four focused crude-pricing tests pass. The existing three nonblocking workspace lint warnings and large-bundle advisory remain.
+
+The revised source workbook, yield limitations, price provenance and publication behavior are documented in CRUDE-WORKBOOK-AUDIT.md. A real public API fetch returned complete estimates for all five crudes and seven products. Observation dates are displayed separately from snapshot generation time.

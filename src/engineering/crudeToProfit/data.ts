@@ -227,7 +227,7 @@ export const DEFAULT_CRUDE_TO_PROFIT_CONFIG: CrudeToProfitConfig = {
   },
   residue_unit: "lc_finer",
   coker_feed_ccr_wtpct: 15.0,
-  lpg_fuel_gas_recovered: 1.0,
+  lpg_fuel_gas_recovered: 0.0, // Combined fuel gas is not verified saleable LPG.
   hcht_yield_volpct: {
     c3: 1.55,
     ic4: 2.96,

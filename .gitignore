@@ -28,3 +28,6 @@ playwright/.cache
 *.njsproj
 *.sln
 *.sw?
+
+__pycache__/
+secrets.local.py

@@ -17,6 +17,7 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm run test:parity
+      - run: npm run test:python
       - run: npm run lint
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e -- --workers=2
