@@ -1,0 +1,355 @@
+{
+  "date": "2026-09-10",
+  "generatedAt": "2026-09-10T04:54:11.296388+00:00",
+  "source": "EIA, Government of Alberta and Bank of Canada; model-derived estimates",
+  "currency": "CAD",
+  "unit": "CAD/m3",
+  "crude": {
+    "OSH": 785.7585604434136,
+    "SHD": 782.2674638736328,
+    "AWB": 782.2674638736328,
+    "SCO": 759.5753361700574,
+    "FRB": 782.2674638736328
+  },
+  "product": {
+    "lpg": 239.9829649353014,
+    "naphtha": 810.5366347826086,
+    "swing_naphtha": 1173.2222843404484,
+    "kerosene": 1535.9079338982883,
+    "diesel": 1735.319369707517,
+    "swing_diesel": 1149.1227999862672,
+    "uco": 562.9262302650172
+  },
+  "provenance": {
+    "fx": {
+      "value": 1.3876,
+      "date": "2026-08-26",
+      "source": "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=10"
+    },
+    "crude": {
+      "wcs_usd_bbl": 78.18,
+      "wti_usd_bbl": 91.48,
+      "wti_source": "eia",
+      "wti_date": "2026-09-01",
+      "wcs_wti_differential": -13.3,
+      "differential_source": "alberta",
+      "differential_date": "2026-07-01",
+      "feeds_usd_bbl": {
+        "AWB": 89.63000000000001,
+        "OSA": 87.03,
+        "OSH": 90.03,
+        "SHD": 89.63000000000001,
+        "FRB": 89.63000000000001
+      },
+      "provenance": {
+        "AWB": {
+          "feed": "AWB",
+          "name": "Access Western Blend",
+          "pricing_anchor": "Access Western Blend",
+          "pricing_mode": "benchmark_spread",
+          "differential_to_wcs": 11.45,
+          "mapping_type": "exact",
+          "confidence": "high",
+          "confidence_rank": 0,
+          "calibrated_date": "2026-08-24",
+          "status": "reference-calibrated",
+          "wording": "Estimated from WCS + Access Western Blend differential",
+          "note": "Named-stream match. The feed and the reference grade are the same stream.",
+          "is_estimate": true
+        },
+        "OSA": {
+          "feed": "OSA",
+          "name": "Suncor Synthetic A",
+          "pricing_anchor": "Syncrude Sweet Premium",
+          "pricing_mode": "benchmark_spread",
+          "differential_to_wcs": 8.85,
+          "mapping_type": "proxy",
+          "confidence": "high_proxy",
+          "confidence_rank": 1,
+          "calibrated_date": "2026-08-24",
+          "status": "reference-calibrated",
+          "wording": "Estimated from WCS + Syncrude Sweet Premium proxy differential",
+          "note": "Both light sweet synthetics. OSA about 32.4 API / 0.21 % S against SSP about 33.2 API / 0.19 % S.",
+          "is_estimate": true
+        },
+        "OSH": {
+          "feed": "OSH",
+          "name": "Suncor Synthetic H",
+          "pricing_anchor": "Albian Heavy Synthetic",
+          "pricing_mode": "benchmark_spread",
+          "differential_to_wcs": 11.85,
+          "mapping_type": "proxy",
+          "confidence": "low_medium_proxy",
+          "confidence_rank": 4,
+          "calibrated_date": "2026-08-24",
+          "status": "reference-calibrated",
+          "wording": "Estimated from WCS + Albian Heavy Synthetic proxy differential",
+          "note": "Weakest mapping. Similar API and sulfur, but materially different refining behaviour: OSH is a bottomless upgraded synthetic with about 0.9 % MCR against AHS at about 13.4 %, and TAN about 3.5 against about 0.7.",
+          "is_estimate": true
+        },
+        "SHD": {
+          "feed": "SHD",
+          "name": "Surmont Heavy Dilbit",
+          "pricing_anchor": "Access Western Blend",
+          "pricing_mode": "benchmark_spread",
+          "differential_to_wcs": 11.45,
+          "mapping_type": "proxy",
+          "confidence": "medium_proxy",
+          "confidence_rank": 2,
+          "calibrated_date": "2026-08-24",
+          "status": "reference-calibrated",
+          "wording": "Estimated using Access Western Blend as a comparable heavy-dilbit proxy",
+          "note": "Both heavy sour unconventional dilbits with close assays: API about 21.5 against 22.1, sulfur about 4.1 % against 3.9 %, TAN about 1.7 against 1.6, MCR about 10.5 % against 10.6 %. No extra quality penalty applied.",
+          "is_estimate": true
+        },
+        "FRB": {
+          "feed": "FRB",
+          "name": "Fort Hills Dilbit",
+          "pricing_anchor": "Access Western Blend",
+          "pricing_mode": "benchmark_spread",
+          "differential_to_wcs": 11.45,
+          "mapping_type": "proxy",
+          "confidence": "medium_low_proxy",
+          "confidence_rank": 3,
+          "calibrated_date": "2026-08-24",
+          "status": "reference-calibrated",
+          "wording": "Estimated using Access Western Blend as a comparable heavy-dilbit proxy",
+          "note": "Heavy sour unconventional, so AWB is the best available anchor, but less alike than SHD: API about 20.6, sulfur about 4.0 %, MCR about 9.1 %, TAN about 2.0.",
+          "is_estimate": true
+        }
+      },
+      "is_estimate": true
+    },
+    "product": {
+      "detail": {
+        "lpg": {
+          "price_cad_m3": 239.9829649353014,
+          "pricing_mode": "regional_anchor",
+          "confidence": "medium",
+          "ui_label": "Alberta NGL reference price, moved daily",
+          "basis_cad_m3": 0.0,
+          "note": "The LPG stream is C3 + iC4 + nC4, so it is valued as a volume-weighted blend of Alberta's propane and butanes reference prices rather than as pure propane. Alberta does not price iC4 and nC4 separately, so both sit inside the butanes line. Butane has no EIA daily series, so gasoline supplies its daily movement; that is the weakest link here.",
+          "is_estimate": true,
+          "inputs": null,
+          "benchmark": "EIA Mont Belvieu propane",
+          "freshness": {
+            "status": "recent",
+            "business_days_old": 6,
+            "observation_date": "2026-09-01"
+          },
+          "anchor_status": "anchored",
+          "anchor": {
+            "basis": "Alberta Propane Spec and Butanes Spec, volume weighted",
+            "price_cad_m3": 239.9829649353014,
+            "components": {
+              "propane": {
+                "anchor_cad_m3": 173.0,
+                "driver_label": "EIA Mont Belvieu propane",
+                "driver_month_average": 0.755095238095238,
+                "driver_today": 0.736,
+                "factor_k": 229.1101721637132,
+                "movement": 0.9747114838872423,
+                "price_cad_m3": 168.6250867124929
+              },
+              "butanes": {
+                "anchor_cad_m3": 231.64,
+                "driver_label": "EIA gasoline, butane proxy",
+                "driver_month_average": 3.011904761904762,
+                "driver_today": 3.443,
+                "factor_k": 76.90814229249011,
+                "movement": 1.1431304347826088,
+                "price_cad_m3": 264.79473391304344
+              }
+            },
+            "composition": {
+              "propane_cad_m3": 0.258,
+              "butanes_cad_m3": 0.742
+            }
+          },
+          "client_range": {
+            "low": 650,
+            "high": 780,
+            "position": "below",
+            "gap_cad_m3": -410.0170350646986,
+            "ratio": 0.33564051039902293
+          }
+        },
+        "naphtha": {
+          "price_cad_m3": 810.5366347826086,
+          "pricing_mode": "regional_anchor",
+          "confidence": "medium",
+          "ui_label": "Alberta NGL reference price, moved daily",
+          "basis_cad_m3": 0.0,
+          "note": "Naphtha is a gasoline blendstock, not finished gasoline, and trades below it. Anchored on Alberta's pentanes plus reference price, which is a light-hydrocarbon price for this province in the right currency and unit. Pentanes plus is condensate rather than a refinery naphtha cut, so it remains a proxy, but a far closer one than finished gasoline.",
+          "is_estimate": true,
+          "inputs": null,
+          "benchmark": "EIA Gulf Coast conventional gasoline",
+          "freshness": {
+            "status": "recent",
+            "business_days_old": 6,
+            "observation_date": "2026-09-01"
+          },
+          "anchor_status": "anchored",
+          "anchor": {
+            "basis": "Alberta Pentanes Plus Spec",
+            "price_cad_m3": 810.5366347826086,
+            "anchor_cad_m3": 709.05,
+            "driver_label": "EIA Gulf Coast gasoline",
+            "driver_month_average": 3.011904761904762,
+            "driver_today": 3.443,
+            "factor_k": 235.41581027667982,
+            "movement": 1.1431304347826088
+          },
+          "client_range": {
+            "low": 720,
+            "high": 810,
+            "position": "above",
+            "gap_cad_m3": 0.536634782608644,
+            "ratio": 1.0595250127877238
+          }
+        },
+        "kerosene": {
+          "price_cad_m3": 1535.9079338982883,
+          "pricing_mode": "direct_market_benchmark",
+          "confidence": "high",
+          "ui_label": "EIA jet-fuel benchmark",
+          "basis_cad_m3": 0.0,
+          "note": "A real middle-distillate benchmark for this cut. Gulf Coast rather than Western Canada, so basis risk remains.",
+          "is_estimate": true,
+          "inputs": null,
+          "benchmark": "EIA Gulf Coast kerosene-type jet fuel",
+          "freshness": {
+            "status": "recent",
+            "business_days_old": 6,
+            "observation_date": "2026-09-01"
+          },
+          "client_range": {
+            "low": 1150,
+            "high": 1300,
+            "position": "above",
+            "gap_cad_m3": 235.90793389828832,
+            "ratio": 1.253802395019011
+          }
+        },
+        "diesel": {
+          "price_cad_m3": 1735.319369707517,
+          "pricing_mode": "direct_market_benchmark",
+          "confidence": "high",
+          "ui_label": "EIA ULSD benchmark",
+          "basis_cad_m3": 0.0,
+          "note": "Bulk refined diesel market value, not a pump price. Switch to ulsd_nyh_usd_gal by editing `benchmark` if preferred.",
+          "is_estimate": true,
+          "inputs": null,
+          "benchmark": "EIA Gulf Coast ULSD",
+          "freshness": {
+            "status": "recent",
+            "business_days_old": 6,
+            "observation_date": "2026-09-01"
+          },
+          "client_range": {
+            "low": 1100,
+            "high": 1280,
+            "position": "above",
+            "gap_cad_m3": 455.3193697075169,
+            "ratio": 1.4582515711827873
+          }
+        },
+        "uco": {
+          "price_cad_m3": 562.9262302650172,
+          "pricing_mode": "opportunity_value_proxy",
+          "confidence": "medium_low",
+          "ui_label": "Heavy-product opportunity-value proxy",
+          "basis_cad_m3": 0.0,
+          "note": "EIA discontinued residual fuel oil price reporting in March 2022, so there is no live heavy-product series to anchor on. Unconverted oil above 385 C is heavy material, so it is valued as a fraction of the live heavy crude benchmark already in the model. The factor is calibrated to the workbook's reference price and is the number to revisit first if a VGO or resid assessment becomes available.",
+          "is_estimate": true,
+          "inputs": [
+            "wcs_usd_bbl"
+          ],
+          "benchmark": "WCS heavy crude",
+          "freshness": {
+            "status": "stale",
+            "business_days_old": 50,
+            "observation_date": "2026-07-01"
+          },
+          "client_range": {
+            "low": 520,
+            "high": 650,
+            "position": "inside",
+            "gap_cad_m3": 0.0,
+            "ratio": 0.9622670602820808
+          }
+        },
+        "swing_diesel": {
+          "price_cad_m3": 1149.1227999862672,
+          "pricing_mode": "opportunity_value",
+          "confidence": "model_derived",
+          "ui_label": "Model-derived opportunity value",
+          "basis_cad_m3": 0.0,
+          "note": "The 340 to 385 C cut is worth whatever pool it is sent to. Valued between the diesel pool and unconverted oil.",
+          "is_estimate": true,
+          "inputs": [
+            "diesel",
+            "uco"
+          ],
+          "benchmark": null,
+          "freshness": {
+            "status": "stale",
+            "business_days_old": 50,
+            "observation_date": "derived from diesel and uco"
+          },
+          "allocation": {
+            "to_diesel_fraction": 0.5
+          },
+          "client_range": {
+            "low": 1000,
+            "high": 1150,
+            "position": "inside",
+            "gap_cad_m3": 0.0,
+            "ratio": 1.0689514418476904
+          }
+        },
+        "swing_naphtha": {
+          "price_cad_m3": 1173.2222843404484,
+          "pricing_mode": "opportunity_value",
+          "confidence": "model_derived",
+          "ui_label": "Model-derived opportunity value",
+          "basis_cad_m3": 0.0,
+          "note": "The 128 to 145 C cut is worth whatever pool it is sent to. Valued as a blend of the naphtha and kerosene pools.",
+          "is_estimate": true,
+          "inputs": [
+            "naphtha",
+            "kerosene"
+          ],
+          "benchmark": null,
+          "freshness": {
+            "status": "recent",
+            "business_days_old": 6,
+            "observation_date": "derived from naphtha and kerosene"
+          },
+          "allocation": {
+            "to_kerosene_fraction": 0.5
+          },
+          "client_range": {
+            "low": 760,
+            "high": 850,
+            "position": "above",
+            "gap_cad_m3": 323.22228434044837,
+            "ratio": 1.457418986758321
+          }
+        }
+      },
+      "wcs_usd_bbl": 78.18,
+      "wcs_source": "eia+alberta",
+      "alberta_ngl": {
+        "ok": true,
+        "source": "alberta",
+        "anchor_month": "2026-06",
+        "values": {
+          "propane_cad_m3": 173.0,
+          "butanes_cad_m3": 231.64,
+          "pentanes_plus_cad_m3": 709.05
+        }
+      }
+    }
+  }
+}

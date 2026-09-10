@@ -1,0 +1,538 @@
+{
+  "source": "Crude to Profit Rev 1 (1).xlsx",
+  "sha256": "2b5b1bcf84c5509962fbb18a2f2f8f3c785d05c2d046bd5efcee21bf426905ea",
+  "cells": {
+    "Sheet1": {
+      "D5": {
+        "input": 100,
+        "cached": 100
+      },
+      "E5": {
+        "input": 87,
+        "cached": 87
+      },
+      "F5": {
+        "input": 150,
+        "cached": 150
+      },
+      "G5": {
+        "input": 15,
+        "cached": 15
+      },
+      "H5": {
+        "input": 249.66666666666666,
+        "cached": 249.66666666666666
+      },
+      "D9": {
+        "input": 935.7,
+        "cached": 935.7
+      },
+      "E9": {
+        "input": 919.1,
+        "cached": 919.1
+      },
+      "F9": {
+        "input": 925.6,
+        "cached": 925.6
+      },
+      "G9": {
+        "input": 867.3,
+        "cached": 867.3
+      },
+      "H9": {
+        "input": 922.4,
+        "cached": 922.4
+      },
+      "D10": {
+        "input": 2.88,
+        "cached": 2.88
+      },
+      "E10": {
+        "input": 3.87,
+        "cached": 3.87
+      },
+      "F10": {
+        "input": 4.09,
+        "cached": 4.09
+      },
+      "G10": {
+        "input": 0.13,
+        "cached": 0.13
+      },
+      "H10": {
+        "input": 3.75,
+        "cached": 3.75
+      },
+      "D11": {
+        "input": 9.8,
+        "cached": 9.8
+      },
+      "E11": {
+        "input": 25.8,
+        "cached": 25.8
+      },
+      "F11": {
+        "input": 24,
+        "cached": 24
+      },
+      "G11": {
+        "input": 16.2,
+        "cached": 16.2
+      },
+      "H11": {
+        "input": 22,
+        "cached": 22
+      },
+      "D12": {
+        "input": 18.7,
+        "cached": 18.7
+      },
+      "E12": {
+        "input": 12,
+        "cached": 12
+      },
+      "F12": {
+        "input": 10.1,
+        "cached": 10.1
+      },
+      "G12": {
+        "input": 35.11,
+        "cached": 35.11
+      },
+      "H12": {
+        "input": 12.2,
+        "cached": 12.2
+      },
+      "D13": {
+        "input": 63.4,
+        "cached": 63.4
+      },
+      "E13": {
+        "input": 22.4,
+        "cached": 22.4
+      },
+      "F13": {
+        "input": 22.9,
+        "cached": 22.9
+      },
+      "G13": {
+        "input": 40.54,
+        "cached": 40.54
+      },
+      "H13": {
+        "input": 25.1,
+        "cached": 25.1
+      },
+      "D14": {
+        "input": 8.3,
+        "cached": 8.3
+      },
+      "E14": {
+        "input": 39.1,
+        "cached": 39.1
+      },
+      "F14": {
+        "input": 42,
+        "cached": 42
+      },
+      "G14": {
+        "input": 5.29,
+        "cached": 5.29
+      },
+      "H14": {
+        "input": 40.4,
+        "cached": 40.4
+      },
+      "D15": {
+        "input": 11,
+        "cached": 11
+      },
+      "E15": {
+        "input": 4,
+        "cached": 4
+      },
+      "F15": {
+        "input": 3.6,
+        "cached": 3.6
+      },
+      "G15": {
+        "input": 10.18,
+        "cached": 10.18
+      },
+      "H15": {
+        "input": 4.1,
+        "cached": 4.1
+      },
+      "D16": {
+        "input": 30.9,
+        "cached": 30.9
+      },
+      "E16": {
+        "input": 9.5,
+        "cached": 9.5
+      },
+      "F16": {
+        "input": 9.5,
+        "cached": 9.5
+      },
+      "G16": {
+        "input": 18.31,
+        "cached": 18.31
+      },
+      "H16": {
+        "input": 10.6,
+        "cached": 10.6
+      },
+      "D17": {
+        "input": 21.5,
+        "cached": 21.5
+      },
+      "E17": {
+        "input": 8.9,
+        "cached": 8.9
+      },
+      "F17": {
+        "input": 9.8,
+        "cached": 9.8
+      },
+      "G17": {
+        "input": 12.05,
+        "cached": 12.05
+      },
+      "H17": {
+        "input": 10.4,
+        "cached": 10.4
+      },
+      "O9": {
+        "input": "LC Finer",
+        "cached": "LC Finer"
+      },
+      "P9": {
+        "input": "Delayed coker",
+        "cached": "Delayed coker"
+      },
+      "Q9": {
+        "input": "FCC",
+        "cached": "FCC"
+      },
+      "O10": {
+        "input": "Wt % of liquid feed",
+        "cached": "Wt % of liquid feed"
+      },
+      "P10": {
+        "input": "Wt %",
+        "cached": "Wt %"
+      },
+      "Q10": {
+        "input": "Wt %",
+        "cached": "Wt %"
+      },
+      "N12": {
+        "input": " LCF Naphtha",
+        "cached": " LCF Naphtha"
+      },
+      "O12": {
+        "input": 14.13,
+        "cached": 14.13
+      },
+      "P12": {
+        "input": "10 to 18",
+        "cached": "10 to 18"
+      },
+      "Q12": {
+        "input": "15 to 25",
+        "cached": "15 to 25"
+      },
+      "N13": {
+        "input": "Diesel",
+        "cached": "Diesel"
+      },
+      "O13": {
+        "input": 23.95,
+        "cached": 23.95
+      },
+      "P13": {
+        "input": "20 to 30",
+        "cached": "20 to 30"
+      },
+      "Q13": {
+        "input": "5 to 15",
+        "cached": "5 to 15"
+      },
+      "N14": {
+        "input": "LCF LVGO",
+        "cached": "LCF LVGO"
+      },
+      "O14": {
+        "input": 12.32,
+        "cached": 12.32
+      },
+      "P14": {
+        "input": "10 to 20",
+        "cached": "10 to 20"
+      },
+      "N15": {
+        "input": "LCF MVGO",
+        "cached": "LCF MVGO"
+      },
+      "O15": {
+        "input": 9.78,
+        "cached": 9.78
+      },
+      "P15": {
+        "input": "5 to 15",
+        "cached": "5 to 15"
+      },
+      "N16": {
+        "input": "LCF HVGO",
+        "cached": "LCF HVGO"
+      },
+      "O16": {
+        "input": 2.44,
+        "cached": 2.44
+      },
+      "P16": {
+        "input": "2 to 8",
+        "cached": "2 to 8"
+      },
+      "N17": {
+        "input": "Residue/CRVR\nor Coke",
+        "cached": "Residue/CRVR\nor Coke"
+      },
+      "O17": {
+        "input": 25.39,
+        "cached": 25.39
+      },
+      "P17": {
+        "input": "0 to 5% \n+ coke  15 to 25",
+        "cached": "0 to 5% \n+ coke  15 to 25"
+      },
+      "Q17": {
+        "input": "5 to 15\n+ 3 to 8 % coke",
+        "cached": "5 to 15\n+ 3 to 8 % coke"
+      },
+      "N18": {
+        "input": "LPG or Fuel gas",
+        "cached": "LPG or Fuel gas"
+      },
+      "O18": {
+        "input": 11.99,
+        "cached": 11.99
+      },
+      "P18": {
+        "input": "7 to 15",
+        "cached": "7 to 15"
+      },
+      "Q18": {
+        "input": "LPG 15 to 25 \n(+ ~5% Light gas)",
+        "cached": "LPG 15 to 25 \n(+ ~5% Light gas)"
+      },
+      "D40": {
+        "input": 580,
+        "cached": 580
+      },
+      "E40": {
+        "input": 500,
+        "cached": 500
+      },
+      "F40": {
+        "input": 500,
+        "cached": 500
+      },
+      "G40": {
+        "input": 610,
+        "cached": 610
+      },
+      "H40": {
+        "input": 500,
+        "cached": 500
+      },
+      "D41": {
+        "input": 640,
+        "cached": 640
+      },
+      "E41": {
+        "input": 570,
+        "cached": 570
+      },
+      "F41": {
+        "input": 580,
+        "cached": 580
+      },
+      "G41": {
+        "input": 680,
+        "cached": 680
+      },
+      "H41": {
+        "input": 570,
+        "cached": 570
+      },
+      "D44": {
+        "input": "=Q20",
+        "cached": 11.20473112557986
+      },
+      "E44": {
+        "input": "=Q23",
+        "cached": 35.36960125308043
+      },
+      "F44": {
+        "input": "=Q24",
+        "cached": 46.01857863053589
+      },
+      "G44": {
+        "input": "=Q25",
+        "cached": 108.90568975459232
+      },
+      "H44": {
+        "input": "=Q26",
+        "cached": 193.1214988080245
+      },
+      "I44": {
+        "input": "=Q27",
+        "cached": 59.618018226848605
+      },
+      "J44": {
+        "input": "=Q28",
+        "cached": 14.155310321982558
+      },
+      "D45": {
+        "input": 650,
+        "cached": 650
+      },
+      "E45": {
+        "input": 720,
+        "cached": 720
+      },
+      "F45": {
+        "input": 760,
+        "cached": 760
+      },
+      "G45": {
+        "input": 1150,
+        "cached": 1150
+      },
+      "H45": {
+        "input": 1100,
+        "cached": 1100
+      },
+      "I45": {
+        "input": 1000,
+        "cached": 1000
+      },
+      "J45": {
+        "input": 520,
+        "cached": 520
+      },
+      "D46": {
+        "input": 780,
+        "cached": 780
+      },
+      "E46": {
+        "input": 810,
+        "cached": 810
+      },
+      "F46": {
+        "input": 850,
+        "cached": 850
+      },
+      "G46": {
+        "input": 1300,
+        "cached": 1300
+      },
+      "H46": {
+        "input": 1280,
+        "cached": 1280
+      },
+      "I46": {
+        "input": 1150,
+        "cached": 1150
+      },
+      "J46": {
+        "input": 650,
+        "cached": 650
+      },
+      "H48": {
+        "input": "=D44*D45+E44*E45+F44*F45+G44*G45+H44*H45+I44*I45+J44*J45",
+        "cached": 472377.27939393977
+      },
+      "H49": {
+        "input": "=D44*D46+E44*E46+F44*F46+G44*G46+H44*H46+I44*I46+J44*J46",
+        "cached": 543039.4469543089
+      },
+      "H51": {
+        "input": "=H48-I40",
+        "cached": 161893.94606060645
+      },
+      "H52": {
+        "input": "=H49-I41",
+        "cached": 189939.4469543089
+      },
+      "H54": {
+        "input": "=H51*24*330/1000000",
+        "cached": 1282.200052800003
+      },
+      "H55": {
+        "input": "=H52*24*330/1000000",
+        "cached": 1504.3204198781264
+      }
+    },
+    "SimDist": {
+      "Z9": {
+        "input": 0,
+        "cached": 0
+      },
+      "AA9": {
+        "input": 37,
+        "cached": 37
+      },
+      "AB9": {
+        "input": 15,
+        "cached": 15
+      },
+      "AC9": {
+        "input": 0,
+        "cached": 0
+      },
+      "AD9": {
+        "input": 48,
+        "cached": 48
+      },
+      "AE9": {
+        "input": 0,
+        "cached": 0
+      },
+      "AF9": {
+        "input": "=100-SUM(Z9:AE9)",
+        "cached": 0
+      },
+      "Z10": {
+        "input": 0,
+        "cached": 0
+      },
+      "AA10": {
+        "input": "=$C$9*(Z9/100)",
+        "cached": 0
+      },
+      "AB10": {
+        "input": "=$C$9*(AB9/100)",
+        "cached": 35.91564606563805
+      },
+      "AC10": {
+        "input": "=$C$9*(AC9/100)",
+        "cached": 0
+      },
+      "AD10": {
+        "input": "=$C$9*(AD9/100)",
+        "cached": 114.93006741004177
+      },
+      "AE10": {
+        "input": "=$C$9*(AE9/100)",
+        "cached": 0
+      },
+      "AF10": {
+        "input": "=$C$9*(AF9/100)",
+        "cached": 0
+      }
+    }
+  }
+}

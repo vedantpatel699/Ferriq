@@ -13,7 +13,8 @@ import {
   type GasOilUnit,
 } from "../engineering/crudeToProfit/data";
 import { runModel } from "../engineering/crudeToProfit/calculations";
-import { ConfigEditor, type ConfigValue } from "../components/ConfigEditor";
+import { MarketSnapshot } from "../components/MarketSnapshot";
+import { useLiveMarket } from "../lib/liveMarket";
 import { DataTable } from "../components/DataTable";
 import { ReferenceManual } from "../components/ReferenceManual";
 import { formatNumber } from "../lib/format";
@@ -47,8 +48,9 @@ export function CrudeToProfitPage() {
   const [draft, setDraft] = useState<Scenario>(structuredClone(data)),
     [draftVersion, setDraftVersion] = useState(version),
     [tab, setTab] = useState("Overview"),
-    [note, setNote] = useState(""),
-    [pending, setPending] = useState<Market | null>(null);
+    [note, setNote] = useState("");
+  const live = useLiveMarket();
+  const market = live.market;
   const valid = useMemo(() => {
     try {
       return {
@@ -65,13 +67,13 @@ export function CrudeToProfitPage() {
         ? runModel(
             draft.flows,
             draft.config,
-            draft.market?.crude ?? null,
-            draft.market?.product ?? null,
+            market?.crude ?? null,
+            market?.product ?? null,
             draft.residueUnit,
             draft.gasOilUnit,
           )
         : null,
-    [draft, valid.data],
+    [draft, valid.data, market],
   );
   async function persist() {
     try {
@@ -85,6 +87,7 @@ export function CrudeToProfitPage() {
   return (
     <>
       <h1>Crude to Profit</h1>
+      <p>The data were obtained from open resources.</p>
       {result && (
         <div className="action-bar">
           <BuildReport
@@ -92,11 +95,8 @@ export function CrudeToProfitPage() {
             source={
               "Scenario version " +
               draftVersion +
-              (draft.market
-                ? " · price snapshot " +
-                  draft.market.date +
-                  " " +
-                  draft.market.source
+              (market
+                ? " · price snapshot " + market.date + " " + market.source
                 : " · fixed workbook price cases")
             }
             summary={`Gross margin low ${formatNumber(result.economics.margin_low_cad_hr, 0)} CAD/h; high ${formatNumber(result.economics.margin_high_cad_hr, 0)} CAD/h. Operating and capital costs are excluded.`}
@@ -118,13 +118,7 @@ export function CrudeToProfitPage() {
         then save to retain changes. Prices are CAD/m³ and flows are m³/h.
       </p>
       <div className="page-tabs" role="group" aria-label="Economics views">
-        {[
-          "Overview",
-          "Configuration",
-          "Price snapshot",
-          "Detailed results",
-          "Engineering manual",
-        ].map((t) => (
+        {["Overview", "Price snapshot", "Engineering manual"].map((t) => (
           <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>
             {t}
           </button>
@@ -145,6 +139,44 @@ export function CrudeToProfitPage() {
           <p>
             {RESIDUE_UNIT_LABELS[draft.residueUnit]} ·{" "}
             {GAS_OIL_UNIT_LABELS[draft.gasOilUnit]}
+          </p>
+          <label className="editor-field">
+            Technology
+            <select
+              aria-label="Technology"
+              value={
+                draft.gasOilUnit === "fcc"
+                  ? draft.residueUnit === "delayed_coker"
+                    ? "combined"
+                    : "fcc"
+                  : draft.residueUnit
+              }
+              onChange={(e) =>
+                setDraft((d) => ({
+                  ...d,
+                  residueUnit:
+                    e.target.value === "delayed_coker"
+                      ? "delayed_coker"
+                      : "lc_finer",
+                  gasOilUnit: e.target.value === "fcc" ? "fcc" : "hydrocracker",
+                }))
+              }
+            >
+              <option value="lc_finer">LC Finer</option>
+              <option value="delayed_coker">Delayed Coker</option>
+              <option value="fcc">FCC (Fluid Catalytic Cracking)</option>
+              {draft.residueUnit === "delayed_coker" &&
+                draft.gasOilUnit === "fcc" && (
+                  <option value="combined">
+                    Saved case: Delayed Coker + FCC
+                  </option>
+                )}
+            </select>
+          </label>
+          <p>
+            {draft.gasOilUnit === "fcc"
+              ? "FCC converts gas oil; the selected residue unit is retained upstream. FCC yields and fuel-price allocations are illustrative assumptions, not a matched client slate."
+              : "The selected technology converts vacuum residue; the downstream hydrocracker remains in service."}
           </p>
           <details className="advanced-panel">
             <summary>Adjust scenario</summary>
@@ -170,60 +202,24 @@ export function CrudeToProfitPage() {
                 </label>
               ))}
             </div>
-            <div className="action-bar">
-              <label>
-                Residue unit
-                <select
-                  value={draft.residueUnit}
-                  onChange={(e) =>
-                    setDraft((d) => ({
-                      ...d,
-                      residueUnit: e.target.value as ResidueUnit,
-                    }))
-                  }
-                >
-                  {Object.entries(RESIDUE_UNIT_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Gas-oil unit
-                <select
-                  value={draft.gasOilUnit}
-                  onChange={(e) =>
-                    setDraft((d) => ({
-                      ...d,
-                      gasOilUnit: e.target.value as GasOilUnit,
-                    }))
-                  }
-                >
-                  {Object.entries(GAS_OIL_UNIT_LABELS).map(([v, l]) => (
-                    <option key={v} value={v}>
-                      {l}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
           </details>
           {result && (
             <>
+              {draft.config.lpg_fuel_gas_recovered > 0 && (
+                <p role="status">
+                  This saved scenario credits{" "}
+                  {formatNumber(draft.config.lpg_fuel_gas_recovered * 100, 0)}%
+                  of combined residue gas as saleable LPG. Recovery is
+                  unverified. Restore the published scenario to use the revised
+                  zero-credit default.
+                </p>
+              )}
               <h2>Gross margin</h2>
               <div className="metrics-grid">
                 {[
                   ["Low", result.economics.margin_low_cad_hr],
                   ["High", result.economics.margin_high_cad_hr],
-                  ...(result.economics.has_market_case
-                    ? [
-                        [
-                          "Imported snapshot",
-                          result.economics.margin_market_cad_hr,
-                        ],
-                      ]
-                    : []),
+                  ["Live market", result.economics.margin_market_cad_hr],
                 ].map(([label, value]) => (
                   <article className="metric-card" key={String(label)}>
                     <h3>{label} case</h3>
@@ -233,6 +229,11 @@ export function CrudeToProfitPage() {
                   </article>
                 ))}
               </div>
+              <p>
+                {market
+                  ? `Live market uses published estimates from ${market.date}; see Price snapshot for older source dates and proxy assumptions.`
+                  : live.status}
+              </p>
               <p>
                 This is product revenue less crude feed cost; operating, capital
                 and other costs are not deducted. Low/high labels retain the
@@ -247,6 +248,53 @@ export function CrudeToProfitPage() {
                 caption="Product slate (including recovered LPG)"
               />
               <details className="advanced-panel">
+                <summary>Yield basis and workbook differences</summary>
+                <DataTable
+                  caption="Selected residue-unit mass yields"
+                  rows={Object.entries(result.byproducts.yield_wtpct).map(
+                    ([cut, yieldPct]) => ({
+                      cut: cut.replaceAll("_", " "),
+                      wtPct: yieldPct,
+                    }),
+                  )}
+                />
+                <p>
+                  LC Finer: the revised sheet adds 11.99 wt% LPG/fuel gas; the
+                  mass yields now total 100%. This is combined gas, not a
+                  measured recoverable LPG fraction. The current scenario credits{" "}
+                  {formatNumber(draft.config.lpg_fuel_gas_recovered * 100, 0)}%
+                  as LPG. The revised default credits none until recovery is established.
+                </p>
+                <p>
+                  Delayed coker: at 15 wt% feed CCR, the correlation gives
+                  16.435% naphtha, 9.96% gas, 24% coke and 49.605% gas oils. Gas
+                  oils are apportioned using the LC Finer cut ratios. These
+                  derived cuts fit the client’s ranges at this CCR; they are
+                  assumptions, not measured yields.
+                </p>
+                <p>
+                  FCC: the sheet’s ranges total only 48–93 wt%, including about
+                  5% light gas. They cannot define a closed mass balance. The
+                  retained illustrative slate is 47% gasoline, 21% LCO, 10%
+                  slurry, 12% LPG, 4% dry gas and 6% coke. It totals 100%, but
+                  does not match every client range.
+                </p>
+                <p>
+                  FCC processes the gas-oil stream; LC Finer or coker processes
+                  vacuum residue. FCC boiling-range allocations do not establish
+                  finished-fuel quality. Applying kerosene/diesel price proxies
+                  to these cuts can overstate realizable revenue.
+                </p>
+                <p>
+                  Source assay yields are retained without normalization.
+                  Hydrocracker liquid volume gain is retained. The model
+                  corrects SimDist!AA10, which references Z9 rather than AA9 and
+                  omits direct naphtha in the sheet. The “workbook flow” column
+                  excludes additional recovered residue LPG but includes that
+                  naphtha correction.
+                </p>
+              </details>
+              <details className="advanced-panel">
                 <summary>Crude blend properties</summary>
                 <DataTable
                   rows={flatten(result.blend)}
@@ -257,137 +305,16 @@ export function CrudeToProfitPage() {
           )}
         </>
       )}
-      {tab === "Configuration" && (
-        <>
-          <h2>Model configuration</h2>
-          <p>
-            Yield fractions, properties, conversion assumptions, and fixed price
-            cases from the HTML workbook.
-          </p>
-          <details className="advanced-panel">
-            <summary>Edit model assumptions</summary>
-            <ConfigEditor
-              value={draft.config as unknown as ConfigValue}
-              onChange={(v) =>
-                setDraft((d) => ({
-                  ...d,
-                  config: v as unknown as Scenario["config"],
-                }))
-              }
-            />
-          </details>
-        </>
-      )}
-      {tab === "Price snapshot" && (
-        <>
-          <h2>Import an explicit price case</h2>
-          <p>
-            No external market service is called. Provide a complete dated price
-            snapshot in CAD/m³. All five crudes and seven products are required
-            before a snapshot can be applied.
-          </p>
-          {draft.market && (
-            <p>
-              Applied: {draft.market.date} · {draft.market.source} ·{" "}
-              {draft.market.unit}
-            </p>
-          )}
-          <button
-            onClick={() =>
-              downloadFile(
-                "price-snapshot-template.json",
-                JSON.stringify(
-                  {
-                    date: new Date().toISOString().slice(0, 10),
-                    source: "Replace with your verified source",
-                    currency: "CAD",
-                    unit: "CAD/m3",
-                    crude: draft.config.crude_price_low_cad_m3,
-                    product: draft.config.product_price_low_cad_m3,
-                  },
-                  null,
-                  2,
-                ),
-                "application/json",
-              )
-            }
-          >
-            Download snapshot template
-          </button>
-          <label>
-            Import snapshot JSON
-            <input
-              type="file"
-              accept=".json"
-              onChange={async (e) => {
-                try {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  if (f.size > 1000000)
-                    throw Error("Maximum snapshot size is 1 MB.");
-                  const market = JSON.parse(await f.text());
-                  validateResource("economics", { ...draft, market });
-                  setPending(market);
-                  setNote(
-                    "Validated; review before applying to the draft scenario.",
-                  );
-                } catch (e) {
-                  setPending(null);
-                  setNote((e as Error).message);
-                }
-              }}
-            />
-          </label>
-          {pending && (
-            <>
-              <DataTable
-                rows={flatten(pending)}
-                caption="Imported price snapshot preview"
-              />
-              <button
-                onClick={() => {
-                  setDraft((d) => ({ ...d, market: pending }));
-                  setPending(null);
-                  setNote(
-                    "Snapshot applied to draft. Save scenario to retain it.",
-                  );
-                }}
-              >
-                Apply snapshot
-              </button>
-              <button onClick={() => setPending(null)}>Cancel</button>
-            </>
-          )}
-          <button
-            disabled={!draft.market}
-            onClick={() => setDraft((d) => ({ ...d, market: null }))}
-          >
-            Remove snapshot from draft
-          </button>
-        </>
-      )}
-      {tab === "Detailed results" && result && (
-        <>
-          {Object.entries(result).map(([key, value]) => (
-            <details key={key} open={key === "economics"}>
-              <summary>{key.replaceAll("_", " ")}</summary>
-              <DataTable
-                rows={flatten(value)}
-                caption={key.replaceAll("_", " ")}
-              />
-            </details>
-          ))}
-        </>
-      )}
+      {tab === "Price snapshot" && <MarketSnapshot {...live} />}
       {tab === "Engineering manual" && (
         <>
           <p>
             All four conversion-unit combinations use the original calculation
             engine. Current selected units:{" "}
             {RESIDUE_UNIT_LABELS[draft.residueUnit]} and{" "}
-            {GAS_OIL_UNIT_LABELS[draft.gasOilUnit]}. Live price fetching
-            described in the source manual is replaced here by validated,
-            manually applied snapshots.
+            {GAS_OIL_UNIT_LABELS[draft.gasOilUnit]}. Live prices use the
+            original Python pricing method, fetched during website publication
+            with dated source observations.
           </p>
           <ReferenceManual id="crude-to-profit" />
         </>
@@ -431,7 +358,7 @@ export function CrudeToProfitPage() {
               "crude-to-profit-scenario.json",
               JSON.stringify(
                 {
-                  inputs: draft,
+                  inputs: { ...draft, market },
                   results: result,
                   configurationVersion: version,
                 },

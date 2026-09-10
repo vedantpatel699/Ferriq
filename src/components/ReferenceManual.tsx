@@ -41,6 +41,19 @@ export function ReferenceManual({ id }: { id: string }) {
           history stay in this browser until a reviewed backup is published to
           Git.
         </p>
+        {id === "crude-to-profit" && (
+          <p>
+            The revised workbook adds 11.99 wt% LC Finer LPG/fuel gas. The
+            default now credits no additional saleable LPG without a verified
+            recovery fraction. The AA10 naphtha correction remains. Low and High
+            retain workbook prices; Live market uses Claude’s original Python
+            pricing method through daily static publication, with source dates
+            and proxy assumptions in Price snapshot. FCC ranges do not close to
+            100%; its retained illustrative yields are disclosed on Overview.
+            Configuration and Detailed results are hidden. The data were
+            obtained from open resources.
+          </p>
+        )}
         {id === "air-blower" && (
           <>
             <p>

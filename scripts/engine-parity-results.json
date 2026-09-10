@@ -29,7 +29,7 @@
     {
       "name": "Crude to Profit constants and full model across four process combinations",
       "status": "PASS",
-      "comparisons": 3391,
+      "comparisons": 3390,
       "detail": "12 complete model cases, including all output streams, byproducts and economics. No market fetch performed."
     },
     {
@@ -111,5 +111,5 @@
       }
     }
   ],
-  "comparisons": 31974
+  "comparisons": 31973
 }
