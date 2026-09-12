@@ -1,0 +1,109 @@
+{
+  "source_url": "https://grace.com/content/dam/grace-site/english/grace-publications/Grace-The-Essential-Articles-Vol-1_WEB.pdf",
+  "article": "Strategies for Maximizing FCC Light Cycle Oil",
+  "article_pages": [
+    46,
+    58
+  ],
+  "table": 1,
+  "printed_page": 48,
+  "pdf_page": 49,
+  "publication": "Catalagram 105 (2009), reprinted in Grace Essential Articles Volume 1",
+  "sha256": "2b4dd18abbe129a5d44faa824e73829103d1ca23b0484f69daf311baf529eda6",
+  "basis": "wt% of feed; DCR pilot plant resid feed, deactivated MIDAS catalyst without Ni/V; no recycle in selected first-pass case",
+  "client_ranges_wtpct": {
+    "gasoline": [
+      15,
+      25
+    ],
+    "lco": [
+      5,
+      15
+    ],
+    "bottoms": [
+      5,
+      15
+    ],
+    "lpg": [
+      15,
+      25
+    ],
+    "coke": [
+      3,
+      8
+    ]
+  },
+  "client_light_gas_approx_wtpct": 5,
+  "selection": "Minimum summed percentage-point distance outside the five bounded client ranges among the four Table 1 measured cases. Approximate light gas 5% is not a bound; including its absolute deviation leaves the same selection. This does not establish a feed match.",
+  "selected_conversion_wtpct": 75,
+  "cases": [
+    {
+      "conversion_wtpct": 54,
+      "reactor_exit_f": 950,
+      "regenerator_f": 1350,
+      "feed_preheat_f": 701,
+      "catalyst_oil_ratio": 4.3,
+      "yield_wtpct": {
+        "dry_gas": 2,
+        "lpg": 8.2,
+        "gasoline": 38.4,
+        "lco": 22.2,
+        "bottoms": 24,
+        "coke": 5.2
+      },
+      "reported_total_wtpct": 100.0,
+      "outside_client_ranges_pp": 36.4
+    },
+    {
+      "conversion_wtpct": 58,
+      "reactor_exit_f": 950,
+      "regenerator_f": 1350,
+      "feed_preheat_f": 574,
+      "catalyst_oil_ratio": 5,
+      "yield_wtpct": {
+        "dry_gas": 1.9,
+        "lpg": 8.9,
+        "gasoline": 42,
+        "lco": 21.7,
+        "bottoms": 20,
+        "coke": 5.3
+      },
+      "reported_total_wtpct": 99.8,
+      "outside_client_ranges_pp": 34.8
+    },
+    {
+      "conversion_wtpct": 68,
+      "reactor_exit_f": 971,
+      "regenerator_f": 1270,
+      "feed_preheat_f": 700,
+      "catalyst_oil_ratio": 5.9,
+      "yield_wtpct": {
+        "dry_gas": 2.6,
+        "lpg": 11.4,
+        "gasoline": 48,
+        "lco": 19.2,
+        "bottoms": 12.8,
+        "coke": 5.9
+      },
+      "reported_total_wtpct": 99.9,
+      "outside_client_ranges_pp": 30.8
+    },
+    {
+      "conversion_wtpct": 75,
+      "reactor_exit_f": 970,
+      "regenerator_f": 1270,
+      "feed_preheat_f": 299,
+      "catalyst_oil_ratio": 9.4,
+      "yield_wtpct": {
+        "dry_gas": 2.2,
+        "lpg": 13.3,
+        "gasoline": 51.9,
+        "lco": 16.7,
+        "bottoms": 8.6,
+        "coke": 7.1
+      },
+      "reported_total_wtpct": 99.8,
+      "outside_client_ranges_pp": 30.3
+    }
+  ]
+}

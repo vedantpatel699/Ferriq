@@ -1,3 +1,11 @@
+# Grace FCC release - 12 September 2026
+
+The active FCC split is transcribed from Grace Table 1 at 75 wt% conversion. Source-fixture checks verify all four source cases, the comparison rule and unallocated 0.2 wt% closure. Python/TypeScript agree across 162 cases (49,991 comparisons); 76 unit tests pass. All 90 desktop/tablet browser checks pass, including source-link and category-table checks. Production build passes. Four market-refresh tests and historical 31,973-comparison regression pass. Three pre-existing lint warnings and bundle-size notice remain.
+
+The source table was visually checked against printed p.48. The full relevant article (pp.46-58) was reviewed for feed, catalyst, recycle and unit-basis differences. Yields are a pilot-plant reference, not a feed-specific validation. Client categories use disclosed product-quality and price mappings. Revert to 0e83a0a if the new source mapping or source/engine parity fails after release.
+
+## Prior verification
+
 # Routing release checks - 10 September 2026
 
 - 76 unit tests, including nine routing combinations, residue/FCC mass accounting, bypass, annualization and invalid saved scenarios.

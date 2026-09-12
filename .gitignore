@@ -31,3 +31,6 @@ playwright/.cache
 
 __pycache__/
 secrets.local.py
+
+# Local source-review PDF and renders
+/tmp/grace/

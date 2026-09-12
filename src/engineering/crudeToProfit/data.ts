@@ -116,6 +116,7 @@ export const GAS_OIL_SPLIT: Record<string, number> = Object.fromEntries(
   GAS_OIL_KEYS.map((k) => [k, LC_FINER_YIELD_WTPCT[k] / GAS_OIL_TOTAL]),
 );
 
+// Historical unsourced split, used only by the preserved workbook audit.
 export const FCC_YIELD_WTPCT = {
   dry_gas: 4.0,
   lpg: 12.0,
@@ -379,3 +380,31 @@ export const DEFAULT_CRUDE_TO_PROFIT_CONFIG: CrudeToProfitConfig = {
   lpg_c4_fraction: 0.742,
   gas_oil_unit: "hydrocracker",
 };
+
+// Grace, Table 1, printed p.48, 75 wt% conversion. Preserve the reported
+// 99.8 wt% total: the 0.2-point closure gap is unallocated, not saleable oil.
+export const GRACE_FCC_REFERENCE = {
+  source: "Grace, Strategies for Maximizing FCC Light Cycle Oil, Table 1, p.48",
+  url: "https://grace.com/content/dam/grace-site/english/grace-publications/Grace-The-Essential-Articles-Vol-1_WEB.pdf#page=49",
+  conversion_wtpct: 75,
+  reactor_exit_f: 970,
+  regenerator_f: 1270,
+  feed_preheat_f: 299,
+  catalyst_oil_ratio: 9.4,
+  yield_wtpct: {
+    dry_gas: 2.2,
+    lpg: 13.3,
+    gasoline: 51.9,
+    lco: 16.7,
+    bottoms: 8.6,
+    coke: 7.1,
+  },
+  unallocated_wtpct: 0.2,
+} as const;
+// Retained screening densities, not measured by Grace for this case.
+export const GRACE_FCC_DENSITY_KG_M3 = {
+  lpg: 560,
+  gasoline: 730,
+  lco: 950,
+  bottoms: 1050,
+} as const;

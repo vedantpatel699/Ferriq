@@ -87,18 +87,22 @@ describe("Once-through conversion routing", () => {
         x.byproducts.lpg_fuel_gas_kghr,
     ).toBeCloseTo(x.byproducts.feed_kghr, 7);
   });
-  it("FCC native pools close in mass and do not become jet or diesel", () => {
+  it("Grace FCC products retain categories and expose the unpriced closure gap", () => {
     const x = run("delayed_coker", "fcc"),
       h = x.hc_reactor_products_m3hr,
       m = x.gas_oil_byproducts.feed_kghr!;
-    expect(h.naphtha * 730).toBeCloseTo(m * 0.47, 7);
-    expect(h.lpg * 560).toBeCloseTo(m * 0.12, 7);
-    expect(h.uco).toBeCloseTo((m * 0.21) / 950 + (m * 0.1) / 1050, 8);
-    expect(h.kerosene + h.diesel + h.swing_diesel + h.swing_naphtha).toBe(0);
+    expect(h.naphtha * 730).toBeCloseTo(m * 0.519, 7);
+    expect(h.lpg * 560).toBeCloseTo(m * 0.133, 7);
+    expect(h.uco * 1050).toBeCloseTo(m * 0.086, 8);
+    expect(h.diesel * 950).toBeCloseTo(m * 0.167, 8);
+    expect(x.gas_oil_byproducts.unallocated_kghr).toBeCloseTo(m * 0.002, 8);
+    expect(h.kerosene + h.swing_diesel + h.swing_naphtha).toBe(0);
     expect(
       h.naphtha * 730 +
         h.lpg * 560 +
-        m * 0.31 +
+        h.diesel * 950 +
+        h.uco * 1050 +
+        x.gas_oil_byproducts.unallocated_kghr! +
         x.gas_oil_byproducts.coke_kghr +
         x.gas_oil_byproducts.dry_gas_kghr,
     ).toBeCloseTo(m, 7);

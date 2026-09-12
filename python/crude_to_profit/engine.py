@@ -339,16 +339,19 @@ def residue_unit_yields_wtpct(unit, config=None):
 
 FCC_FEED_DENSITY_KG_M3 = 900.0
 
-# Published FCC yields, wt% of gas oil feed at about 70 % conversion. Every
-# value sits inside its published range and the set sums to exactly 100.
+# Historical unsourced FCC assumptions, retained for workbook audit only.
+# The active routed engine uses GRACE_FCC_REFERENCE below.
 FCC_YIELD_WTPCT = {
-    "dry_gas":   4.0,    # published 2-7
-    "lpg":      12.0,    # published 10-15
-    "gasoline": 47.0,    # published 45-55
-    "lco":      21.0,    # published 20-25, light cycle oil
-    "slurry":   10.0,    # published 8-12, heavy cycle oil / decant
-    "coke":      6.0,    # published 5-7
+    "dry_gas":   4.0,    # historical assumption
+    "lpg":      12.0,    # historical assumption
+    "gasoline": 47.0,    # historical assumption
+    "lco":      21.0,    # historical assumption
+    "slurry":   10.0,    # historical assumption
+    "coke":      6.0,    # historical assumption
 }
+
+GRACE_FCC_REFERENCE = {'source': 'Grace, Strategies for Maximizing FCC Light Cycle Oil, Table 1, p.48', 'url': 'https://grace.com/content/dam/grace-site/english/grace-publications/Grace-The-Essential-Articles-Vol-1_WEB.pdf#page=49', 'conversion_wtpct': 75, 'reactor_exit_f': 970, 'regenerator_f': 1270, 'feed_preheat_f': 299, 'catalyst_oil_ratio': 9.4, 'yield_wtpct': {'dry_gas': 2.2, 'lpg': 13.3, 'gasoline': 51.9, 'lco': 16.7, 'bottoms': 8.6, 'coke': 7.1}, 'unallocated_wtpct': 0.2}
+GRACE_FCC_DENSITY_KG_M3 = {'lpg': 560, 'gasoline': 730, 'lco': 950, 'bottoms': 1050}
 
 FCC_PRODUCT_DENSITY_KG_M3 = {"lpg": 560.0, "gasoline": 730.0,
                              "lco": 950.0, "slurry": 1050.0}
@@ -461,7 +464,7 @@ SIMDIST_PCT_GRID = (0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50,
 # Verified against Alberta's own published series: their differential is
 # exactly WTI - WCS to the cent, every month checked. fetch_wcs_usd_bbl()
 # returns this estimate when both feeds answer, falls back to Alberta's
-# published monthly WCS otherwise, and reports which path it took plus the
+# historical assumption
 # vintage of the differential so a caller can show the data age.
 # =============================================================================
 
@@ -1412,9 +1415,16 @@ def run_model(crude_flows_m3hr=None, config=None, curves=None,
     if gas_oil_unit == 'none':
         hc = {**dict.fromkeys(PRODUCTS,0), 'uco':pool, 'byproducts':dict(unit='none',unit_label=GAS_OIL_UNIT_LABELS['none'],feed_m3hr=0,feed_kghr=0,coke_kghr=0,dry_gas_kghr=0,liquid_volume_yield_volpct=0)}
     elif gas_oil_unit == 'fcc':
-        def vol(p): return pool_mass*FCC_YIELD_WTPCT[p]/100/FCC_PRODUCT_DENSITY_KG_M3[p]
-        hc = {**dict.fromkeys(PRODUCTS,0), 'lpg':vol('lpg'),'naphtha':vol('gasoline'),'uco':vol('lco')+vol('slurry')}
-        hc['byproducts'] = dict(unit='fcc',unit_label=GAS_OIL_UNIT_LABELS['fcc'],feed_m3hr=pool,feed_kghr=pool_mass,coke_kghr=pool_mass*.06,coke_wtpct=6,dry_gas_kghr=pool_mass*.04,dry_gas_wtpct=4,liquid_volume_yield_volpct=sum(hc.values())/pool*100 if pool else 0)
+        ref = GRACE_FCC_REFERENCE
+        y = ref['yield_wtpct']
+        def vol(p): return pool_mass*y[p]/100/GRACE_FCC_DENSITY_KG_M3[p]
+        native = {p:vol(p) for p in GRACE_FCC_DENSITY_KG_M3}
+        hc = {**dict.fromkeys(PRODUCTS,0), 'lpg':native['lpg'],'naphtha':native['gasoline'],'diesel':native['lco'],'uco':native['bottoms']}
+        hc['byproducts'] = dict(unit='fcc',unit_label=GAS_OIL_UNIT_LABELS['fcc'],feed_m3hr=pool,feed_kghr=pool_mass,
+            coke_kghr=pool_mass*y['coke']/100,coke_wtpct=y['coke'],dry_gas_kghr=pool_mass*y['dry_gas']/100,dry_gas_wtpct=y['dry_gas'],
+            liquid_volume_yield_volpct=sum(hc.values())/pool*100 if pool else 0,source=ref['source'],source_url=ref['url'],
+            conversion_wtpct=ref['conversion_wtpct'],yield_wtpct=dict(y),unallocated_wtpct=ref['unallocated_wtpct'],
+            unallocated_kghr=pool_mass*ref['unallocated_wtpct']/100,native_products_m3hr=native)
     else:
         hc = hcht_split(pool,cfg,unit='hydrocracker')
     workbook_slate = final_product_slate(direct['totals_m3hr'],hc)
