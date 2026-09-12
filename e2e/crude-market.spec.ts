@@ -51,6 +51,22 @@ test("nine routing combinations and three price cases use a read-only source sna
   await expect(
     page.getByText("Coker gas-oil pool (cut split unknown)", { exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Grace Table 1, printed page 48" }),
+  ).toHaveAttribute("href", /grace.com.*#page=49/);
+  const referenceTable = page
+    .getByRole("table")
+    .filter({ has: page.getByText("Gasoline (C5–430°F)", { exact: true }) });
+  await expect(referenceTable).toContainText("51.9");
+  await expect(referenceTable).toContainText("16.7");
+  await expect(referenceTable).toContainText("Unallocated balance");
+  await expect(
+    page.getByText(/FCC uses a Grace pilot-plant reference/),
+  ).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath("grace-fcc.png"),
+    fullPage: true,
+  });
   await page
     .getByLabel("Residue conversion", { exact: true })
     .selectOption("none");

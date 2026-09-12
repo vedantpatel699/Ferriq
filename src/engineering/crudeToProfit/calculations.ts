@@ -17,6 +17,8 @@ import {
   GAS_OIL_KEYS,
   GAS_OIL_SPLIT,
   FCC_YIELD_WTPCT,
+  GRACE_FCC_REFERENCE,
+  GRACE_FCC_DENSITY_KG_M3,
   FCC_PRODUCT_DENSITY_KG_M3,
   FCC_PRODUCT_RANGE_C,
   PRODUCT_RANGE_C,
@@ -288,6 +290,13 @@ export interface HchtByproducts {
   dry_gas_kghr: number;
   dry_gas_wtpct?: number;
   liquid_volume_yield_volpct: number;
+  source?: string;
+  source_url?: string;
+  conversion_wtpct?: number;
+  yield_wtpct?: Record<string, number>;
+  unallocated_wtpct?: number;
+  unallocated_kghr?: number;
+  native_products_m3hr?: Record<string, number>;
 }
 export type HchtSplitResult = Record<ProductCode, number> & {
   byproducts: HchtByproducts;
@@ -609,15 +618,24 @@ export function runModel(
       },
     };
   } else if (gasOilUnit === "fcc") {
-    // Native FCC product pools; do not sell FCC gasoline as jet fuel based
-    // on boiling overlap. Existing prices are explicitly named pool proxies.
-    const vol = (p: "lpg" | "gasoline" | "lco" | "slurry") =>
-      (poolMass * FCC_YIELD_WTPCT[p]) / 100 / FCC_PRODUCT_DENSITY_KG_M3[p];
+    const ref = GRACE_FCC_REFERENCE,
+      y = ref.yield_wtpct;
+    const vol = (p: keyof typeof GRACE_FCC_DENSITY_KG_M3) =>
+      (poolMass * y[p]) / 100 / GRACE_FCC_DENSITY_KG_M3[p];
+    const native = {
+      lpg: vol("lpg"),
+      gasoline: vol("gasoline"),
+      lco: vol("lco"),
+      bottoms: vol("bottoms"),
+    };
+    // Preserve the client's product headings, with explicit quality/price proxies.
+    // LCO is a diesel-range intermediate, not certified finished diesel.
     const slate = {
       ...zeroSlate(),
-      lpg: vol("lpg"),
-      naphtha: vol("gasoline"),
-      uco: vol("lco") + vol("slurry"),
+      lpg: native.lpg,
+      naphtha: native.gasoline,
+      diesel: native.lco,
+      uco: native.bottoms,
     };
     hc = {
       ...slate,
@@ -626,13 +644,20 @@ export function runModel(
         unit_label: GAS_OIL_UNIT_LABELS.fcc,
         feed_m3hr: pool,
         feed_kghr: poolMass,
-        coke_kghr: poolMass * 0.06,
-        coke_wtpct: 6,
-        dry_gas_kghr: poolMass * 0.04,
-        dry_gas_wtpct: 4,
+        coke_kghr: (poolMass * y.coke) / 100,
+        coke_wtpct: y.coke,
+        dry_gas_kghr: (poolMass * y.dry_gas) / 100,
+        dry_gas_wtpct: y.dry_gas,
         liquid_volume_yield_volpct: pool
           ? (Object.values(slate).reduce((a, b) => a + b, 0) / pool) * 100
           : 0,
+        source: ref.source,
+        source_url: ref.url,
+        conversion_wtpct: ref.conversion_wtpct,
+        yield_wtpct: { ...y },
+        unallocated_wtpct: ref.unallocated_wtpct,
+        unallocated_kghr: (poolMass * ref.unallocated_wtpct) / 100,
+        native_products_m3hr: native,
       },
     };
   } else hc = hchtSplit(pool, cfg, "hydrocracker");

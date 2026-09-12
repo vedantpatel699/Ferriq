@@ -9,6 +9,7 @@ import {
   DEFAULT_CRUDE_TO_PROFIT_CONFIG,
   RESIDUE_UNIT_LABELS,
   GAS_OIL_UNIT_LABELS,
+  GRACE_FCC_REFERENCE,
   type CrudeCode,
   type ProductCode,
   type ResidueUnit,
@@ -136,9 +137,14 @@ export function CrudeToProfitPage() {
             period="Current draft scenario"
             quality={[
               "Scenario inputs are assumptions, not live process observations.",
+              ...(draft.gasOilUnit === "fcc"
+                ? [
+                    `${GRACE_FCC_REFERENCE.source}; reported closure gap: ${formatNumber(result.gas_oil_byproducts.unallocated_kghr, 2)} kg/h, unpriced. Source: ${GRACE_FCC_REFERENCE.url}`,
+                  ]
+                : []),
               `${RESIDUE_UNIT_LABELS[draft.residueUnit]} + ${GAS_OIL_UNIT_LABELS[draft.gasOilUnit]}; once-through illustrative yields.`,
-              `Unpriced residue: ${formatNumber(result.unpriced_residue_m3hr, 2)} m�/h; no sales credit.`,
-              "FCC gasoline uses naphtha pricing; LCO/slurry and bypassed gas oil use UCO pricing. Pretreatment, product-quality discounts and recycle are excluded.",
+              `Unpriced residue: ${formatNumber(result.unpriced_residue_m3hr, 2)} m³/h; no sales credit.`,
+              "FCC uses Grace Table 1 at 75% conversion. Naphtha includes FCC gasoline; Diesel includes LCO; Residue/UCO includes bottoms. These are price proxies. Pretreatment, quality discounts and recycle are excluded.",
             ]}
             rows={PRODUCTS.map((p) => ({
               product: p.replaceAll("_", " "),
@@ -149,9 +155,9 @@ export function CrudeToProfitPage() {
       )}
 
       <p>
-        Original refinery yield and gross margin calculation. The saved scenario
-        loads automatically. Expand Adjust scenario to explore alternatives,
-        then save to retain changes. Prices are CAD/m³ and flows are m³/h.
+        Refinery yield and gross margin estimate. The saved scenario loads
+        automatically. Expand Adjust scenario to explore alternatives, then save
+        to retain changes. Prices are CAD/m³ and flows are m³/h.
       </p>
       <div className="page-tabs" role="group" aria-label="Economics views">
         {["Overview", "Price snapshot", "Engineering manual"].map((t) => (
@@ -266,6 +272,15 @@ export function CrudeToProfitPage() {
                   its potential value.
                 </p>
               )}
+              {draft.gasOilUnit === "fcc" && (
+                <p role="status">
+                  FCC uses a Grace pilot-plant reference, not a feed-specific
+                  prediction. Naphtha includes FCC gasoline; Diesel includes
+                  light cycle oil (LCO), which needs treatment for finished
+                  diesel. The reference leaves 0.2 wt% unallocated with no sales
+                  credit.
+                </p>
+              )}
               <h2>Annual estimate</h2>
               <p>
                 Workbook basis: {HOURS_PER_DAY} hours/day ×{" "}
@@ -347,19 +362,89 @@ export function CrudeToProfitPage() {
                   assumptions, not measured yields.
                 </p>
                 <p>
-                  FCC: the sheet’s ranges total only 48–93 wt%, including about
-                  5% light gas. They cannot define a closed mass balance. The
-                  retained illustrative slate is 47% gasoline, 21% LCO, 10%
-                  slurry, 12% LPG, 4% dry gas and 6% coke. It totals 100%, but
-                  does not match every client range.
+                  FCC now uses{" "}
+                  <a
+                    href={GRACE_FCC_REFERENCE.url}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Grace Table 1, printed page 48
+                  </a>
+                  , at 75 wt% conversion. The measured case uses resid feed and
+                  deactivated MIDAS catalyst, with no recycle. It is the closest
+                  of the four Table 1 cases by summed distance outside the
+                  client's five bounded ranges, but it does not match all of
+                  them.
+                </p>
+                <DataTable
+                  caption="FCC reference yields and client categories (wt% of FCC feed)"
+                  rows={[
+                    {
+                      category: "Naphtha",
+                      sourceProduct: "Gasoline (C5–430°F)",
+                      clientRange: "15–25",
+                      referenceWtPct: 51.9,
+                    },
+                    {
+                      category: "Diesel",
+                      sourceProduct: "Light cycle oil (430–650°F)",
+                      clientRange: "5–15",
+                      referenceWtPct: 16.7,
+                    },
+                    {
+                      category: "Residue / UCO",
+                      sourceProduct: "Bottoms (650°F+)",
+                      clientRange: "5–15",
+                      referenceWtPct: 8.6,
+                    },
+                    {
+                      category: "LPG / Fuel gas",
+                      sourceProduct: "LPG (saleable price proxy)",
+                      clientRange: "15–25 LPG",
+                      referenceWtPct: 13.3,
+                    },
+                    {
+                      category: "LPG / Fuel gas",
+                      sourceProduct: "Dry gas (no sales credit)",
+                      clientRange: "Approximately 5",
+                      referenceWtPct: 2.2,
+                    },
+                    {
+                      category: "Coke",
+                      sourceProduct: "Coke burned in regenerator",
+                      clientRange: "3–8",
+                      referenceWtPct: 7.1,
+                    },
+                    {
+                      category: "Unallocated balance",
+                      sourceProduct: "Reported closure gap (no sales credit)",
+                      clientRange: "Not specified",
+                      referenceWtPct: 0.2,
+                    },
+                  ]}
+                />
+                <p>
+                  The reported yields total 99.8 wt%; the remaining 0.2 wt% is
+                  tracked separately, not normalized into saleable products.
+                  LVGO, MVGO and HVGO are not separately allocated: this model
+                  retains the FCC bottoms pool. Grace's detailed boiling bins do
+                  not establish the client's VGO cut boundaries.
                 </p>
                 <p>
-                  FCC processes the gas-oil stream; LC Finer or coker processes
-                  vacuum residue. FCC gasoline uses the naphtha price proxy; LCO
-                  and slurry use the UCO price proxy. FCC does not create
-                  finished jet/diesel by boiling-range allocation. Bypassed gas
-                  oil also uses the UCO price proxy. Treatment costs and
-                  product-quality discounts are excluded.
+                  Reference conditions: reactor exit 970°F, regenerator 1270°F,
+                  feed preheat 299°F and catalyst/oil ratio 9.4. These identify
+                  the source experiment, not recommended plant settings.
+                  Applying this fixed case to straight-run, LC Finer or coker
+                  gas oil requires feed-specific validation.
+                </p>
+                <p>
+                  Naphtha and Diesel retain the client's price categories, but
+                  the FCC contributions are gasoline and LCO proxies, not
+                  certified finished products. Bottoms and bypassed gas oil use
+                  the UCO price proxy. Treatment costs and quality discounts are
+                  excluded. Liquid densities remain model assumptions (LPG 560,
+                  gasoline 730, LCO 950 and bottoms 1050 kg/m³), not Grace
+                  measurements.
                 </p>
                 <p>
                   Source assay yields are retained without normalization.

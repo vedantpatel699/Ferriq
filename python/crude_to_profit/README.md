@@ -18,3 +18,7 @@ Read `CRUDE-WORKBOOK-AUDIT.md` for the source-sheet AA10 correction, zero additi
 ## Routing revision
 
 `run_model` uses nine independent combinations: residue `none`, `lc_finer`, `delayed_coker`; gas oil `none`, `hydrocracker`, `fcc`. It returns stage transfers in `routing` and `unpriced_residue_m3hr`. Coker gas oil stays unsplit. Fixed conversion yields and price proxies are illustrative. `workbook_slate_m3hr` is a backward-compatible field meaning current routed products before additional LPG credit, not the original workbook result. Use `run_workbook_model` only for historical workbook comparison. The command-line output uses the current routed engine without network calls.
+
+## Grace FCC reference
+
+The active FCC route uses Grace Table 1, printed p.48, nominal 75 wt% conversion. `GRACE_FCC_REFERENCE` identifies the source and measured yields. `gas_oil_byproducts` includes the source URL, native liquid pools, yields, and an unallocated 0.2 wt% closure gap without sales credit. Naphtha/Diesel/Residue-UCO map to gasoline/LCO/bottoms as explicit price and reporting proxies. The old FCC_YIELD_WTPCT belongs only to the historical workbook function. See the current section of CRUDE-WORKBOOK-AUDIT.md for the selection comparison and feed limitations.

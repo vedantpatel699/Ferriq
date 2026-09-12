@@ -51,10 +51,19 @@ export function ReferenceManual({ id }: { id: string }) {
             fraction. The AA10 naphtha correction remains. Low and High retain
             workbook prices; Live market uses Claude’s original Python pricing
             method through daily static publication, with source dates and proxy
-            assumptions in Price snapshot. FCC ranges do not close to 100%; its
-            retained illustrative yields are disclosed on Overview.
-            Configuration and Detailed results are hidden. The data were
-            obtained from open resources.
+            assumptions in Price snapshot. Residue and gas-oil conversion are
+            independent, with bypass choices. Coker gas oil stays unsplit and
+            unconverted residue has no sales credit. FCC uses Grace Table 1
+            (printed p.48), the measured 75 wt% conversion case: gasoline 51.9,
+            LCO 16.7, bottoms 8.6, LPG 13.3, dry gas 2.2 and coke 7.1 wt%. The
+            0.2 wt% closure gap is unpriced. Client Naphtha, Diesel and
+            Residue/UCO headings map to gasoline, LCO and bottoms, with explicit
+            price and quality proxies. The pilot-plant reference is not a
+            prediction calibrated to this feed. The source link, conditions and
+            client-range comparison are on Overview. These current notes
+            supersede the historical FCC calculation below. Configuration and
+            Detailed results are hidden. The data were obtained from open
+            resources.
           </p>
         )}
         {id === "air-blower" && (

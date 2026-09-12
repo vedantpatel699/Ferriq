@@ -1,3 +1,35 @@
+# FCC source revision - 12 September 2026
+
+The active FCC case now uses Grace's *Strategies for Maximizing FCC Light Cycle Oil*, Table 1, printed page 48 (PDF page 49), in *Grace Essential Articles*, Volume 1. [Source](https://grace.com/content/dam/grace-site/english/grace-publications/Grace-The-Essential-Articles-Vol-1_WEB.pdf#page=49). This section supersedes all earlier FCC yield and pricing mappings below. The historical workbook function retains its old assumptions for audit only.
+
+## Selection and applicability
+
+I reviewed the full relevant article (printed pp.46-58), including the DCR experiments, ACE recycle work, fresh-versus-combined-feed equations, catalyst discussion and commercial examples. Table 1 offers four directly measured first-pass cases with all six product yields in wt% of feed. Table 3 is interpolated ACE data; Tables 5/6 include recycle modeling; Table 7 mixes liquid vol%, dry-gas scf/bbl and coke wt% and its optimized cases require recycle. Combining those columns or treating vol% as wt% would introduce unsupported assumptions.
+
+| Table 1 nominal conversion | Naphtha/gasoline | Diesel/LCO | Residue/bottoms | LPG | Dry gas | Coke | Total | Sum outside bounded client ranges, percentage points |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Client ranges, wt% | 15-25 | 5-15 | 5-15 | 15-25 | About 5 | 3-8 | Approx. 48-93 | Not applicable |
+| 54% | 38.4 | 22.2 | 24.0 | 8.2 | 2.0 | 5.2 | 100.0 | 36.4 |
+| 58% | 42.0 | 21.7 | 20.0 | 8.9 | 1.9 | 5.3 | 99.8 | 34.8 |
+| 68% | 48.0 | 19.2 | 12.8 | 11.4 | 2.6 | 5.9 | 99.9 | 30.8 |
+| **75%, selected** | **51.9** | **16.7** | **8.6** | **13.3** | **2.2** | **7.1** | **99.8** | **30.3** |
+
+Selection minimizes summed absolute distance outside the five bounded client intervals. The approximate 5% dry-gas figure is not a bound; including its absolute deviation still selects 75%. This rule is transparent but not a feed calibration. The difference from 68% is small, and no case fits every supplied range. In particular, gasoline remains far above the client's naphtha range. No interpolation, cherry-picking between cases or adjustment into the ranges was applied.
+
+The selected experiment used resid feed, deactivated MIDAS catalyst without Ni/V, reactor exit 970 F, regenerator 1270 F, feed preheat 299 F, catalyst/oil 9.4. Those conditions identify the experiment; they are not operating recommendations. Ferriq applies it as a fixed reference to its pooled gas-oil feed, not as a validated prediction for LC Finer or coker gas oil.
+
+## Categories, mass and revenue
+
+The client's Naphtha heading receives FCC gasoline, Diesel receives LCO, and Residue/UCO receives bottoms. These are explicit reporting and price proxies, not equivalent boiling cuts or certified finished fuels. LPG and dry gas remain separate under LPG/Fuel gas so only LPG gets product revenue. Coke is internal fuel, not saleable petroleum coke. LVGO/MVGO/HVGO are not invented; the paper's bottoms bins do not identify the client's cut boundaries. Existing final-product categories are retained; this FCC reference adds no kerosene or swing cuts.
+
+The six source yields total 99.8%. The remaining 0.2% is an unallocated closure gap with no sales credit, not a measured product or a normalization adjustment. It is carried explicitly in both engines and scenario exports. This gap may reflect reporting precision, but its cause is not established.
+
+Volume conversion retains assumed liquid densities of 560/730/950/1050 kg/m3 for LPG/gasoline/LCO/bottoms. These are not measurements from the Grace case. LCO uses the client's diesel price as requested by the category mapping; treatment and quality discounts are excluded and disclosed. Fixed Low/High prices, live pricing pulls and annualization are unchanged. Default LC Finer + Hydrocracker output is unaffected.
+
+`reference/grace-fcc-table1.json` records all four source cases, conditions, the selection metric, source URL and PDF checksum. Independent source-fixture checks and Python/TypeScript parity guard the transcription.
+
+## Previous routing release (historical record)
+
 # Active routing revision - 10 September 2026
 
 The current website uses independent residue (None / LC Finer / Delayed Coker) and gas-oil (None / Hydrocracker / FCC) choices. Earlier workbook tie-out figures below refer to `runWorkbookModel` / `run_workbook_model`, retained for audit only. They are not the new routing output.

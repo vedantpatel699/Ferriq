@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { stripTypeScriptTypes } from 'node:module';
 import { spawnSync } from 'node:child_process';
 const code = ['data.ts','calculations.ts'].map(file => stripTypeScriptTypes(fs.readFileSync(`src/engineering/crudeToProfit/${file}`, 'utf8'), {mode:'strip'}).replace(/^import[\s\S]*?;\s*/gm,'').replace(/\bexport\s+/g,'')).join('\n');
-const model = vm.runInNewContext(code+';({runModel,runWorkbookModel,DEFAULT_CRUDE_TO_PROFIT_CONFIG,DEFAULT_CRUDE_FLOWS_M3HR,CRUDES,PRODUCTS,cokerYieldWtpct,LC_FINER_YIELD_WTPCT,FCC_YIELD_WTPCT})');
+const model = vm.runInNewContext(code+';({runModel,runWorkbookModel,DEFAULT_CRUDE_TO_PROFIT_CONFIG,DEFAULT_CRUDE_FLOWS_M3HR,CRUDES,PRODUCTS,cokerYieldWtpct,LC_FINER_YIELD_WTPCT,FCC_YIELD_WTPCT,GRACE_FCC_REFERENCE})');
 const cfg = model.DEFAULT_CRUDE_TO_PROFIT_CONFIG;
 const snapshot = JSON.parse(fs.readFileSync('public/data/crude-market-prices.json','utf8'));
 const cases=[];
@@ -48,3 +48,16 @@ equal(Object.values(model.FCC_YIELD_WTPCT).reduce((a,b)=>a+b,0),100);
 const y=model.cokerYieldWtpct(15);
 for(const [key,lo,hi]of [['rhc_naphtha',10,18],['diesel',20,30],['rhc_lvgo',10,20],['rhc_mvgo',5,15],['rhc_hvgo',2,8],['unconverted_residue',0,5],['coke',15,25],['lpg_fuel_gas',7,15]]) assert.ok(y[key]>=lo && y[key]<=hi,key+' client range');
 console.log(`PASS: ${cases.length} Python/TypeScript cases; ${comparisons} comparisons; revised-workbook prices and outputs reconcile after AA10 correction (${dropped.toFixed(8)} m3/h naphtha).`);
+
+// Independent transcription of Grace Table 1: verify the selected column,
+// its closure gap and selection rule without normalizing the reported data.
+const grace=JSON.parse(fs.readFileSync('reference/grace-fcc-table1.json','utf8'));
+const chosen=grace.cases.find(c=>c.conversion_wtpct===75);
+equal(model.GRACE_FCC_REFERENCE.yield_wtpct,chosen.yield_wtpct,'Grace source yields');
+for(const c of grace.cases) {
+ const distance=Object.entries(grace.client_ranges_wtpct).reduce((sum,[k,[lo,hi]])=>sum+Math.max(lo-c.yield_wtpct[k],0,c.yield_wtpct[k]-hi),0);
+ equal(distance,c.outside_client_ranges_pp,'source case distance');
+ assert.ok(chosen.outside_client_ranges_pp <= distance+1e-9);
+}
+equal(Object.values(chosen.yield_wtpct).reduce((a,b)=>a+b,0)+model.GRACE_FCC_REFERENCE.unallocated_wtpct,100,'Grace closure');
+console.log('PASS: Grace Table 1 source transcription, case selection and unallocated 0.2 wt% closure gap.');

@@ -27,7 +27,7 @@
       "detail": "53 rows including deterministic synthetic feed and missing/zero flow."
     },
     {
-      "name": "Crude to Profit constants and full model across four process combinations",
+      "name": "Historical Crude to Profit workbook model across four process combinations",
       "status": "PASS",
       "comparisons": 3390,
       "detail": "12 complete model cases, including all output streams, byproducts and economics. No market fetch performed."
