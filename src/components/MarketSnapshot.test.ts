@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 import snapshot from "../../public/data/crude-market-prices.json";
 import { parseLiveMarket } from "../lib/liveMarket";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { MarketSnapshot } from "./MarketSnapshot";
 
 describe("published market snapshot", () => {
+  it("converts offset publication times to UTC before labelling them UTC", () => {
+    const market = parseLiveMarket({ ...snapshot, generatedAt: "2026-09-14T13:32:26-06:00" });
+    const html = renderToStaticMarkup(createElement(MarketSnapshot, { market, status: "", loading: false, refresh: async () => {} }));
+    expect(html).toContain("2026-09-14 19:32:26");
+    expect(html).not.toContain("2026-09-14 13:32:26");
+  });
   it("accepts a complete dated snapshot with all source metadata", () => {
     const parsed = parseLiveMarket(snapshot);
     expect(Object.keys(parsed.crude)).toHaveLength(5);

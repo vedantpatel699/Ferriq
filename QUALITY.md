@@ -1,3 +1,7 @@
+# Website sweep - 14 September 2026
+
+See [the full audit](WEBSITE-AUDIT-2026-09-14.md) for corrected issues, test evidence and prioritized remaining work. 81 unit tests and 106 browser checks pass; 18 affected browser checks were repeated after the final mobile spacing change. Numerical parity remains 49,991 Python/TypeScript comparisons plus 31,973 historical HTML comparisons. Build passes; production dependency audit reports no known vulnerabilities. Three existing lint warnings and the large initial bundle remain. This is regression verification, not independent physical-model validation.
+
 # Grace FCC release - 12 September 2026
 
 The active FCC split is transcribed from Grace Table 1 at 75 wt% conversion. Source-fixture checks verify all four source cases, the comparison rule and unallocated 0.2 wt% closure. Python/TypeScript agree across 162 cases (49,991 comparisons); 76 unit tests pass. All 90 desktop/tablet browser checks pass, including source-link and category-table checks. Production build passes. Four market-refresh tests and historical 31,973-comparison regression pass. Three pre-existing lint warnings and bundle-size notice remain.

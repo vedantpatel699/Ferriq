@@ -9,12 +9,13 @@ export function downloadFile(name: string, text: string, type = "text/plain") {
 }
 export function csv(rows: Record<string, unknown>[]) {
   const keys = [...new Set(rows.flatMap(Object.keys))];
-  const cell = (v: unknown) =>
-    '"' +
-    String(v ?? "")
-      .replace(/^[=+@\t\r]/, "'$&")
-      .replaceAll('"', '""') +
-    '"';
+  const cell = (v: unknown) => {
+    const text = String(v ?? "");
+    // Keep actual numbers numeric, but never export text as a spreadsheet formula.
+    const safe = typeof v === "string" && /^(?:[\t\r\n]|\s*[=+@-])/.test(text)
+      ? "'" + text : text;
+    return '"' + safe.replaceAll('"', '""') + '"';
+  };
   return [
     keys.map(cell).join(","),
     ...rows.map((r) =>

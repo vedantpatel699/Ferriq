@@ -12,6 +12,8 @@ const ROUTES = [
   "/predictors/furnace-skin-temp",
   "/crude-to-profit",
   "/settings",
+  "/data-export",
+  "/activity-log",
   "/help",
 ];
 

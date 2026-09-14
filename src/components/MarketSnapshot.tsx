@@ -38,7 +38,7 @@ export function MarketSnapshot({
           )}
           <p>
             Snapshot generated{" "}
-            {market.generatedAt.slice(0, 19).replace("T", " ")} UTC. All prices
+            {new Date(market.generatedAt).toISOString().slice(0, 19).replace("T", " ")} UTC. All prices
             in CAD/m³.
           </p>
           <p>

@@ -1722,6 +1722,17 @@ summary {
   }
 }
 @media (max-width: 700px) {
+  .top-left, .range-block {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .range-seg {
+    flex-wrap: wrap;
+  }
+  .action-bar label, .action-bar select {
+    min-width: 0;
+    max-width: 100%;
+  }
   .mobile-menu {
     display: block;
     position: fixed;
@@ -1743,7 +1754,9 @@ summary {
     display: flex;
   }
   .content {
-    padding: 64px 16px 32px;
+    margin-top: 56px;
+    height: calc(100dvh - 56px);
+    padding: 16px 16px 32px;
   }
   .metrics-grid,
   .context-grid {
@@ -2287,3 +2300,9 @@ textarea {
 .read-only-inputs { display: flex; flex-wrap: wrap; gap: 10px 24px; }
 .read-only-inputs span { font-family: var(--font-tag); font-size: 13px; }
 .read-only-inputs strong { font-family: var(--font-body); font-weight: 500; }
+
+@media (max-width: 450px) {
+  .context-grid, .metrics-grid { grid-template-columns: minmax(0, 1fr); }
+  .editor-field { min-width: 0; }
+  .editor-field input, .editor-field select { min-width: 0; max-width: 100%; }
+}
