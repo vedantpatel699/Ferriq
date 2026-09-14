@@ -13,6 +13,8 @@ const ROUTES = [
   "/predictors/furnace-skin-temp",
   "/crude-to-profit",
   "/settings",
+  "/data-export",
+  "/activity-log",
   "/help",
 ];
 
@@ -21,7 +23,7 @@ test.describe("No critical/serious axe-core violations (WCAG 2 A/AA)", () => {
     test(`a11y ${route}`, async ({ page }) => {
       await page.goto(route, { waitUntil: "networkidle" });
       const results = await new AxeBuilder({ page })
-        .withTags(["wcag2a", "wcag2aa"])
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
         .analyze();
       const critical = results.violations.filter(
         (v) => v.impact === "critical" || v.impact === "serious",

@@ -1,4 +1,5 @@
 import { BuildReport } from "./BuildReport";
+import { rollingMean } from "../lib/rollingMean";
 import {
   demoBlower,
   cleanBaseline,
@@ -129,27 +130,14 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
       ]),
     },
   ];
-  if (id === "air-blower" && metric.key === "efficiencyPolytropicPct")
+  if (id === "air-blower" && metric.key === "efficiencyPolytropicPct") {
+    const baseline = rollingMean(rows.map(r => ({ epoch: r.epoch, value: r.values[metric.key] })), 7 * 86400000);
     series.push({
       name: "7-day rolling baseline (valid observations)",
       kind: "baseline",
-      data: selected.map((r) => {
-        const slice = rows.filter(
-          (v) =>
-            v.epoch >= r.epoch - 7 * 86400000 &&
-            v.epoch <= r.epoch &&
-            typeof v.values[metric.key] === "number" &&
-            Number.isFinite(v.values[metric.key]),
-        );
-        return [
-          r.epoch,
-          slice.length >= 2
-            ? slice.reduce((a, v) => a + Number(v.values[metric.key]), 0) /
-              slice.length
-            : null,
-        ];
-      }),
+      data: selected.map(r => [r.epoch, baseline.get(r.epoch) ?? null]),
     });
+  }
   if (
     id === "air-blower" &&
     ["maxVibrationMms", "maxBearingTempC"].includes(metric.key)
