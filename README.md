@@ -8,6 +8,8 @@ alarm screen. Built with Vite, React, and TypeScript.
 
 ## Architecture
 
+The published workspace loads independently of the predictor model. Failed or invalid local storage enters read-only mode without deleting saved data; retries can restore editing. Resources are validated on read as well as import/save. Equipment and economics page code loads on demand, and a page-level error boundary keeps navigation available if a page cannot render or download.
+
 Engineering/domain logic is kept separate from presentation and is
 independently testable:
 

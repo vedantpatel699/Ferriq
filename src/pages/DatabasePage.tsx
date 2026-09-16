@@ -4,7 +4,7 @@ import { downloadFile } from "../lib/files";
 import { DataTable } from "../components/DataTable";
 import { validateResource, type Resource } from "../shared/workspace";
 export function DatabasePage() {
-  const { snapshot, importResources, history } = useWorkspace();
+  const { snapshot, importResources, history, readOnly } = useWorkspace();
   const [versions, setVersions] = useState<Record<string, unknown>[]>([]);
   const [pending, setPending] = useState<Resource[]>([]),
     [note, setNote] = useState("");
@@ -18,6 +18,7 @@ export function DatabasePage() {
         repository update; there is no shared write server.
       </p>
       <p>Published revision: {snapshot.workspace.id}</p>
+      <p>Backups contain the currently loaded data. {snapshot.resources.some(r => r.key === "furnace-model") ? "The predictor model is included." : "The predictor model is not included until it becomes available."}</p>
       <div className="action-bar">
         <button
           onClick={() =>
@@ -43,6 +44,7 @@ export function DatabasePage() {
         Import workspace backup
         <input
           type="file"
+          disabled={readOnly}
           accept=".json"
           onChange={async (e) => {
             try {
@@ -76,6 +78,7 @@ export function DatabasePage() {
         <>
           <p>{pending.map((r) => r.key).join(", ")}</p>
           <button
+            disabled={readOnly}
             onClick={async () => {
               try {
                 await importResources(pending);
@@ -95,6 +98,7 @@ export function DatabasePage() {
       <label className="editor-field">
         Inspect local resource versions
         <select
+          disabled={readOnly}
           aria-label="Inspect local resource versions"
           defaultValue=""
           onChange={async (e) => {

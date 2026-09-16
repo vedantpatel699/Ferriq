@@ -1,3 +1,7 @@
+# Reliability follow-up - 16 September 2026
+
+83 unit tests and 118 desktop/tablet browser checks pass. New cases cover stalled/failed predictor downloads, retries, unavailable storage, preservation of loaded local edits, invalid stored/published data, deferred chart code and failed page downloads. Build passes; the same three WorkspaceContext lint warnings remain. Initial JavaScript is about 60% smaller (543 KB raw / 165 KB gzip), with charts loaded on demand. The predictor JSON still downloads separately in the background. No engineering or Python formulas changed. Rollback revision: faba70748be853b5f0d1fe2f3a67442d1aaae627.
+
 # Website sweep - 14 September 2026
 
 See [the full audit](WEBSITE-AUDIT-2026-09-14.md) for corrected issues, test evidence and prioritized remaining work. 81 unit tests and 106 browser checks pass; 18 affected browser checks were repeated after the final mobile spacing change. Numerical parity remains 49,991 Python/TypeScript comparisons plus 31,973 historical HTML comparisons. Build passes; production dependency audit reports no known vulnerabilities. Three existing lint warnings and the large initial bundle remain. This is regression verification, not independent physical-model validation.

@@ -216,19 +216,18 @@ export function validateResource(key: string, input: unknown): unknown {
     if (v.advisory_threshold_c >= v.alarm_threshold_c)
       throw Error("Model advisory threshold must be below alarm.");
     let count = 0;
+    const nodeSchema = z.object({
+      v: z.number().finite().optional(),
+      f: z.number().int().nonnegative().optional(),
+      t: z.number().finite().optional(),
+      m: z.number().int().min(0).max(1).optional(),
+      l: z.unknown().optional(),
+      r: z.unknown().optional(),
+    });
     const check = (node: unknown, depth = 0) => {
       if (depth > 64 || ++count > 1000000)
         throw Error("Model exceeds supported tree size.");
-      const n = z
-        .object({
-          v: z.number().finite().optional(),
-          f: z.number().int().nonnegative().optional(),
-          t: z.number().finite().optional(),
-          m: z.number().int().min(0).max(1).optional(),
-          l: z.unknown().optional(),
-          r: z.unknown().optional(),
-        })
-        .parse(node);
+      const n = nodeSchema.parse(node);
       if (n.v === undefined) {
         if (n.f === undefined || n.t === undefined)
           throw Error("Invalid indexed tree node.");

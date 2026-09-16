@@ -3,7 +3,7 @@ import { useResource, useWorkspace } from "../lib/WorkspaceContext";
 import type { FerriqSettings } from "../lib/settingsStore";
 export function SettingsPage() {
   const { data, version } = useResource<FerriqSettings>("settings"),
-    { save, reset, published } = useWorkspace();
+    { save, reset, published, readOnly } = useWorkspace();
   const [draft, setDraft] = useState(data),
     [note, setNote] = useState(""),
     [draftVersion, setDraftVersion] = useState(version);
@@ -61,8 +61,8 @@ export function SettingsPage() {
         ))}
         <p>Start must precede end; the remaining hours form the night shift.</p>
         <div className="action-bar">
-          <button type="submit">Save Changes</button>
-          <button type="button" onClick={() => void apply(true)}>
+          <button type="submit" disabled={readOnly}>Save Changes</button>
+          <button type="button" disabled={readOnly} onClick={() => void apply(true)}>
             Reset to Defaults
           </button>
         </div>

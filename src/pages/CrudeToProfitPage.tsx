@@ -47,7 +47,7 @@ function flatten(value: unknown, path = ""): Record<string, unknown>[] {
 }
 export function CrudeToProfitPage() {
   const { data, version } = useResource<Scenario>("economics"),
-    { save, reset, published } = useWorkspace();
+    { save, reset, published, readOnly } = useWorkspace();
   const [draft, setDraft] = useState<Scenario>(structuredClone(data)),
     [draftVersion, setDraftVersion] = useState(version),
     [tab, setTab] = useState("Overview"),
@@ -485,7 +485,7 @@ export function CrudeToProfitPage() {
         </>
       )}
       <div className="action-bar">
-        <button disabled={!result} onClick={() => void persist()}>
+        <button disabled={!result || readOnly} onClick={() => void persist()}>
           Save scenario
         </button>
         <button
@@ -498,6 +498,7 @@ export function CrudeToProfitPage() {
           Discard draft changes
         </button>
         <button
+          disabled={readOnly}
           onClick={async () => {
             try {
               await reset("economics");
