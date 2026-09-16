@@ -20,7 +20,7 @@ export function SummaryList({
   return (
     <>
       {items.length === 0 && (
-        <p>No conditions requiring review in the loaded data.</p>
+        <p>{predictorsOnly ? "Predictor data are not available yet. Check the model status above." : "No conditions requiring review in the loaded data."}</p>
       )}
       <div className="summary-grid">
         {items.map((e) => (

@@ -30,6 +30,7 @@ export function Sidebar({ onNavigate }: { onNavigate: () => void }) {
           e.state === "normal" ? undefined : stateLabel(e.state),
         ),
       )}
+      {!items.some(e => e.id === "furnace-skin-temp") && link("/predictors/furnace-skin-temp", "Furnace Skin TI Predictor", "UNAVAILABLE")}
       {link("/crude-to-profit", "Crude to Profit")}
       <div className="nav-label">Workspace</div>
       {link(

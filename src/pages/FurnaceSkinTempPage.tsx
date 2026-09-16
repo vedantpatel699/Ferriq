@@ -18,9 +18,15 @@ import { ReferenceManual } from "../components/ReferenceManual";
 import { formatNumber } from "../lib/format";
 import { csv, downloadFile } from "../lib/files";
 export function FurnaceSkinTempPage() {
+  const { snapshot } = useWorkspace();
+  if (!snapshot.resources.some(r => r.key === "furnace-model"))
+    return <><h1>Furnace Skin TI Predictor</h1><p>Forecasts require a valid predictor model. Model status and retry controls are shown above.</p></>;
+  return <FurnaceContent />;
+}
+function FurnaceContent() {
   const { data: bundle, version } =
       useResource<FurnaceModelBundle>("furnace-model"),
-    { save } = useWorkspace();
+    { save, readOnly } = useWorkspace();
   const [params, setParams] = useSearchParams();
   const key = params.get("furnace") ?? Object.keys(bundle.furnaces)[0];
   const furnace = bundle.furnaces[key] ?? Object.values(bundle.furnaces)[0];
@@ -438,6 +444,7 @@ export function FurnaceSkinTempPage() {
               Import model JSON
               <input
                 type="file"
+                disabled={readOnly}
                 accept=".json"
                 onChange={async (e) => {
                   try {

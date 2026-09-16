@@ -1,5 +1,15 @@
 # Website audit - 14 September 2026
 
+## Follow-up - 16 September 2026
+
+The failure-isolation findings below have been addressed. The main workspace now renders independently of the predictor model, with bounded requests and a separate predictor retry. Browser-storage failures enter read-only mode, preserving any local data already loaded. Save, restore and import actions are disabled until recovery. Malformed stored data are retained without being applied. Published and local resources are validated on read; page render/download failures show recovery controls while navigation remains available.
+
+Chart-heavy pages now load on demand. Initial JavaScript is approximately 543 KB uncompressed / 165 KB gzip, down from 1,309 KB / 416 KB. This is about a 60% reduction in the entry bundle, not a measured 60% reduction in page-load time. The 3.47 MB predictor model still downloads in the background for overview summaries. Model validation now reuses its node schema instead of rebuilding it for every tree node.
+
+The remaining priorities are explicit overdue-publication handling, client validation of process assumptions, human usability and assistive-technology testing, and further reductions in background data transfer. Engineering formulas and Python calculations are unchanged.
+
+The original audit below records the findings before this follow-up.
+
 The six dashboards and supporting routes pass the tested workflows. This sweep found and corrected usability, export and performance defects. Numerical agreement is strong within the tested cases; it is not independent validation of the physical models.
 
 ## Corrections in this release

@@ -8,13 +8,25 @@ function open(): Promise<IDBDatabase> {
       db.createObjectStore("history", { keyPath: "id" });
       db.createObjectStore("events", { keyPath: "id" });
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () =>
+    let finished = false;
+    const unavailable = () => {
+      finished = true;
+      clearTimeout(timer);
       reject(
         new Error(
           "Browser database is unavailable. Enable site storage to save local changes.",
         ),
       );
+    };
+    const timer = setTimeout(unavailable, 15000);
+    req.onsuccess = () => {
+      clearTimeout(timer);
+      if (finished) { req.result.close(); return; }
+      finished = true;
+      resolve(req.result);
+    };
+    req.onerror = unavailable;
+    req.onblocked = unavailable;
   });
 }
 const result = <T>(request: IDBRequest<T>) =>

@@ -40,7 +40,7 @@ import { calcCompositionProps } from "../engineering/heater/calculations";
 import type { FerriqSettings } from "../lib/settingsStore";
 export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
   const resource = useResource<EquipmentData>(id),
-    { save, reset, published, snapshot } = useWorkspace(),
+    { save, reset, published, snapshot, readOnly } = useWorkspace(),
     { data: settings } = useResource<FerriqSettings>("settings");
   const data = resource.data,
     rows = useMemo(() => calculate(id, data), [id, data]),
@@ -354,7 +354,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
               {(["current", "stale", "missing"] as const).map((kind) => (
                 <button
                   key={kind}
-                  disabled={busy}
+                  disabled={busy || readOnly}
                   onClick={() =>
                     void action(async () => {
                       const demo = demoBlower(kind);
@@ -727,7 +727,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
                   caption={`${filename}: preview (${pending.length} rows)`}
                 />
                 <button
-                  disabled={busy}
+                  disabled={busy || readOnly}
                   onClick={() =>
                     void action(async () => {
                       await save(
@@ -862,7 +862,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
             <ConfigEditor value={draft} onChange={setDraft} />
             <div className="action-bar">
               <button
-                disabled={busy}
+                disabled={busy || readOnly}
                 onClick={() =>
                   void action(async () => {
                     await save(
@@ -878,7 +878,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
                 Save configuration
               </button>
               <button
-                disabled={busy}
+                disabled={busy || readOnly}
                 onClick={() =>
                   void action(async () => {
                     await reset(id);

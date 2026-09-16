@@ -5,6 +5,11 @@ export function HelpPage() {
     <>
       <h1>Help & engineering manuals</h1>
       <p>
+        If browser storage is unavailable, reference data remain readable and saving is disabled.
+        Restore site-storage access and use Retry browser storage. Existing saved data are not deleted.
+        A predictor-model download failure has its own retry and does not block other dashboards.
+      </p>
+      <p>
         Open an equipment page and select Engineering manual for the original
         HTML calculation descriptions, sources and current configured reference
         limits. Calculation basis opens the same reference material beside the
