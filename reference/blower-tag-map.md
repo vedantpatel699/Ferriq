@@ -1,6 +1,6 @@
 # Air Blower demo tag mapping
 
-The bundled Ferriq demo is rebuilt from the client's `Blower (1).xlsx` workbook using the source tags below. Values are sampled once per day from 1–30 May 2025 while Blower A is the running train. No A measurement is copied into a B field and no missing temperature is invented.
+The Air Blower reference dataset maps the source workbook tags below into the model input schema. Values are sampled once per day from 1 May through 15 June 2025 while Blower A is the running train. Train-specific measurements remain separate and unavailable signals remain blank.
 
 | Ferriq field | Workbook tag | Source description | Source unit | Conversion |
 | --- | --- | --- | --- | --- |
@@ -10,8 +10,8 @@ The bundled Ferriq demo is rebuilt from the client's `Blower (1).xlsx` workbook 
 | Suction Press B | 164545-PI-3111.PV | BL301B blower suction | kPaa | none |
 | Discharge Press A | 1645-PIC-3101.PV | BL301A discharge pressure controller PV | kPa | interpreted as kPag |
 | Discharge Press B | 1645-PIC-3104.PV | BL301B discharge pressure controller PV | kPa | interpreted as kPag |
-| Controller SP A | 1645-PIC-3101.SP | BL301A discharge controller SP | kPa | none |
-| Controller SP B | 1645-PIC-3104.SP | BL301B discharge controller SP | kPa | none |
+| Controller SP A | 1645-PIC-3101.SP | BL301A discharge controller SP | kPa | used as kPag setpoint |
+| Controller SP B | 1645-PIC-3104.SP | BL301B discharge controller SP | kPa | used as kPag setpoint |
 | Bypass OP A | 1645-FIC-3108O1.PV | BL301A bypass valve position | % | none |
 | Bypass OP B | 1645-FIC-3111O1.PV | BL301B bypass valve position | % | none |
 | Filter DP A | 1645-PDI-3102.PV | BL301A air-filter suction DP | Pa | divide by 100000 to bar |
