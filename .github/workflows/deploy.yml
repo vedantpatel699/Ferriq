@@ -33,13 +33,13 @@ jobs:
           path: public/data/crude-market-prices.json
           key: market-v1-${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: market-v1-
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:python
       - name: Refresh public market observations
         run: python scripts/fetch-market-prices.py
         env:
           EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
-      - run: npm ci
-      - run: npm test
-      - run: npm run test:python
       - run: npm run build
         env:
           # Served at https://vedantpatel699.github.io/Ferriq/ — see the
