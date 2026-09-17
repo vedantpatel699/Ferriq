@@ -26,10 +26,12 @@ describe("Air Blower reference dataset", () => {
       expect(r["Filter DP A"]).toBeLessThan(0.1);
       expect(r["Total Flow"]).toBeGreaterThan(5000);
       expect(r["Total Flow"]).toBeLessThan(100000);
-      expect(r["Suction Temp"]).toBeNull();
-      expect(r["Discharge Temp B"]).toBeNull();
-      expect(r["Vibration B1"]).toBeNull();
-      expect(r["Bearing Temp B1"]).toBeNull();
+      expect(r["Suction Temp"]).toBeGreaterThan(-10);
+      expect(r["Suction Temp"]).toBeLessThan(20);
+      expect(r["Discharge Temp A"]).toBeGreaterThan(r["Suction Temp"]);
+      expect(r["Discharge Temp B"]).toBeGreaterThan(r["Suction Temp"]);
+      expect(r["Vibration B1"]).toBeGreaterThan(0);
+      expect(r["Bearing Temp B1"]).toBeGreaterThan(40);
 
       const p1 = r["Suction Press A"] / 100;
       const p2 =
@@ -39,11 +41,15 @@ describe("Air Blower reference dataset", () => {
     }
   });
 
-  it("does not elevate the page to DATA ISSUE for optional thermodynamic gaps", () => {
+  it("exercises thermodynamic efficiency and the thrust screening proxy", () => {
     const rows = calculate("air-blower", seedEquipment("air-blower"));
     expect(rows).toHaveLength(200);
-    expect(rows.at(-1)?.state).not.toBe("data-issue");
-    expect(rows.at(-1)?.quality.join(" ")).toContain("Suction temperature");
+    expect(
+      Number.isFinite(Number(rows.at(-1)?.values.efficiencyPolytropicPct)),
+    ).toBe(true);
+    expect(Number.isFinite(Number(rows.at(-1)?.values.thrustProxyPct))).toBe(
+      true,
+    );
   });
 
   it("uses the configured time-based baseline and suppresses off-envelope degradation", () => {
@@ -110,8 +116,8 @@ describe("Air Blower reference dataset", () => {
       expect(result.pressureRatio).toBeLessThan(2.1);
       expect(result.efficiencyFluidPct).toBeGreaterThan(40);
       expect(result.efficiencyFluidPct).toBeLessThan(85);
-      expect(result.t1Source).toBe("unavailable");
-      expect(result.efficiencyMethodUsed).toContain("fallback to fluid");
+      expect(result.t1Source).toBe("measured");
+      expect(Number.isFinite(result.efficiencyPolytropicPct)).toBe(true);
     }
   });
 });
