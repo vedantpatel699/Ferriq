@@ -127,7 +127,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
           ]),
         });
   }
-  if (id === "air-blower" && !compare) {
+  if (id === "air-blower") {
     const statePoints = (state: "Stale" | "Fallback") =>
       selected.map(
         (r) =>
