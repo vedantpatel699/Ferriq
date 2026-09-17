@@ -39,6 +39,10 @@ export function BlowerOverview({
   const bearing = finite(v.maxBearingTempC);
   const vibration = finite(v.maxVibrationMms);
   const thrustProxy = finite(v.thrustProxyPct);
+  const modelIntercept = finite(v.performanceModelIntercept);
+  const modelSlope = finite(v.performanceModelSlope);
+  const modelTrainingRows = finite(v.performanceModelTrainingRows);
+  const powerFactorUsed = finite(v.powerFactorUsed);
   const thermoAvailable =
     finite(v.efficiencyPolytropicPct) !== null &&
     finite(v.efficiencyIsentropicPct) !== null;
@@ -60,7 +64,20 @@ export function BlowerOverview({
           </div>
         </div>
         <div className="metrics-grid">
-          <MetricCard label="Motor input power" value={formatNumber(v.powerKw, 1)} unit="kW" />
+          <MetricCard
+            label="Motor input power"
+            value={formatNumber(v.powerKw, 1)}
+            unit="kW"
+            facts={[
+              {
+                bold:
+                  powerFactorUsed === null
+                    ? undefined
+                    : `PF ${formatNumber(powerFactorUsed, 3)}`,
+                rest: ` ${String(v.powerFactorSource ?? "")}`,
+              },
+            ]}
+          />
           <MetricCard label="Measured flow" value={formatNumber(v.flowNm3hr, 0)} unit="Nm³/hr" />
           <MetricCard label="Pressure ratio" value={formatNumber(v.pressureRatio, 3)} unit="" />
           <MetricCard label="Pressure rise" value={formatNumber(v.dpBar, 3)} unit="bar" />
@@ -117,6 +134,22 @@ export function BlowerOverview({
               : " Current operating conditions are outside the configured baseline envelope."}
           </span>
         </div>
+        <details className="disclosure">
+          <summary>Baseline model details</summary>
+          <div className="disclosure-body">
+            <p>
+              Qexpected = a + b × motor current. a ={" "}
+              <strong>{formatNumber(modelIntercept, 1)}</strong> Nm³/hr; b ={" "}
+              <strong>{formatNumber(modelSlope, 2)}</strong> Nm³/hr/A; training
+              observations ={" "}
+              <strong>{formatNumber(modelTrainingRows, 0)}</strong>.
+            </p>
+            <p>
+              a and b are fitted from the configured healthy-reference window,
+              not taken from the vendor datasheet.
+            </p>
+          </div>
+        </details>
         <TrendButton metric="performanceDegradationPct" />
       </section>
 
