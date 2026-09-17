@@ -1,10 +1,10 @@
-// Air Blower engineering module — ported verbatim from the live
-// air-blower.html engine (which matches backend-air-blower.md §3-4 exactly;
-// verified against the doc's worked example in calculations.test.ts).
-// Reference: ASME PTC 10 §5.4/§5.4a, API 617, ISO 10816-3 Group 1.
+// Air Blower proof-of-concept engineering model.
 //
-// Do NOT change these formulas to "improve" or "simplify" them during the
-// React migration — they are validated engineering logic, not UI code.
+// Core compression relationships use ideal-gas thermodynamics. ASME PTC 10
+// is the compressor-performance test framework; this module is intentionally
+// simpler than a formal acceptance test. Linear regression is used only as an
+// interpretable expected-behaviour screen. The thrust operating-deviation
+// proxy is explicitly a POC heuristic, not a direct axial-thrust calculation.
 
 import type { EngineeringAlert, RawSeverity } from "../types";
 
