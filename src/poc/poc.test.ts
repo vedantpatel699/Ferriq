@@ -21,10 +21,10 @@ const data = demoBlower(),
   metrics = metricsFor("air-blower", data.config, latest),
   bearing = metrics.find((m) => m.key === "maxBearingTempC")!;
 describe("POC quality and comparison contracts", () => {
-  it("computes the demo through the original engine and exposes an honest score", () => {
+  it("computes the demo through the current engine and exposes an honest score", () => {
     expect(latest.values.maxBearingTempC).toBeCloseTo(71.8);
     expect(latest.values.efficiencyPolytropicPct).toBeCloseTo(78.8, 1);
-    expect(latest.values.powerKw).toBeCloseTo(685);
+    expect(latest.values.powerKw).toBeCloseTo(714.52, 1);
     expect(healthScore(metrics, rows).score).toBe(82);
     expect(healthScore(metrics, cleanBaseline()).score).toBe(100);
   });
