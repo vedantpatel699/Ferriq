@@ -1,6 +1,6 @@
 # Air Blower demo tag mapping
 
-The Air Blower reference dataset maps the source workbook tags below into the model input schema. Values are sampled once per day from 1 May through 15 June 2025 while Blower A is the running train. Train-specific measurements remain separate and unavailable signals remain blank.
+The Air Blower source anchors map the workbook tags below into the model input schema. Forty-six validated daily anchors cover 1 May through 15 June 2025 while Blower A is the running train. The 200-row reference test CSV preserves those anchors and fills intermediate timestamps by deterministic linear interpolation of measured numeric fields. Train-specific measurements remain separate and unavailable signals remain blank.
 
 | Ferriq field | Workbook tag | Source description | Source unit | Conversion |
 | --- | --- | --- | --- | --- |
