@@ -9,6 +9,9 @@ function finite(value: unknown): number | null {
 export function BlowerOverview({ latest }: { latest: Reading }) {
   const v = latest.values;
   const degradation = finite(v.performanceDegradationPct);
+  const expectedFlow = finite(v.expectedFlowNm3hr);
+  const flowResidual = finite(v.flowResidualPct);
+  const modelApplicable = v.performanceModelApplicable === true;
   const bearingEta = finite(v.bearingAdvisoryEtaDays);
   const bearingTrend = finite(v.bearingTrendCPerDay);
   const vibrationTrend = finite(v.vibrationTrendMmsPerDay);
@@ -38,32 +41,37 @@ export function BlowerOverview({ latest }: { latest: Reading }) {
           unit="Nm³/hr"
         />
         <MetricCard
-          label="Expected flow"
-          value={formatNumber(v.expectedFlowNm3hr, 0)}
-          unit="Nm³/hr"
-          method="Healthy-reference linear baseline"
-        />
-        <MetricCard
-          label="Performance degradation"
-          value={formatNumber(degradation, 1)}
-          unit="%"
+          label="Performance vs baseline"
+          value={modelApplicable ? formatNumber(degradation, 1) : "N/A"}
+          unit={modelApplicable ? "%" : ""}
           state={
-            degradation === null
-              ? "data-issue"
-              : degradation >= 10
+            !modelApplicable
+              ? undefined
+              : degradation !== null && degradation >= 10
                 ? "investigate"
-                : degradation >= 5
+                : degradation !== null && degradation >= 5
                   ? "watch"
                   : "normal"
           }
           facts={[
             {
-              rest:
-                degradation === null
-                  ? " Baseline result unavailable."
-                  : " Flow shortfall versus expected flow.",
+              bold:
+                expectedFlow === null
+                  ? undefined
+                  : `${formatNumber(expectedFlow, 0)} Nm³/hr`,
+              rest: " expected flow",
+            },
+            {
+              bold:
+                flowResidual === null
+                  ? undefined
+                  : `${formatNumber(flowResidual, 1)}%`,
+              rest: modelApplicable
+                ? " measured-flow residual"
+                : " baseline comparison not applied at this operating condition",
             },
           ]}
+          method="Current-to-flow healthy-reference regression"
         />
         <MetricCard
           label={
@@ -144,18 +152,11 @@ export function BlowerOverview({ latest }: { latest: Reading }) {
           value={formatNumber(v.filterDpBar, 4)}
           unit="bar"
         />
-        <MetricCard
-          label="Thrust health"
-          value="Unavailable"
-          state="data-issue"
-          facts={[
-            {
-              rest:
-                " No identified axial-position or thrust-bearing-temperature tag in the supplied workbook.",
-            },
-          ]}
-        />
       </div>
+      <p className="source-note">
+        Thrust health is not calculated until an axial-position or
+        thrust-bearing-temperature measurement is mapped.
+      </p>
     </>
   );
 }
