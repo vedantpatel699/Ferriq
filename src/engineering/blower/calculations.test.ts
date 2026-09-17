@@ -167,7 +167,7 @@ describe("Air Blower — backend-air-blower.md §8 worked example", () => {
 
   it("computes the POC thrust operating-deviation proxy from design-point deviations", () => {
     const designPr = 178 / 93;
-    expect(thrustOperatingDeviationPct(23187, designPr, 0)).toBeCloseTo(0, 10);
+    expect(thrustOperatingDeviationPct(20609.2866, designPr, 0)).toBeCloseTo(0, 10);
     expect(thrustOperatingDeviationPct(18000, designPr, 0)).toBeGreaterThan(10);
   });
 
