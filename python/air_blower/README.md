@@ -11,9 +11,11 @@ The two implementations share:
 - isentropic and polytropic efficiency
 - vibration, bearing-temperature and process-condition alerts
 - bounded suction-temperature forward fill
+- motor power-factor interpolation from the supplied motor performance points
 - expected-flow baseline regression
 - measured-versus-expected flow degradation screening
 - bearing and vibration trend calculations
+- a clearly labelled POC thrust operating-deviation proxy
 
 Run the cross-language parity check with:
 
@@ -21,4 +23,4 @@ Run the cross-language parity check with:
 npm run test:python
 ```
 
-The reference Air Blower input dataset is stored at `reference/blower-demo.csv`. Its source-tag mapping and units are documented in `reference/blower-tag-map.md`.
+The 200-row POC Air Blower input dataset is stored at `reference/blower-demo.csv`. Its source mapping, simulated fields and units are documented in `reference/blower-tag-map.md`.
