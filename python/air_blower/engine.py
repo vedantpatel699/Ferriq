@@ -60,6 +60,8 @@ DEFAULT_LIMITS = {
     "filter_dp_max_bar":   0.10,
     "blower_dp_max_bar":   1.00,
     "bypass_open_max_pct": 60.0,
+    "performance_watch_pct": 5.0,
+    "performance_alarm_pct": 10.0,
 }
 
 # =============================================================================
@@ -486,6 +488,7 @@ def process_batch(rows, settings=None, limits=None):
     on suction_temp per STANDARD.md §4.
     """
     s = {**DEFAULT_SETTINGS, **(settings or {})}
+    lim = {**DEFAULT_LIMITS, **(limits or {})}
     ff_window_h = s["suction_temp_ff_max_hours"]
 
     sortable = []
@@ -524,23 +527,28 @@ def process_batch(rows, settings=None, limits=None):
                     and r.get("active_current_amp") is not None
                     and r.get("flow_nm3hr") is not None
                     and (r.get("bypass_op_pct") is None or r["bypass_op_pct"] < 5)
-                    and (r.get("filter_dp_bar") is None or r["filter_dp_bar"] <= DEFAULT_LIMITS["filter_dp_max_bar"])]
+                    and (r.get("filter_dp_bar") is None or r["filter_dp_bar"] <= lim["filter_dp_max_bar"])]
         model = fit_simple_flow_model(
             [(r["active_current_amp"], r["flow_nm3hr"]) for r in eligible[:14]]
         )
         for r in [x for x in processed if x["active_blower"] == train]:
             expected = predict_flow_nm3hr(model, r.get("active_current_amp"))
+            within_baseline_envelope = (
+                (r.get("bypass_op_pct") is None or r["bypass_op_pct"] < 5)
+                and (r.get("filter_dp_bar") is None or r["filter_dp_bar"] <= lim["filter_dp_max_bar"])
+            )
             residual = ((r["flow_nm3hr"] - expected) / expected * 100.0
-                        if expected is not None and expected > 0 else None)
+                        if within_baseline_envelope and expected is not None and expected > 0 else None)
             r["expected_flow_nm3hr"] = None if expected is None else round(expected, 2)
             r["flow_residual_pct"] = None if residual is None else round(residual, 2)
             r["performance_degradation_pct"] = None if residual is None else round(max(0.0, -residual), 2)
             r["performance_model_training_rows"] = 0 if model is None else model["training_rows"]
-            if residual is not None and residual <= -10:
+            r["performance_model_applicable"] = bool(within_baseline_envelope and model is not None)
+            if residual is not None and residual <= -lim.get("performance_alarm_pct", 10.0):
                 r["alerts"].append(_alert("alarm",
                     f"Measured flow is {abs(residual):.1f}% below the baseline regression expectation.",
                     "healthy-baseline linear regression"))
-            elif residual is not None and residual <= -5:
+            elif residual is not None and residual <= -lim.get("performance_watch_pct", 5.0):
                 r["alerts"].append(_alert("advisory",
                     f"Measured flow is {abs(residual):.1f}% below the baseline regression expectation.",
                     "healthy-baseline linear regression"))
@@ -559,8 +567,8 @@ def process_batch(rows, settings=None, limits=None):
             r[output] = None if slope is None else round(slope, 4)
         bearing = r.get("max_bearing_temp_c")
         slope = r.get("bearing_trend_c_per_day")
-        if bearing is not None and slope is not None and slope > 0 and bearing < DEFAULT_LIMITS["brg_advisory_c"]:
-            r["bearing_advisory_eta_days"] = round((DEFAULT_LIMITS["brg_advisory_c"] - bearing) / slope, 1)
+        if bearing is not None and slope is not None and slope > 0 and bearing < lim["brg_advisory_c"]:
+            r["bearing_advisory_eta_days"] = round((lim["brg_advisory_c"] - bearing) / slope, 1)
         else:
             r["bearing_advisory_eta_days"] = None
         r["thrust_health"] = "unavailable"
