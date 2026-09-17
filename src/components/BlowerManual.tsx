@@ -96,6 +96,22 @@ export function BlowerManual() {
         </FormulaBlock>
       </ManualSection>
 
+      <ManualSection title="Vendor design reference conversion">
+        <p>
+          The vendor sheet provides normal-condition weight flow and molecular
+          weight. For comparison with the dashboard's Nm³/hr flow, the reference
+          normal flow is derived at 0 °C and approximately 101.3 kPa using the
+          ideal-gas molar volume.
+        </p>
+        <FormulaBlock name="Reference normal flow">
+          <><i>Q</i><sub>N</sub> = (<i>ṁ</i> / MW) · 22.414</>
+        </FormulaBlock>
+        <p>
+          For the supplied normal point, 26,665 kg/hr and MW 29 give
+          approximately 20,609 Nm³/hr.
+        </p>
+      </ManualSection>
+
       <ManualSection title="Performance degradation model">
         <p>
           The coefficients <strong>a</strong> and <strong>b</strong> are fitted
