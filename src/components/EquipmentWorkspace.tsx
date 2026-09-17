@@ -181,38 +181,43 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
         ]
       : []),
   ];
-  const manual = (
-    <>
-      <h2>Current status & reference configuration</h2>
-      <p>
-        Current state: {latest.state.toUpperCase()}. Advisory maps to WATCH;
-        alarm/trip maps to INVESTIGATE. The tables below describe the active
-        workspace; original manual defaults follow as source reference.
-      </p>
-      <DataTable
-        rows={metrics.flatMap((m) => [
-          ...(m.limits ?? []).map((l) => ({
-            metric: m.label,
-            reference: l.name,
-            value: l.value,
-            unit: m.unit,
-          })),
-          ...(m.reference === undefined
-            ? []
-            : [
-                {
-                  metric: m.label,
-                  reference: m.referenceLabel,
-                  value: m.reference,
-                  unit: m.unit,
-                },
-              ]),
-        ])}
-        caption="Active metric references"
+  const manual =
+    id === "air-blower" ? (
+      <BlowerManual
+        settings={(data.config as unknown as { settings: import("../engineering/blower/calculations").BlowerSettings }).settings}
+        limits={(data.config as unknown as { limits: import("../engineering/blower/calculations").BlowerLimits }).limits}
       />
-      {id === "air-blower" ? <BlowerManual /> : <ReferenceManual id={id} />}
-    </>
-  );
+    ) : (
+      <>
+        <h2>Current status & reference configuration</h2>
+        <p>
+          Current state: {latest.state.toUpperCase()}. Advisory maps to WATCH;
+          alarm/trip maps to INVESTIGATE.
+        </p>
+        <DataTable
+          rows={metrics.flatMap((m) => [
+            ...(m.limits ?? []).map((l) => ({
+              metric: m.label,
+              reference: l.name,
+              value: l.value,
+              unit: m.unit,
+            })),
+            ...(m.reference === undefined
+              ? []
+              : [
+                  {
+                    metric: m.label,
+                    reference: m.referenceLabel,
+                    value: m.reference,
+                    unit: m.unit,
+                  },
+                ]),
+          ])}
+          caption="Active metric references"
+        />
+        <ReferenceManual id={id} />
+      </>
+    );
   const local =
     resource.version !== (published.find((p) => p.key === id)?.version ?? 1);
   async function action(fn: () => Promise<void>) {
