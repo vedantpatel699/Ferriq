@@ -38,6 +38,8 @@ DEFAULT_SETTINGS = {
     "active_current_min_a": 10.0,   # below this, blower treated as off
     "suction_temp_fallback_c": 4.0, # retained for compatibility; no fixed value is inserted
     "suction_temp_ff_max_hours": 4, # forward-fill window (batch mode only)
+    "baseline_training_days": 14.0,
+    "performance_bypass_max_pct": 5.0,
     # Blower mode: "auto" | "A" | "B"
     "blower_mode": "auto",
     # Efficiency method to report as the headline KPI:
@@ -527,15 +529,24 @@ def process_batch(rows, settings=None, limits=None):
                     if r["active_blower"] == train
                     and r.get("active_current_amp") is not None
                     and r.get("flow_nm3hr") is not None
-                    and (r.get("bypass_op_pct") is None or r["bypass_op_pct"] < 5)
+                    and (r.get("bypass_op_pct") is None or r["bypass_op_pct"] < s["performance_bypass_max_pct"])
                     and (r.get("filter_dp_bar") is None or r["filter_dp_bar"] <= lim["filter_dp_max_bar"])]
+        if eligible:
+            training_start = datetime.fromisoformat(eligible[0]["timestamp"])
+            training_end = training_start.timestamp() + s["baseline_training_days"] * 86400.0
+            training_rows = [
+                r for r in eligible
+                if datetime.fromisoformat(r["timestamp"]).timestamp() <= training_end
+            ]
+        else:
+            training_rows = []
         model = fit_simple_flow_model(
-            [(r["active_current_amp"], r["flow_nm3hr"]) for r in eligible[:14]]
+            [(r["active_current_amp"], r["flow_nm3hr"]) for r in training_rows]
         )
         for r in [x for x in processed if x["active_blower"] == train]:
             expected = predict_flow_nm3hr(model, r.get("active_current_amp"))
             within_baseline_envelope = (
-                (r.get("bypass_op_pct") is None or r["bypass_op_pct"] < 5)
+                (r.get("bypass_op_pct") is None or r["bypass_op_pct"] < s["performance_bypass_max_pct"])
                 and (r.get("filter_dp_bar") is None or r["filter_dp_bar"] <= lim["filter_dp_max_bar"])
             )
             residual = ((r["flow_nm3hr"] - expected) / expected * 100.0
