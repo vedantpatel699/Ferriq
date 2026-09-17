@@ -36,7 +36,7 @@ DEFAULT_SETTINGS = {
     "atm_pressure_bar": 0.93,       # site atmospheric pressure, ~93 kPa
     # Data-quality rules
     "active_current_min_a": 10.0,   # below this, blower treated as off
-    "suction_temp_fallback_c": 4.0, # used when live value is missing
+    "suction_temp_fallback_c": 4.0, # retained for compatibility; no fixed value is inserted
     "suction_temp_ff_max_hours": 4, # forward-fill window (batch mode only)
     # Blower mode: "auto" | "A" | "B"
     "blower_mode": "auto",
@@ -58,7 +58,7 @@ DEFAULT_LIMITS = {
     "brg_trip_c":       95.0,
     # Process advisories (plant-specific; user-tunable)
     "filter_dp_max_bar":   0.10,
-    "blower_dp_max_bar":   0.45,
+    "blower_dp_max_bar":   1.00,
     "bypass_open_max_pct": 60.0,
 }
 
@@ -377,8 +377,7 @@ def process_single_row(row, settings=None, limits=None):
             t1_c = s["_t1_forward_filled"]
             t1_source = "forward-filled"
         else:
-            t1_c = s["suction_temp_fallback_c"]
-            t1_source = "default"
+            t1_source = "unavailable"
     else:
         t1_source = "measured"
 
@@ -391,16 +390,20 @@ def process_single_row(row, settings=None, limits=None):
     p_fluid = fluid_power_kw(flow, dp_bar)
     eff_fluid = (p_fluid / p_elec * 100.0) if p_elec > 0 else float("nan")
 
-    t1_k = t1_c + 273.15
+    t1_k = t1_c + 273.15 if not math.isnan(t1_c) else float("nan")
     t2_k = t2_c + 273.15 if not math.isnan(t2_c) else float("nan")
     eff_isen = (isentropic_efficiency(t1_k, t2_k, p1_bar, p2_bar, s["gamma_k"]) * 100.0
-                if not math.isnan(t2_k) else float("nan"))
+                if not math.isnan(t1_k) and not math.isnan(t2_k) else float("nan"))
     eff_poly = (polytropic_efficiency(t1_k, t2_k, p1_bar, p2_bar, s["gamma_k"]) * 100.0
-                if not math.isnan(t2_k) else float("nan"))
+                if not math.isnan(t1_k) and not math.isnan(t2_k) else float("nan"))
 
     method = s["efficiency_method"]
     eff_headline = {"polytropic": eff_poly, "isentropic": eff_isen,
                     "fluid": eff_fluid}.get(method, eff_poly)
+    method_used = method
+    if math.isnan(eff_headline) and method != "fluid":
+        eff_headline = eff_fluid
+        method_used = f"{method} (fallback to fluid)"
 
     alerts = build_alerts(vib_max, brg_max, filt_dp, dp_bar, bypass,
                           p2_kpag, sp_kpag, lim)
@@ -425,15 +428,52 @@ def process_single_row(row, settings=None, limits=None):
         "efficiency_polytropic_pct":  _r(eff_poly, 2),
         "efficiency_headline_pct":    _r(eff_headline, 2),
         "efficiency_method": method,
+        "efficiency_method_used": method_used,
+        "active_current_amp": _r(current, 3),
         "max_vibration_mms":     _r(vib_max, 2),
         "max_bearing_temp_c":    _r(brg_max, 1),
         "filter_dp_bar":         _r(filt_dp, 3),
         "bypass_op_pct":         _r(bypass, 1),
-        "t1_c_used": round(t1_c, 1),
+        "t1_c_used": None if math.isnan(t1_c) else round(t1_c, 1),
         "t1_source": t1_source,
         "alerts": alerts,
         "status": status,
     }
+
+
+def fit_simple_flow_model(points):
+    """Fit an interpretable baseline linear regression: flow = a + b*current."""
+    clean = [(float(x), float(y)) for x, y in points
+             if x is not None and y is not None and math.isfinite(float(x)) and math.isfinite(float(y))]
+    if len(clean) < 5:
+        return None
+    mx = sum(x for x, _ in clean) / len(clean)
+    my = sum(y for _, y in clean) / len(clean)
+    variance = sum((x - mx) ** 2 for x, _ in clean)
+    covariance = sum((x - mx) * (y - my) for x, y in clean)
+    slope = covariance / variance if variance > 1e-12 else 0.0
+    return {"intercept": my - slope * mx, "slope": slope, "training_rows": len(clean)}
+
+
+def predict_flow_nm3hr(model, current):
+    if model is None or current is None or not math.isfinite(float(current)):
+        return None
+    return model["intercept"] + model["slope"] * float(current)
+
+
+def _trend_per_day(history):
+    """Least-squares slope for (datetime, value) pairs."""
+    if len(history) < 3:
+        return None
+    t0 = history[0][0]
+    xs = [(t - t0).total_seconds() / 86400.0 for t, _ in history]
+    ys = [v for _, v in history]
+    mx = sum(xs) / len(xs)
+    my = sum(ys) / len(ys)
+    denom = sum((x - mx) ** 2 for x in xs)
+    if denom <= 0:
+        return None
+    return sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / denom
 
 
 # =============================================================================
@@ -475,6 +515,55 @@ def process_batch(rows, settings=None, limits=None):
             if out["t1_source"] == "measured":
                 last_t1_val = out["t1_c_used"]
                 last_t1_ts = ts
+
+    # Standard, transparent ML baseline: train a separate current->flow
+    # regression for each blower using the first 14 clean-reference rows.
+    for train in ("A", "B"):
+        eligible = [r for r in processed
+                    if r["active_blower"] == train
+                    and r.get("active_current_amp") is not None
+                    and r.get("flow_nm3hr") is not None
+                    and (r.get("bypass_op_pct") is None or r["bypass_op_pct"] < 5)
+                    and (r.get("filter_dp_bar") is None or r["filter_dp_bar"] <= DEFAULT_LIMITS["filter_dp_max_bar"])]
+        model = fit_simple_flow_model(
+            [(r["active_current_amp"], r["flow_nm3hr"]) for r in eligible[:14]]
+        )
+        for r in [x for x in processed if x["active_blower"] == train]:
+            expected = predict_flow_nm3hr(model, r.get("active_current_amp"))
+            residual = ((r["flow_nm3hr"] - expected) / expected * 100.0
+                        if expected is not None and expected > 0 else None)
+            r["expected_flow_nm3hr"] = None if expected is None else round(expected, 2)
+            r["flow_residual_pct"] = None if residual is None else round(residual, 2)
+            r["performance_degradation_pct"] = None if residual is None else round(max(0.0, -residual), 2)
+            r["performance_model_training_rows"] = 0 if model is None else model["training_rows"]
+            if residual is not None and residual <= -10:
+                r["alerts"].append(_alert("alarm",
+                    f"Measured flow is {abs(residual):.1f}% below the baseline regression expectation.",
+                    "healthy-baseline linear regression"))
+            elif residual is not None and residual <= -5:
+                r["alerts"].append(_alert("advisory",
+                    f"Measured flow is {abs(residual):.1f}% below the baseline regression expectation.",
+                    "healthy-baseline linear regression"))
+            r["status"] = roll_up_status(r["alerts"])
+
+    # Trend-only bearing/vibration projections. These are not remaining-life estimates.
+    for i, r in enumerate(processed):
+        for metric, output in (("max_bearing_temp_c", "bearing_trend_c_per_day"),
+                               ("max_vibration_mms", "vibration_trend_mms_per_day")):
+            hist = []
+            for x in processed[max(0, i-6):i+1]:
+                v = x.get(metric)
+                if v is not None and math.isfinite(float(v)):
+                    hist.append((datetime.fromisoformat(x["timestamp"]), float(v)))
+            slope = _trend_per_day(hist)
+            r[output] = None if slope is None else round(slope, 4)
+        bearing = r.get("max_bearing_temp_c")
+        slope = r.get("bearing_trend_c_per_day")
+        if bearing is not None and slope is not None and slope > 0 and bearing < DEFAULT_LIMITS["brg_advisory_c"]:
+            r["bearing_advisory_eta_days"] = round((DEFAULT_LIMITS["brg_advisory_c"] - bearing) / slope, 1)
+        else:
+            r["bearing_advisory_eta_days"] = None
+        r["thrust_health"] = "unavailable"
 
     return {
         "rows_processed": len(processed),
