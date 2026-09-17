@@ -82,7 +82,7 @@ export const BLOWER_DESIGN_REFERENCE = {
   inletPressureKpaa: 93,
   dischargePressureKpaa: 178,
   annualAverageInletTempC: 4,
-  designFlowNm3hr: 23187,
+  designFlowNm3hr: 20609.2866,
   designTrainPowerKw: 711,
   designPolytropicEfficiencyPct: 76,
   designSpeedRpm: 3580,
