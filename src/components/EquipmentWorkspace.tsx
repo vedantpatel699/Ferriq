@@ -520,7 +520,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
                   id + "-input-template.csv",
                   csv(
                     id === "air-blower"
-                      ? BLOWER_DEMO_DATA.slice(0, 3)
+                      ? (BLOWER_DEMO_DATA.slice(0, 3) as unknown as Row[])
                       : data.rows.slice(0, 3),
                   ),
                   "text/csv",
@@ -534,7 +534,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
                 onClick={() =>
                   downloadFile(
                     "air-blower-reference.csv",
-                    csv(BLOWER_DEMO_DATA),
+                    csv(BLOWER_DEMO_DATA as unknown as Row[]),
                     "text/csv",
                   )
                 }
