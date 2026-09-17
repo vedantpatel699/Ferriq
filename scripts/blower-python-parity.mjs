@@ -1,6 +1,6 @@
-// Cross-language Air Blower reference check.
-// The Python upload is a reference engine. Shared math must match exactly;
-// known site behavior differences are asserted explicitly so they cannot drift silently.
+// Cross-language Air Blower parity check.
+// Shared engineering calculations and baseline-model math must remain aligned
+// between the Python engine and the TypeScript site implementation.
 import fs from "node:fs";
 import vm from "node:vm";
 import assert from "node:assert/strict";
@@ -16,7 +16,7 @@ const tsSource = stripTypeScriptTypes(
 
 const ts = vm.runInNewContext(
   tsSource +
-    ";({DEFAULT_BLOWER_SETTINGS,DEFAULT_BLOWER_LIMITS,shaftPowerKw,normalizePressures,fluidPowerKw,isentropicEfficiency,polytropicEfficiency,detectActiveBlower,processBlowerRow})",
+    ";({DEFAULT_BLOWER_SETTINGS,DEFAULT_BLOWER_LIMITS,shaftPowerKw,normalizePressures,fluidPowerKw,isentropicEfficiency,polytropicEfficiency,detectActiveBlower,processBlowerRow,fitSimpleFlowModel,predictFlowNm3hr})",
 );
 
 const py = spawnSync(
@@ -53,6 +53,7 @@ pure = {
     )
   ],
   "python_dp_default": E.DEFAULT_LIMITS["blower_dp_max_bar"],
+  "flow_model": E.fit_simple_flow_model([(100,16000),(105,17500),(110,19000),(115,20500),(120,22000)]),
 }
 
 row = {
@@ -75,8 +76,9 @@ row = {
   "bearing_temp_b_2": 68.29,
 }
 normal = E.process_single_row(row, limits={**E.DEFAULT_LIMITS, "blower_dp_max_bar": 1.0})
-missing_t2 = E.process_single_row({**row, "discharge_temp_b": None}, limits={**E.DEFAULT_LIMITS, "blower_dp_max_bar": 1.0})
-print(json.dumps({"pure":pure,"normal":normal,"missing_t2":missing_t2}, allow_nan=False))`,
+missing_t2 = E.process_single_row({**row, "discharge_temp_b": None}, limits=E.DEFAULT_LIMITS)
+missing_t1 = E.process_single_row({**row, "suction_temp": None}, limits=E.DEFAULT_LIMITS)
+print(json.dumps({"pure":pure,"normal":normal,"missing_t2":missing_t2,"missing_t1":missing_t1}, allow_nan=False))`,
   ],
   { encoding: "utf8" },
 );
@@ -173,15 +175,37 @@ assert.equal(current.activeBlower, p.normal.active_blower);
 assert.equal(current.t1Source, p.normal.t1_source);
 assert.equal(current.severity, p.normal.status);
 
-// Intentional divergence #1: live site follows the preserved dashboard's 1.00 bar default.
-assert.equal(p.pure.python_dp_default, 0.45);
+// Current defaults are shared across both engines.
+assert.equal(p.pure.python_dp_default, 1.0);
 assert.equal(ts.DEFAULT_BLOWER_LIMITS.blowerDpMaxBar, 1.0);
 
-// Intentional divergence #2: site preserves a labelled fluid-power fallback when T2 is missing.
+// Missing thermodynamic temperature inputs must produce the same labelled
+// fluid-power fallback without inventing a suction temperature.
 const noT2 = ts.processBlowerRow({...siteRow, dischargeTempB:null}, ts.DEFAULT_BLOWER_SETTINGS, ts.DEFAULT_BLOWER_LIMITS, null);
-assert.equal(p.missing_t2.efficiency_headline_pct, null);
 assert.equal(noT2.drop, false);
 assert.ok(noT2.efficiencyMethodUsed.includes("fallback to fluid"));
-assert.equal(Number(noT2.efficiencyHeadlinePct.toFixed(2)), p.missing_t2.efficiency_fluid_pct);
+assert.equal(Number(noT2.efficiencyHeadlinePct.toFixed(2)), p.missing_t2.efficiency_headline_pct);
 
-console.log("PASS: Air Blower Python reference and TypeScript site share the same core math; intentional site differences are explicitly asserted.");
+const noT1 = ts.processBlowerRow({...siteRow, suctionTempC:null}, ts.DEFAULT_BLOWER_SETTINGS, ts.DEFAULT_BLOWER_LIMITS, null);
+assert.equal(noT1.drop, false);
+assert.equal(noT1.t1Source, "unavailable");
+assert.equal(noT1.t1CUsed, null);
+assert.equal(p.missing_t1.t1_source, "unavailable");
+assert.equal(p.missing_t1.t1_c_used, null);
+assert.equal(Number(noT1.efficiencyHeadlinePct.toFixed(2)), p.missing_t1.efficiency_headline_pct);
+
+// Baseline regression coefficients and prediction must also agree.
+const model = ts.fitSimpleFlowModel([
+  {currentA:100,flowNm3hr:16000},
+  {currentA:105,flowNm3hr:17500},
+  {currentA:110,flowNm3hr:19000},
+  {currentA:115,flowNm3hr:20500},
+  {currentA:120,flowNm3hr:22000},
+]);
+assert.ok(model);
+close(model.intercept, p.pure.flow_model.intercept);
+close(model.slope, p.pure.flow_model.slope);
+assert.equal(model.trainingRows, p.pure.flow_model.training_rows);
+close(ts.predictFlowNm3hr(model, 112), 19600);
+
+console.log("PASS: Air Blower Python and TypeScript implementations match for core math, temperature handling and baseline regression.");
