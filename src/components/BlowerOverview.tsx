@@ -38,6 +38,7 @@ export function BlowerOverview({
   const vibrationTrend = finite(v.vibrationTrendMmsPerDay);
   const bearing = finite(v.maxBearingTempC);
   const vibration = finite(v.maxVibrationMms);
+  const thrustProxy = finite(v.thrustProxyPct);
   const thermoAvailable =
     finite(v.efficiencyPolytropicPct) !== null &&
     finite(v.efficiencyIsentropicPct) !== null;
@@ -197,14 +198,38 @@ export function BlowerOverview({
         <div>
           <h2>Thrust health</h2>
           <p className="section-note">
-            Dedicated thrust monitoring requires an axial-position, axial-displacement,
-            thrust-bearing-temperature, or equivalent OEM-designated measurement.
+            POC screening based on deviation from the vendor design operating
+            point. This is not a direct axial-thrust measurement.
           </p>
         </div>
-        <div className="thrust-unavailable">
-          <strong>Not instrumented</strong>
-          <span>No dedicated thrust measurement is currently mapped, so thrust condition is not inferred from radial vibration.</span>
+        <div className="metrics-grid">
+          <MetricCard
+            label="Thrust operating-deviation proxy"
+            value={formatNumber(thrustProxy, 1)}
+            unit="%"
+            state={
+              thrustProxy === null
+                ? undefined
+                : thrustProxy >= limits.thrustProxyAlarmPct
+                  ? "investigate"
+                  : thrustProxy >= limits.thrustProxyWatchPct
+                    ? "watch"
+                    : "normal"
+            }
+            facts={[
+              {
+                bold: `${limits.thrustProxyWatchPct}%`,
+                rest: " POC watch threshold",
+              },
+              {
+                rest:
+                  " Direct axial or thrust-bearing instrumentation is still required for a true thrust assessment.",
+              },
+            ]}
+            method="Equal-weight RMS of flow, pressure-ratio and bypass deviations from the design point"
+          />
         </div>
+        <TrendButton metric="thrustProxyPct" />
       </section>
     </div>
   );
