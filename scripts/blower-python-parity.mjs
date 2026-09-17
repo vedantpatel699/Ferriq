@@ -27,28 +27,21 @@ const py = spawnSync(
 sys.path.insert(0, "python/air_blower")
 import engine as E
 
+def finite_or_none(v):
+    return None if isinstance(v, float) and math.isnan(v) else v
+
+thermo_cases = (
+  (283.15,390,0.93,2,1.4),
+  (277,277,1,1,1.4),
+  (300,410,1,3,1.3),
+  (300,280,1,2,1.4),
+)
 pure = {
   "shaft": [E.shaft_power_kw(4000, i, 0.85) for i in (0, 5, 100, 117)],
   "pressures": list(E.normalize_pressures(93, 105, 0.93)),
   "fluid": E.fluid_power_kw(20000, 0.9),
-  "isentropic": [
-    E.isentropic_efficiency(*x)
-    for x in (
-      (283.15,390,0.93,2,1.4),
-      (277,277,1,1,1.4),
-      (300,410,1,3,1.3),
-      (300,280,1,2,1.4),
-    )
-  ],
-  "polytropic": [
-    E.polytropic_efficiency(*x)
-    for x in (
-      (283.15,390,0.93,2,1.4),
-      (277,277,1,1,1.4),
-      (300,410,1,3,1.3),
-      (300,280,1,2,1.4),
-    )
-  ],
+  "isentropic": [finite_or_none(E.isentropic_efficiency(*x)) for x in thermo_cases],
+  "polytropic": [finite_or_none(E.polytropic_efficiency(*x)) for x in thermo_cases],
   "active": [
     E.detect_active_blower(*x)
     for x in (
@@ -83,7 +76,7 @@ row = {
 }
 normal = E.process_single_row(row, limits={**E.DEFAULT_LIMITS, "blower_dp_max_bar": 1.0})
 missing_t2 = E.process_single_row({**row, "discharge_temp_b": None}, limits={**E.DEFAULT_LIMITS, "blower_dp_max_bar": 1.0})
-print(json.dumps({"pure":pure,"normal":normal,"missing_t2":missing_t2}, allow_nan=True))`,
+print(json.dumps({"pure":pure,"normal":normal,"missing_t2":missing_t2}, allow_nan=False))`,
   ],
   { encoding: "utf8" },
 );
