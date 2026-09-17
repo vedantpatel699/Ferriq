@@ -8,7 +8,7 @@ import {
 
 describe("Air Blower reference dataset", () => {
   it("keeps the corrected source mapping and expected date range", () => {
-    expect(BLOWER_DEMO_DATA).toHaveLength(46);
+    expect(BLOWER_DEMO_DATA).toHaveLength(200);
     expect(BLOWER_DEMO_DATA[0].Date).toBe("2025-05-01 03:59:59");
     expect(BLOWER_DEMO_DATA.at(-1)?.Date).toBe("2025-06-15 03:59:59");
   });
