@@ -46,6 +46,24 @@ describe("Air Blower reference dataset", () => {
     expect(rows.at(-1)?.quality.join(" ")).toContain("Suction temperature");
   });
 
+  it("uses the configured time-based baseline and suppresses off-envelope degradation", () => {
+    const rows = calculate("air-blower", seedEquipment("air-blower"));
+    const trained = rows.filter(
+      (r) => Number(r.values.performanceModelTrainingRows) > 0,
+    );
+    expect(trained.length).toBeGreaterThan(0);
+    expect(Number(trained[0].values.performanceModelTrainingRows)).toBeGreaterThan(14);
+
+    const offEnvelope = rows.find(
+      (r) =>
+        Number(r.values.bypassOpPct) >=
+        DEFAULT_BLOWER_SETTINGS.performanceBypassMaxPct,
+    );
+    expect(offEnvelope).toBeDefined();
+    expect(offEnvelope?.values.performanceModelApplicable).toBe(false);
+    expect(offEnvelope?.values.performanceDegradationPct).toBeNull();
+  });
+
   it("produces plausible power, pressure rise and fluid-power indicators", () => {
     for (const r of BLOWER_DEMO_DATA) {
       const result = processBlowerRow(

@@ -3,14 +3,13 @@ Air Blower — Performance & Health Calculation Engine
 Version: 1.0
 Date: 2026-04-04
 
-Reference-grade proof-of-concept engine for a dual-train centrifugal air
-blower (Blowers A / B, one active at a time). Mirrors the math in
-dashboard.html. Every formula cites a standard — see
-_shared/standards-registry.md.
+Engineering calculation engine for a dual-train centrifugal air blower
+(Blowers A / B, one active at a time). The same calculation methods are
+implemented by the Ferriq TypeScript site model.
 
 Usage:
     from engine import process_single_row, process_batch, load_csv
-    result = process_batch(load_csv("data/demo.csv"))
+    result = process_batch(load_csv("reference/blower-demo.csv"))
 
 Contract:
     - Row dicts accept both snake_case engine names and the original human-
@@ -612,7 +611,7 @@ def load_csv(path):
 
 if __name__ == "__main__":
     import sys
-    path = sys.argv[1] if len(sys.argv) > 1 else "data/demo.csv"
+    path = sys.argv[1] if len(sys.argv) > 1 else "reference/blower-demo.csv"
     batch = process_batch(load_csv(path))
     print(f"Processed: {batch['rows_processed']}  Dropped: {batch['rows_dropped']}")
     if batch["drop_reasons"]:

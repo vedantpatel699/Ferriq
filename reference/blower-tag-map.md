@@ -1,4 +1,4 @@
-# Air Blower demo tag mapping
+# Air Blower reference input mapping
 
 The Air Blower source anchors map the workbook tags below into the model input schema. Forty-six validated daily anchors cover 1 May through 15 June 2025 while Blower A is the running train. The 200-row reference test CSV preserves those anchors and fills intermediate timestamps by deterministic linear interpolation of measured numeric fields. Train-specific measurements remain separate and unavailable signals remain blank.
 
@@ -21,4 +21,4 @@ The Air Blower source anchors map the workbook tags below into the model input s
 | Total Flow | 1645-FIC-3113.PV | BU301 combustion-air feed | Nm³/h | none |
 | Discharge Temp A | 1645-TI-3103.PV | BL301A blower discharge | °C | none |
 
-The supplied workbook does not identify B vibration probes, B bearing-temperature probes, a B discharge-temperature tag, a suction-temperature tag, an axial-position tag, or a thrust-bearing-temperature tag. Those fields therefore remain unavailable in the demo.
+The supplied workbook does not identify B vibration probes, B bearing-temperature probes, a B discharge-temperature tag, a suction-temperature tag, an axial-position tag, or a thrust-bearing-temperature tag. Those fields therefore remain unavailable in the reference dataset.
