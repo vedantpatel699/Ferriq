@@ -636,6 +636,30 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
           <DataTable
             rows={selected.map((r) => r.values)}
             caption="Selected observation window"
+            columns={
+              id === "air-blower"
+                ? [
+                    "timestamp",
+                    "activeBlower",
+                    "motorCurrentA",
+                    "motorCurrentB",
+                    "flowNm3hr",
+                    "expectedFlowNm3hr",
+                    "flowResidualPct",
+                    "performanceDegradationPct",
+                    "powerKw",
+                    "p1BarAbs",
+                    "p2BarAbs",
+                    "dpBar",
+                    "pressureRatio",
+                    "bypassOpPct",
+                    "filterDpBar",
+                    "maxVibrationMms",
+                    "maxBearingTempC",
+                    "efficiencyHeadlinePct",
+                  ]
+                : undefined
+            }
           />
           {id !== "air-blower" && (
             <>
