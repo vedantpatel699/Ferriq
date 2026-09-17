@@ -6,9 +6,8 @@ export function BlowerManual() {
     <div className="engineering-manual">
       <h2>Air Blower engineering manual</h2>
       <p className="manual-lead">
-        This model evaluates blower operating performance and mechanical
-        condition for a dual-train air-blower service. One train is evaluated
-        per timestamp using the active-train selection logic described below.
+        Proof-of-concept performance and condition model for a dual-train
+        centrifugal air blower. One active train is evaluated per timestamp.
       </p>
 
       <ManualSection title="Model inputs">
@@ -16,38 +15,22 @@ export function BlowerManual() {
           caption="Live-data inputs"
           columns={["input", "unit", "required", "use"]}
           rows={[
-            { input: "Timestamp", unit: "date/time", required: "Yes", use: "Observation ordering and trend calculations" },
-            { input: "Motor current A / B", unit: "A", required: "Yes", use: "Running-train selection, motor power and performance baseline" },
-            { input: "Suction pressure A / B", unit: "kPaa", required: "Active train", use: "Absolute suction pressure, pressure ratio and pressure rise" },
-            { input: "Discharge pressure A / B", unit: "kPag", required: "Active train", use: "Absolute discharge pressure, pressure ratio, pressure rise and capacity check" },
-            { input: "Discharge-pressure controller SP A / B", unit: "kPag", required: "No", use: "Capacity-limit condition" },
-            { input: "Bypass valve position A / B", unit: "% open", required: "No", use: "Recycle condition and performance-model applicability" },
-            { input: "Filter differential pressure A / B", unit: "bar", required: "No", use: "Filter restriction and performance-model applicability" },
-            { input: "Total air flow", unit: "Nm³/hr", required: "Yes", use: "Fluid-power indicator and expected-flow model" },
+            { input: "Timestamp", unit: "date/time", required: "Yes", use: "Ordering and trends" },
+            { input: "Motor current A / B", unit: "A", required: "Yes", use: "Active-train selection, electrical power and performance baseline" },
+            { input: "Suction pressure A / B", unit: "kPaa", required: "Active train", use: "P₁, pressure rise and pressure ratio" },
+            { input: "Discharge pressure A / B", unit: "kPag", required: "Active train", use: "P₂, pressure rise and pressure ratio" },
+            { input: "Total air flow", unit: "Nm³/hr", required: "Yes", use: "Performance indicator and expected-flow regression" },
             { input: "Suction temperature", unit: "°C", required: "Thermodynamic efficiency", use: "T₁" },
             { input: "Discharge temperature A / B", unit: "°C", required: "Thermodynamic efficiency", use: "T₂" },
+            { input: "Bypass valve position A / B", unit: "% open", required: "No", use: "Recycle condition, regression applicability and thrust proxy" },
+            { input: "Filter differential pressure A / B", unit: "bar", required: "No", use: "Filter restriction and regression applicability" },
             { input: "Vibration probes A / B", unit: "mm/s RMS", required: "Mechanical health", use: "Maximum vibration and trend" },
-            { input: "Bearing temperatures A / B", unit: "°C", required: "Mechanical health", use: "Maximum bearing temperature, trend and advisory projection" },
-            { input: "Axial position / thrust-bearing temperature", unit: "OEM units", required: "Thrust health", use: "Required before thrust-health monitoring can be enabled" },
+            { input: "Bearing temperatures A / B", unit: "°C", required: "Mechanical health", use: "Maximum bearing temperature and trend" },
           ]}
         />
       </ManualSection>
 
-      <ManualSection title="Active-train selection">
-        <p>
-          In automatic mode a train is considered running when its motor current
-          exceeds the configured running-current threshold. If both trains are
-          above the threshold, the train with the higher current is selected.
-          Manual A or B mode selects only that train and still requires it to be running.
-        </p>
-      </ManualSection>
-
       <ManualSection title="Pressure normalization">
-        <p>
-          Suction pressure is supplied as absolute pressure. Discharge pressure
-          is supplied as gauge pressure and converted to absolute pressure using
-          the configured site atmospheric pressure.
-        </p>
         <FormulaBlock name="Absolute suction pressure">
           <><i>P</i><sub>1</sub> = <i>P</i><sub>suction,kPaa</sub> / 100</>
         </FormulaBlock>
@@ -60,30 +43,39 @@ export function BlowerManual() {
       </ManualSection>
 
       <ManualSection title="Motor input power">
-        <p>Three-phase electrical input power is calculated from line voltage, measured motor current and power factor.</p>
-        <FormulaBlock name="Three-phase motor input power" note="Result in kW">
-          <><i>P</i><sub>motor</sub> = √3 · <i>V</i> · <i>I</i> · PF / 1000</>
+        <p>
+          Three-phase electrical input power uses the standard balanced
+          three-phase relationship. In datasheet mode, power factor is linearly
+          interpolated from the supplied motor performance points at the
+          measured current.
+        </p>
+        <FormulaBlock name="Electrical input power">
+          <><i>P</i><sub>in</sub> = √3 · <i>V</i> · <i>I</i> · PF / 1000</>
         </FormulaBlock>
+        <p>
+          The current/power-factor points come from the supplied induction-motor
+          datasheet. Fixed PF remains available as a configuration fallback.
+        </p>
       </ManualSection>
 
       <ManualSection title="Fluid-power performance indicator">
         <p>
-          The fluid-power ratio is retained as a process-performance indicator.
-          It is used as the displayed fallback when thermodynamic temperature
-          measurements are not available; it is not treated as rigorous compressor efficiency.
+          This is retained as a process-performance indicator only. It is not a
+          rigorous compressor thermodynamic efficiency.
         </p>
-        <FormulaBlock name="Fluid power" note="Q in Nm³/hr, ΔP in bar, result in kW">
+        <FormulaBlock name="Fluid power">
           <><i>P</i><sub>fluid</sub> = <i>Q</i> · Δ<i>P</i> / 36</>
         </FormulaBlock>
-        <FormulaBlock name="Fluid-power indicator">
-          <>η<sub>fluid</sub> = (<i>P</i><sub>fluid</sub> / <i>P</i><sub>motor</sub>) · 100%</>
+        <FormulaBlock name="Fluid-power ratio">
+          <>η<sub>fluid</sub> = (<i>P</i><sub>fluid</sub> / <i>P</i><sub>in</sub>) · 100%</>
         </FormulaBlock>
       </ManualSection>
 
       <ManualSection title="Isentropic efficiency">
         <p>
-          T₁ and T₂ are converted to kelvin. The result is calculated only when
-          P₂ &gt; P₁ and T₂ &gt; T₁.
+          Ideal-gas POC estimate. The pressure-temperature relation is standard
+          isentropic thermodynamics. ASME PTC 10 is the governing compressor
+          performance-test framework, but this dashboard is not a full PTC 10 test.
         </p>
         <FormulaBlock name="Isentropic efficiency">
           <>η<sub>s</sub> = <span className="formula-fraction"><span><i>T</i><sub>1</sub>[(<i>P</i><sub>2</sub>/<i>P</i><sub>1</sub>)<sup>(k−1)/k</sup> − 1]</span><span><i>T</i><sub>2</sub> − <i>T</i><sub>1</sub></span></span> · 100%</>
@@ -91,7 +83,11 @@ export function BlowerManual() {
       </ManualSection>
 
       <ManualSection title="Polytropic efficiency">
-        <p>Polytropic efficiency is the preferred thermodynamic performance metric when valid T₁ and T₂ measurements are available.</p>
+        <p>
+          Ideal-gas POC estimate used as the preferred thermodynamic trend when
+          measured T₁ and T₂ are available. A formal acceptance/performance test
+          would follow ASME PTC 10 methods and uncertainty requirements.
+        </p>
         <FormulaBlock name="Polytropic temperature exponent">
           <>σ = <span className="formula-fraction"><span>ln(<i>T</i><sub>2</sub>/<i>T</i><sub>1</sub>)</span><span>ln(<i>P</i><sub>2</sub>/<i>P</i><sub>1</sub>)</span></span></>
         </FormulaBlock>
@@ -100,14 +96,21 @@ export function BlowerManual() {
         </FormulaBlock>
       </ManualSection>
 
-      <ManualSection title="Performance degradation method">
+      <ManualSection title="Performance degradation model">
         <p>
-          A separate expected-flow baseline is fitted for each blower using
-          ordinary least squares over the configured reference period. Only
-          observations inside the configured operating envelope are used.
+          The coefficients <strong>a</strong> and <strong>b</strong> are fitted
+          from the configured healthy-reference observations. They are not taken
+          from the vendor datasheet. The vendor design point is kept separately
+          as an engineering reference.
         </p>
         <FormulaBlock name="Expected-flow regression">
           <><i>Q</i><sub>expected</sub> = a + b · <i>I</i><sub>motor</sub></>
+        </FormulaBlock>
+        <FormulaBlock name="Least-squares slope">
+          <>b = <span className="formula-fraction"><span>Σ(<i>I</i><sub>i</sub>−Ī)(<i>Q</i><sub>i</sub>−Q̄)</span><span>Σ(<i>I</i><sub>i</sub>−Ī)²</span></span></>
+        </FormulaBlock>
+        <FormulaBlock name="Least-squares intercept">
+          <>a = Q̄ − bĪ</>
         </FormulaBlock>
         <FormulaBlock name="Flow residual">
           <><i>R</i><sub>flow</sub> = <span className="formula-fraction"><span><i>Q</i><sub>measured</sub> − <i>Q</i><sub>expected</sub></span><span><i>Q</i><sub>expected</sub></span></span> · 100%</>
@@ -116,76 +119,51 @@ export function BlowerManual() {
           <>Degradation = max(0, −<i>R</i><sub>flow</sub>)</>
         </FormulaBlock>
         <p>
-          Degradation is reported only when bypass opening and filter
-          differential pressure are inside the configured baseline envelope.
-          The result is an expected-behaviour screen, not a failure probability.
+          Method source: NIST Engineering Statistics Handbook, linear
+          least-squares regression. The model is a POC screening model, not a
+          failure-probability or remaining-life model.
         </p>
       </ManualSection>
 
       <ManualSection title="Bearing and vibration condition">
         <p>
-          The maximum valid vibration and maximum valid bearing temperature for
-          the active train are checked against configured advisory, alarm and
-          trip thresholds. A least-squares slope is calculated over up to seven
-          recent valid observations for each condition indicator.
+          Maximum active-train vibration and bearing temperature are compared
+          with configured thresholds. Least-squares slopes over recent valid
+          observations provide short-term trends.
         </p>
         <FormulaBlock name="Bearing advisory trend projection">
           <>Days to advisory = <span className="formula-fraction"><span><i>T</i><sub>advisory</sub> − <i>T</i><sub>current</sub></span><span>d<i>T</i>/dt</span></span></>
         </FormulaBlock>
-        <p>The projection is a trend screen only; it is not remaining useful life.</p>
+        <p>This is a linear trend projection only, not remaining useful life.</p>
       </ManualSection>
 
-      <ManualSection title="Process-condition checks">
-        <DataTable
-          caption="Condition logic"
-          columns={["condition", "method"]}
-          rows={[
-            { condition: "Filter restriction", method: "Filter ΔP above configured maximum" },
-            { condition: "High blower pressure rise", method: "Blower ΔP above configured maximum" },
-            { condition: "High recycle / bypass", method: "Bypass opening above configured maximum" },
-            { condition: "Capacity limit", method: "Bypass below the baseline-open threshold while discharge pressure remains below controller setpoint" },
-          ]}
-        />
-      </ManualSection>
-
-      <ManualSection title="Thrust health">
+      <ManualSection title="Thrust operating-deviation proxy">
         <p>
-          Thrust health requires a dedicated axial-position / axial-displacement
-          measurement, thrust-bearing temperature, or another OEM-designated
-          thrust indicator. Radial vibration is not substituted for a thrust
-          measurement. Until an appropriate signal is mapped, thrust health is unavailable.
+          No direct thrust measurement is available. For this POC, a screening
+          proxy combines deviation from the supplied vendor design flow,
+          pressure ratio and recycle/bypass position. This is a Ferriq
+          engineering heuristic, not an ASME/API thrust equation and not a
+          substitute for axial-position or thrust-bearing instrumentation.
+        </p>
+        <FormulaBlock name="POC thrust operating-deviation proxy">
+          <>Proxy = 100 · √[(δ<sub>Q</sub>² + δ<sub>PR</sub>² + δ<sub>bypass</sub>²) / 3]</>
+        </FormulaBlock>
+        <p>
+          δQ and δPR are fractional deviations from the vendor design point;
+          δbypass is bypass fraction from 0 to 1.
         </p>
       </ManualSection>
 
-      <ManualSection title="Data-quality handling">
-        <p>
-          Timestamp, active-train suction pressure, active-train discharge
-          pressure, total flow and active-train motor current are required for a
-          valid performance observation. Missing mechanical probes do not
-          invalidate the performance calculation, but their mechanical-health
-          outputs remain unavailable. A measured suction temperature may be
-          forward-filled only within the configured time limit; otherwise no
-          fixed temperature is inserted into thermodynamic efficiency calculations.
-        </p>
-      </ManualSection>
-
-      <ManualSection title="Primary outputs">
+      <ManualSection title="Primary references">
         <DataTable
-          caption="Calculated outputs"
-          columns={["output", "description"]}
+          caption="Method references"
+          columns={["reference", "use in this POC"]}
           rows={[
-            { output: "Active blower", description: "A or B selected for the observation" },
-            { output: "Motor input power", description: "Calculated three-phase electrical input" },
-            { output: "P₁, P₂, ΔP and pressure ratio", description: "Normalized compression conditions" },
-            { output: "Fluid-power indicator", description: "Flow / pressure-rise performance indicator" },
-            { output: "Isentropic efficiency", description: "Thermodynamic efficiency when T₁ and T₂ are valid" },
-            { output: "Polytropic efficiency", description: "Preferred thermodynamic efficiency when T₁ and T₂ are valid" },
-            { output: "Expected flow", description: "Regression prediction at current motor load" },
-            { output: "Flow residual / degradation", description: "Measured-versus-expected flow deviation inside the baseline envelope" },
-            { output: "Maximum vibration / bearing temperature", description: "Active-train mechanical-condition indicators" },
-            { output: "Vibration / bearing trend", description: "Least-squares slope over recent valid observations" },
-            { output: "Bearing advisory projection", description: "Linear days-to-advisory projection when applicable" },
-            { output: "Engineering state", description: "Condition results rolled into NORMAL, WATCH or INVESTIGATE; data quality reported independently" },
+            { reference: "ASME PTC 10-2022 — Axial and Centrifugal Compressors", use: "Compressor performance-test framework for flow, pressure rise, power and efficiency" },
+            { reference: "NASA Glenn Research Center — Isentropic Compression", use: "Ideal-gas pressure/temperature relation and γ = Cp/Cv" },
+            { reference: "NIST Engineering Statistics Handbook — Linear Least Squares Regression", use: "Healthy-reference expected-flow regression" },
+            { reference: "Supplied blower vendor datasheet", use: "Design pressure, flow, power, speed and polytropic-efficiency reference point" },
+            { reference: "Supplied induction-motor datasheet", use: "Voltage, rated current and current-dependent power-factor reference points" },
           ]}
         />
       </ManualSection>
@@ -193,10 +171,9 @@ export function BlowerManual() {
       <ManualSection title="Live-data interface">
         <p>
           A historian, OPC-UA, SQL or API connector should provide one record
-          per timestamp using the input names and units listed above. Train A
-          and B signals must remain separate. Unit conversion should occur at
-          the integration boundary. Missing signals should be passed as null or
-          blank values rather than copied from the opposite train.
+          per timestamp using the documented units. Train A and B signals must
+          remain separate. Missing live signals should be null rather than
+          copied between trains.
         </p>
       </ManualSection>
     </div>
