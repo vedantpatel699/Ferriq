@@ -26,6 +26,9 @@ export const DEFAULT_BLOWER_SETTINGS: BlowerSettings = {
   gammaK: 1.4,
   atmPressureBar: 0.93,
   activeCurrentMinA: 10,
+  // Retained for saved-config compatibility. A fixed temperature is no longer
+  // inserted into thermodynamic calculations when the suction-temperature tag
+  // is unavailable.
   suctionTempFallbackC: 4.0,
   suctionTempFfMaxHours: 4,
   blowerMode: "auto",
@@ -42,6 +45,8 @@ export interface BlowerLimits {
   filterDpMaxBar: number;
   blowerDpMaxBar: number;
   bypassOpenMaxPct: number;
+  performanceWatchPct: number;
+  performanceAlarmPct: number;
 }
 
 // blowerDpMaxBar default is 1.00, not the 0.45 documented in
@@ -59,6 +64,8 @@ export const DEFAULT_BLOWER_LIMITS: BlowerLimits = {
   filterDpMaxBar: 0.1,
   blowerDpMaxBar: 1.0,
   bypassOpenMaxPct: 60,
+  performanceWatchPct: 5,
+  performanceAlarmPct: 10,
 };
 
 /** IEEE/NEMA 3-phase motor input power. P = sqrt(3) * V * I * PF / 1000 [kW] */
@@ -295,8 +302,8 @@ export interface BlowerRowSuccess {
   maxBearingTempC: number;
   filterDpBar: number;
   bypassOpPct: number;
-  t1CUsed: number;
-  t1Source: "measured" | "forward-filled" | "default";
+  t1CUsed: number | null;
+  t1Source: "measured" | "forward-filled" | "unavailable";
   alerts: EngineeringAlert[];
   severity: RawSeverity;
 }
@@ -343,7 +350,7 @@ export function processBlowerRow(
     };
   }
 
-  let t1c: number;
+  let t1c: number | null;
   let t1Source: BlowerRowSuccess["t1Source"];
   if (row.suctionTempC !== null && !isNaN(row.suctionTempC)) {
     t1c = row.suctionTempC;
@@ -352,8 +359,8 @@ export function processBlowerRow(
     t1c = t1ForwardFilled;
     t1Source = "forward-filled";
   } else {
-    t1c = settings.suctionTempFallbackC;
-    t1Source = "default";
+    t1c = null;
+    t1Source = "unavailable";
   }
 
   const vibsClean = vibration.filter((x) => !isNaN(x));
@@ -376,15 +383,15 @@ export function processBlowerRow(
   const fluidPwr = fluidPowerKw(row.totalFlowNm3hr, dpBar);
   const efficiencyFluidPct = powerKw > 0 ? (fluidPwr / powerKw) * 100 : NaN;
 
-  const t1K = t1c + 273.15;
+  const t1K = t1c === null ? NaN : t1c + 273.15;
   const t2K = dischargeTempC === null ? NaN : dischargeTempC + 273.15;
   const efficiencyIsentropicPct =
-    dischargeTempC === null
+    t1c === null || dischargeTempC === null
       ? NaN
       : isentropicEfficiency(t1K, t2K, p1BarAbs, p2BarAbs, settings.gammaK) *
         100;
   const efficiencyPolytropicPct =
-    dischargeTempC === null
+    t1c === null || dischargeTempC === null
       ? NaN
       : polytropicEfficiency(t1K, t2K, p1BarAbs, p2BarAbs, settings.gammaK) *
         100;
@@ -439,4 +446,45 @@ export function processBlowerRow(
     alerts,
     severity: rollUpSeverity(alerts),
   };
+}
+
+
+export interface SimpleFlowModel {
+  intercept: number;
+  slope: number;
+  trainingRows: number;
+}
+
+/** Small, transparent baseline regression used for performance-degradation
+ * screening. It predicts flow from active motor current using the first
+ * healthy-reference observations for each train. This is a screening model,
+ * not a failure-probability or remaining-life model. */
+export function fitSimpleFlowModel(
+  points: { currentA: number; flowNm3hr: number }[],
+): SimpleFlowModel | null {
+  const clean = points.filter(
+    (p) => Number.isFinite(p.currentA) && Number.isFinite(p.flowNm3hr),
+  );
+  if (clean.length < 5) return null;
+  const mx = clean.reduce((a, p) => a + p.currentA, 0) / clean.length;
+  const my = clean.reduce((a, p) => a + p.flowNm3hr, 0) / clean.length;
+  const variance = clean.reduce((a, p) => a + (p.currentA - mx) ** 2, 0);
+  const covariance = clean.reduce(
+    (a, p) => a + (p.currentA - mx) * (p.flowNm3hr - my),
+    0,
+  );
+  const slope = variance > 1e-12 ? covariance / variance : 0;
+  return {
+    intercept: my - slope * mx,
+    slope,
+    trainingRows: clean.length,
+  };
+}
+
+export function predictFlowNm3hr(
+  model: SimpleFlowModel | null,
+  currentA: number,
+): number | null {
+  if (!model || !Number.isFinite(currentA)) return null;
+  return model.intercept + model.slope * currentA;
 }
