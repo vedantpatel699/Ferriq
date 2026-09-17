@@ -30,7 +30,8 @@ from datetime import datetime
 DEFAULT_SETTINGS = {
     # Engineering parameters
     "motor_voltage_v": 4000.0,      # 3-phase line-to-line, from motor datasheet
-    "power_factor": 0.85,           # nameplate; replace with measured PF if available
+    "power_factor": 0.85,           # used only when power_factor_mode="fixed"
+    "power_factor_mode": "datasheet",
     "gamma_k": 1.40,                # isentropic exponent for air (ASHRAE Handbook)
     "atm_pressure_bar": 0.93,       # site atmospheric pressure, ~93 kPa
     # Data-quality rules
@@ -63,7 +64,27 @@ DEFAULT_LIMITS = {
     "bypass_open_max_pct": 60.0,
     "performance_watch_pct": 5.0,
     "performance_alarm_pct": 10.0,
+    "thrust_proxy_watch_pct": 15.0,
+    "thrust_proxy_alarm_pct": 25.0,
 }
+
+BLOWER_DESIGN_REFERENCE = {
+    "inlet_pressure_kpaa": 93.0,
+    "discharge_pressure_kpaa": 178.0,
+    "annual_average_inlet_temp_c": 4.0,
+    "design_flow_nm3hr": 23187.0,
+    "design_train_power_kw": 711.0,
+    "design_polytropic_efficiency_pct": 76.0,
+    "design_speed_rpm": 3580.0,
+}
+
+MOTOR_POWER_FACTOR_POINTS = [
+    (33.1, 0.055),
+    (51.1, 0.701),
+    (82.5, 0.853),
+    (118.7, 0.889),
+    (157.5, 0.896),
+]
 
 # =============================================================================
 # 2. INTEGRATION HOOK  (for the live-historian implementer)
@@ -171,6 +192,36 @@ def shaft_power_kw(voltage_v, current_a, power_factor):
     return math.sqrt(3.0) * voltage_v * current_a * power_factor / 1000.0
 
 
+def motor_power_factor_from_current(current_a):
+    pts = MOTOR_POWER_FACTOR_POINTS
+    if not math.isfinite(current_a):
+        return float("nan")
+    if current_a <= pts[0][0]:
+        return pts[0][1]
+    if current_a >= pts[-1][0]:
+        return pts[-1][1]
+    for i in range(1, len(pts)):
+        if current_a <= pts[i][0]:
+            lo, hi = pts[i - 1], pts[i]
+            frac = (current_a - lo[0]) / (hi[0] - lo[0])
+            return lo[1] + frac * (hi[1] - lo[1])
+    return pts[-1][1]
+
+
+def thrust_operating_deviation_pct(flow_nm3hr, pressure_ratio, bypass_pct):
+    design_pr = (
+        BLOWER_DESIGN_REFERENCE["discharge_pressure_kpaa"]
+        / BLOWER_DESIGN_REFERENCE["inlet_pressure_kpaa"]
+    )
+    dq = (
+        (flow_nm3hr - BLOWER_DESIGN_REFERENCE["design_flow_nm3hr"])
+        / BLOWER_DESIGN_REFERENCE["design_flow_nm3hr"]
+    )
+    dpr = (pressure_ratio - design_pr) / design_pr
+    recycle = max(0.0, bypass_pct) / 100.0
+    return math.sqrt((dq * dq + dpr * dpr + recycle * recycle) / 3.0) * 100.0
+
+
 def normalize_pressures(p_suction_kpaa, p_discharge_kpag, p_atm_bar):
     """
     Convert the mixed-unit plant measurements to absolute bar.
@@ -196,7 +247,7 @@ def fluid_power_kw(flow_nm3hr, dp_bar):
 def isentropic_efficiency(t1_k, t2_k, p1_bar, p2_bar, k):
     """
     Isentropic (adiabatic) efficiency for a compressor.
-    Ref: ASME PTC 10 Section 5.4.
+    Ideal-gas POC estimate; ASME PTC 10 is the compressor-performance test framework.
       eta_s = T1 * [(P2/P1)^((k-1)/k) - 1] / (T2 - T1)
 
     Returns decimal (0.75 = 75 %), or NaN if inputs are infeasible.
@@ -212,7 +263,7 @@ def isentropic_efficiency(t1_k, t2_k, p1_bar, p2_bar, k):
 def polytropic_efficiency(t1_k, t2_k, p1_bar, p2_bar, k):
     """
     Polytropic efficiency for a compressor.
-    Ref: ASME PTC 10 Section 5.4a; API 617.
+    Ideal-gas POC estimate; ASME PTC 10 is the compressor-performance test framework.
 
     Using the polytropic temperature exponent:
       sigma = (n-1)/n = ln(T2/T1) / ln(P2/P1)
@@ -440,6 +491,7 @@ def process_single_row(row, settings=None, limits=None):
         "bypass_op_pct":         _r(bypass, 1),
         "t1_c_used": None if math.isnan(t1_c) else t1_c,
         "t1_source": t1_source,
+        "thrust_proxy_pct": _r(thrust_proxy_pct, 2),
         "alerts": alerts,
         "status": status,
     }
