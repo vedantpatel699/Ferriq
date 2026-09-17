@@ -8,6 +8,8 @@ import {
   processBlowerRow,
   DEFAULT_BLOWER_SETTINGS,
   DEFAULT_BLOWER_LIMITS,
+  fitSimpleFlowModel,
+  predictFlowNm3hr,
 } from "./calculations";
 
 // Golden values from backend-air-blower.md §8 "Worked Validation Example"
@@ -87,7 +89,7 @@ describe("Air Blower — backend-air-blower.md §8 worked example", () => {
         filterDpA: NaN,
         filterDpB: NaN,
         totalFlowNm3hr: flow,
-        suctionTempC: null,
+        suctionTempC: t1c,
         dischargeTempA: null,
         dischargeTempB: t2c,
         vibrationA: [NaN, NaN, NaN, NaN],
@@ -102,7 +104,7 @@ describe("Air Blower — backend-air-blower.md §8 worked example", () => {
     expect(result.drop).toBe(false);
     if (result.drop) throw new Error("unreachable");
     expect(result.activeBlower).toBe("B");
-    expect(result.t1Source).toBe("default");
+    expect(result.t1Source).toBe("measured");
     expect(result.t1CUsed).toBeCloseTo(4.0, 4);
     expect(result.maxVibrationMms).toBeCloseTo(0.77, 2);
     expect(result.maxBearingTempC).toBeCloseTo(68.29, 2);
@@ -110,5 +112,61 @@ describe("Air Blower — backend-air-blower.md §8 worked example", () => {
     expect(result.alerts.some((a) => a.message.includes("Blower dP"))).toBe(
       true,
     );
+  });
+
+  it("does not invent suction temperature when it is unavailable", () => {
+    const result = processBlowerRow(
+      {
+        timestamp: "2025-05-01T03:59:59",
+        motorCurrentA: 113.47,
+        motorCurrentB: 0,
+        suctionPressureA: 88.0,
+        suctionPressureB: 95.0,
+        dischargePressureA: 85.0,
+        dischargePressureB: 85.1,
+        controllerSpA: 85,
+        controllerSpB: 95,
+        bypassOpA: 0,
+        bypassOpB: 70,
+        filterDpA: 0.0011,
+        filterDpB: 0.00005,
+        totalFlowNm3hr: 20076.7,
+        suctionTempC: null,
+        dischargeTempA: 111.48,
+        dischargeTempB: null,
+        vibrationA: [0.93, 0.83, 0.07, 0.10],
+        vibrationB: [NaN, NaN, NaN, NaN],
+        bearingTempA: [6.34, 5.0],
+        bearingTempB: [NaN, NaN],
+      },
+      DEFAULT_BLOWER_SETTINGS,
+      DEFAULT_BLOWER_LIMITS,
+      null,
+    );
+    expect(result.drop).toBe(false);
+    if (result.drop) throw new Error("unreachable");
+    expect(result.t1Source).toBe("unavailable");
+    expect(result.t1CUsed).toBeNull();
+    expect(Number.isNaN(result.efficiencyPolytropicPct)).toBe(true);
+    expect(Number.isNaN(result.efficiencyIsentropicPct)).toBe(true);
+    expect(result.efficiencyMethodUsed).toContain("fallback to fluid");
+    expect(result.efficiencyHeadlinePct).toBeCloseTo(
+      result.efficiencyFluidPct,
+      10,
+    );
+  });
+
+  it("fits and applies the transparent current-to-flow baseline", () => {
+    const points = [
+      { currentA: 100, flowNm3hr: 16000 },
+      { currentA: 105, flowNm3hr: 17500 },
+      { currentA: 110, flowNm3hr: 19000 },
+      { currentA: 115, flowNm3hr: 20500 },
+      { currentA: 120, flowNm3hr: 22000 },
+    ];
+    const model = fitSimpleFlowModel(points);
+    expect(model).not.toBeNull();
+    expect(model!.trainingRows).toBe(5);
+    expect(predictFlowNm3hr(model, 112)).toBeCloseTo(19600, 6);
   });
 });
