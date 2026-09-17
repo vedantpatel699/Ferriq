@@ -21,6 +21,7 @@ import { CalculationBasisDialog } from "./CalculationBasisDialog";
 import { ReferenceManual } from "./ReferenceManual";
 import { BlowerManual } from "./BlowerManual";
 import { BlowerOverview } from "./BlowerOverview";
+import { BlowerHealthPanel } from "./BlowerHealthPanel";
 import { BlowerConfiguration } from "./BlowerConfiguration";
 import { ModelTabs } from "./ModelPagePrimitives";
 import type {
@@ -242,7 +243,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
     <>
       <EquipmentHeader
         name={identities[id].name}
-        meta={identities[id].tag}
+        meta={id === "air-blower" ? "Train A / Train B" : identities[id].tag}
         freshness={`${data.source} · Last observation ${DateTime.fromMillis(latest.epoch, { zone: "America/Edmonton" }).toFormat("LLL d, yyyy HH:mm")} Edmonton · ${local ? "Local changes" : "Published data"}`}
         state={latest.state}
         rangeControl={
@@ -305,51 +306,59 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
       )}
       {tab === "Overview" && (
         <>
-          <FindingTag className="finding">
-            {id === "air-blower" && (
-              <summary>Conditions & data quality</summary>
-            )}
-            <h2>
-              {latest.alerts[0]?.message ??
-                (latest.state === "data-issue"
-                  ? "Measurements require data-quality review"
-                  : "Within configured reference limits")}
-            </h2>
-            {latest.quality.map((q) => (
-              <p className="quality-note" key={q}>
-                {q}
-              </p>
-            ))}
-            {latest.alerts.length > 1 && (
-              <details>
-                <summary>
-                  All engineering conditions ({latest.alerts.length})
-                </summary>
-                <ul>
-                  {latest.alerts.map((a, i) => (
-                    <li key={i}>
-                      {a.message} <small>Reference: {a.source}</small>
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-          </FindingTag>
-          <div className="section-heading-row">
-            <h2>Current measurements</h2>
-            {id !== "air-blower" && (
-              <button onClick={() => setDrawer(true)}>
-                Calculation basis & references
-              </button>
-            )}
-          </div>
-          <p className="source-note">
-            Latest observation; the trend window below does not change these
-            current values.
-          </p>
           {id === "air-blower" ? (
-            <BlowerOverview latest={latest} />
+            <>
+              <BlowerHealthPanel latest={latest} />
+              <BlowerOverview
+                latest={latest}
+                limits={(data.config as unknown as { limits: BlowerLimits }).limits}
+                onSelectMetric={(key) => {
+                  setMetricKey(key);
+                  document
+                    .getElementById("equipment-trend")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              />
+            </>
           ) : (
+            <>
+              <FindingTag className="finding">
+                <h2>
+                  {latest.alerts[0]?.message ??
+                    (latest.state === "data-issue"
+                      ? "Measurements require data-quality review"
+                      : "Within configured reference limits")}
+                </h2>
+                {latest.quality.map((q) => (
+                  <p className="quality-note" key={q}>
+                    {q}
+                  </p>
+                ))}
+                {latest.alerts.length > 1 && (
+                  <details>
+                    <summary>
+                      All engineering conditions ({latest.alerts.length})
+                    </summary>
+                    <ul>
+                      {latest.alerts.map((a, i) => (
+                        <li key={i}>
+                          {a.message} <small>Reference: {a.source}</small>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </FindingTag>
+              <div className="section-heading-row">
+                <h2>Current measurements</h2>
+                <button onClick={() => setDrawer(true)}>
+                  Calculation basis & references
+                </button>
+              </div>
+              <p className="source-note">
+                Latest observation; the trend window below does not change these
+                current values.
+              </p>
             <>
               <div className="metrics-grid">
                 {metrics.slice(0, id === "fired-heater" ? 8 : 4).map((m) => (

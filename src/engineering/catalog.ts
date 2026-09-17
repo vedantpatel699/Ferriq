@@ -73,7 +73,7 @@ export interface Reading {
   quality: string[];
 }
 export const identities: Record<EquipmentId, { name: string; tag: string }> = {
-  "air-blower": { name: "Air Blower", tag: "C-101A/B" },
+  "air-blower": { name: "Air Blower", tag: "Train A / Train B" },
   "fired-heater": { name: "Fired Heater", tag: "H-401" },
   "shell-tube-exchanger": { name: "Shell & Tube Exchanger", tag: "E-201" },
   "membrane-analyzer": { name: "Membrane Analyzer", tag: "M-301" },

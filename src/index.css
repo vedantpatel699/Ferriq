@@ -2509,3 +2509,184 @@ table.data caption {
     font-size: 18px;
   }
 }
+
+
+/* Air Blower overview — reusable health-first equipment pattern */
+.blower-health-panel {
+  border: 1px solid var(--border-card);
+  border-left: 4px solid var(--text-secondary);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  padding: 18px 20px;
+  margin: 0 0 28px;
+}
+.blower-health-panel.normal { border-left-color: var(--state-normal-text); }
+.blower-health-panel.watch { border-left-color: var(--state-watch-text); }
+.blower-health-panel.investigate { border-left-color: var(--state-investigate-text); }
+.blower-health-panel.data-issue { border-left-color: var(--state-data-issue-text); }
+.blower-health-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-card);
+}
+.blower-health-kicker {
+  font: 700 10.5px var(--font-heading);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.blower-health-head h2 {
+  margin: 0;
+  font-size: 24px;
+}
+.blower-active-train {
+  font: 700 11px var(--font-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 5px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--canvas);
+  color: var(--text-secondary);
+}
+.blower-health-summary {
+  display: grid;
+  gap: 10px;
+  padding: 14px 0;
+}
+.health-condition {
+  border-left: 3px solid var(--border-card);
+  padding-left: 12px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.health-condition.advisory { border-left-color: var(--severity-advisory); }
+.health-condition.alarm { border-left-color: var(--severity-alarm); }
+.health-condition.trip { border-left-color: var(--severity-trip); }
+.health-condition.normal { border-left-color: var(--state-normal-text); }
+.health-action {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+.blower-health-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-card);
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.blower-health-facts strong {
+  color: var(--text-primary);
+}
+.blower-quality-details {
+  margin-top: 12px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.blower-quality-details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.blower-section {
+  padding: 4px 0 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-card);
+}
+.blower-section:last-child {
+  border-bottom: 0;
+}
+.blower-section .section-heading-row h2,
+.thrust-section h2 {
+  margin: 0 0 4px;
+  font-size: 19px;
+}
+.performance-comparison {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.performance-comparison > div {
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+  padding: 12px 14px;
+}
+.performance-comparison span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 10.5px;
+  margin-bottom: 5px;
+}
+.performance-comparison strong {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+.model-applicability {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 11.5px;
+  margin-bottom: 10px;
+}
+.model-applicability span {
+  color: var(--text-secondary);
+}
+.model-applicability.valid strong {
+  color: var(--state-normal-text);
+}
+.model-applicability.unavailable strong {
+  color: var(--text-secondary);
+}
+.inline-actions {
+  display: flex;
+  gap: 12px;
+}
+.text-action {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--copper-dark);
+  font: 600 11.5px var(--font-heading);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.text-action:hover {
+  color: var(--copper);
+}
+.thrust-unavailable {
+  border: 1px dashed var(--border-card);
+  border-radius: var(--radius-card);
+  padding: 13px 15px;
+  display: grid;
+  gap: 3px;
+  max-width: 760px;
+}
+.thrust-unavailable strong {
+  font-size: 13px;
+}
+.thrust-unavailable span {
+  color: var(--text-secondary);
+  font-size: 11.5px;
+}
+@media (max-width: 800px) {
+  .performance-comparison {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .blower-health-head {
+    flex-direction: column;
+  }
+}
+@media (max-width: 520px) {
+  .performance-comparison {
+    grid-template-columns: 1fr;
+  }
+}
