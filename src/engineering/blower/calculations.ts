@@ -249,31 +249,31 @@ export function buildAlerts(
       alerts.push({
         severity: "trip",
         message: `Bearing T ${b.toFixed(1)} C exceeds trip ${limits.brgTripC} C.`,
-        source: "bearing datasheet",
+        source: "configured POC bearing-temperature threshold",
       });
     else if (b >= limits.brgAlarmC)
       alerts.push({
         severity: "alarm",
         message: `Bearing T ${b.toFixed(1)} C exceeds alarm ${limits.brgAlarmC} C.`,
-        source: "bearing datasheet",
+        source: "configured POC bearing-temperature threshold",
       });
     else if (b >= limits.brgAdvisoryC)
       alerts.push({
         severity: "advisory",
         message: `Bearing T ${b.toFixed(1)} C above advisory ${limits.brgAdvisoryC} C.`,
-        source: "bearing datasheet",
+        source: "configured POC bearing-temperature threshold",
       });
   }
   if (!isNaN(fdp) && fdp > limits.filterDpMaxBar)
     alerts.push({
       severity: "advisory",
-      message: `Filter dP ${fdp.toFixed(3)} bar above ${limits.filterDpMaxBar} bar - replace filter.`,
+      message: `Filter dP ${fdp.toFixed(3)} bar above configured limit ${limits.filterDpMaxBar} bar.`,
       source: "plant setpoint",
     });
   if (!isNaN(dp) && dp > limits.blowerDpMaxBar)
     alerts.push({
       severity: "advisory",
-      message: `Blower dP ${dp.toFixed(3)} bar above design ${limits.blowerDpMaxBar} bar.`,
+      message: `Blower dP ${dp.toFixed(3)} bar above configured limit ${limits.blowerDpMaxBar} bar.`,
       source: "plant setpoint",
     });
   if (!isNaN(byp) && byp > limits.bypassOpenMaxPct)
