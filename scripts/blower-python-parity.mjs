@@ -161,15 +161,7 @@ const pairs = {
   t1CUsed: "t1_c_used",
 };
 for (const [tk, pk] of Object.entries(pairs)) {
-  // Python intentionally rounds its public row result; compare at that output precision.
-  const digits = pk === "pressure_ratio" || pk === "dp_bar" || pk === "p1_bar_abs" || pk === "p2_bar_abs"
-    ? 4
-    : pk === "flow_nm3hr" || pk === "max_bearing_temp_c" || pk === "bypass_op_pct" || pk === "t1_c_used"
-      ? 1
-      : pk === "filter_dp_bar"
-        ? 3
-        : 2;
-  assert.equal(Number(current[tk].toFixed(digits)), p.normal[pk], `${tk} row parity`);
+  close(current[tk], p.normal[pk]);
 }
 assert.equal(current.activeBlower, p.normal.active_blower);
 assert.equal(current.t1Source, p.normal.t1_source);
@@ -184,7 +176,7 @@ assert.equal(ts.DEFAULT_BLOWER_LIMITS.blowerDpMaxBar, 1.0);
 const noT2 = ts.processBlowerRow({...siteRow, dischargeTempB:null}, ts.DEFAULT_BLOWER_SETTINGS, ts.DEFAULT_BLOWER_LIMITS, null);
 assert.equal(noT2.drop, false);
 assert.ok(noT2.efficiencyMethodUsed.includes("fallback to fluid"));
-assert.equal(Number(noT2.efficiencyHeadlinePct.toFixed(2)), p.missing_t2.efficiency_headline_pct);
+close(noT2.efficiencyHeadlinePct, p.missing_t2.efficiency_headline_pct);
 
 const noT1 = ts.processBlowerRow({...siteRow, suctionTempC:null}, ts.DEFAULT_BLOWER_SETTINGS, ts.DEFAULT_BLOWER_LIMITS, null);
 assert.equal(noT1.drop, false);
@@ -192,7 +184,7 @@ assert.equal(noT1.t1Source, "unavailable");
 assert.equal(noT1.t1CUsed, null);
 assert.equal(p.missing_t1.t1_source, "unavailable");
 assert.equal(p.missing_t1.t1_c_used, null);
-assert.equal(Number(noT1.efficiencyHeadlinePct.toFixed(2)), p.missing_t1.efficiency_headline_pct);
+close(noT1.efficiencyHeadlinePct, p.missing_t1.efficiency_headline_pct);
 
 // Baseline regression coefficients and prediction must also agree.
 const model = ts.fitSimpleFlowModel([
