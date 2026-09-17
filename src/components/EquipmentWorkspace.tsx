@@ -21,6 +21,10 @@ import { CalculationBasisDialog } from "./CalculationBasisDialog";
 import { ReferenceManual } from "./ReferenceManual";
 import { BlowerManual } from "./BlowerManual";
 import { BlowerOverview } from "./BlowerOverview";
+import type {
+  BlowerLimits,
+  BlowerSettings,
+} from "../engineering/blower/calculations";
 import { DataTable } from "./DataTable";
 import { ConfigEditor, type ConfigValue } from "./ConfigEditor";
 import { resolveTimeRange, rangeContextLabel } from "../lib/timeRange";
@@ -184,8 +188,8 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
   const manual =
     id === "air-blower" ? (
       <BlowerManual
-        settings={(data.config as unknown as { settings: import("../engineering/blower/calculations").BlowerSettings }).settings}
-        limits={(data.config as unknown as { limits: import("../engineering/blower/calculations").BlowerLimits }).limits}
+        settings={(data.config as unknown as { settings: BlowerSettings }).settings}
+        limits={(data.config as unknown as { limits: BlowerLimits }).limits}
       />
     ) : (
       <>
@@ -313,7 +317,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
         <>
           <FindingTag className="finding">
             {id === "air-blower" && (
-              <summary>Engineering conditions and data-quality notes</summary>
+              <summary>Conditions & data quality</summary>
             )}
             <h2>
               {latest.alerts[0]?.message ??
@@ -497,10 +501,17 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
       {tab === "Data & Log" && (
         <>
           <h2>Observations & calculated data</h2>
-          <p>
-            CSV imports and configuration edits stay in this browser. The
-            published reference is unchanged until a repository update.
-          </p>
+          {id === "air-blower" ? (
+            <p>
+              Import historian observations using the documented model input
+              names and units. Rows are validated before calculations are run.
+            </p>
+          ) : (
+            <p>
+              CSV imports and configuration edits stay in this browser. The
+              published reference is unchanged until a repository update.
+            </p>
+          )}
           <div className="action-bar">
             <button
               onClick={() =>
@@ -615,15 +626,19 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
             rows={selected.map((r) => r.values)}
             caption="Selected observation window"
           />
-          <h3>Local changes</h3>
-          <DataTable
-            rows={
-              snapshot.events.filter(
-                (e) => e.resourceKey === id,
-              ) as unknown as Row[]
-            }
-            caption="Change history"
-          />
+          {id !== "air-blower" && (
+            <>
+              <h3>Local changes</h3>
+              <DataTable
+                rows={
+                  snapshot.events.filter(
+                    (e) => e.resourceKey === id,
+                  ) as unknown as Row[]
+                }
+                caption="Change history"
+              />
+            </>
+          )}
         </>
       )}
       {tab === "Configuration" && (
