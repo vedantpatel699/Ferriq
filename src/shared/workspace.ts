@@ -121,9 +121,14 @@ export function validateResource(key: string, input: unknown): unknown {
         Number(s.gammaK) <= 1 ||
         Number(s.motorVoltageV) <= 0 ||
         Number(s.powerFactor) <= 0 ||
-        Number(s.powerFactor) > 1
+        Number(s.powerFactor) > 1 ||
+        Number(s.baselineTrainingDays) <= 0 ||
+        Number(s.performanceBypassMaxPct) < 0 ||
+        Number(s.performanceBypassMaxPct) > 100
       )
-        throw Error("Check motor voltage, power factor (0–1), and gamma (>1).");
+        throw Error(
+          "Check motor voltage, power factor (0–1), gamma (>1), baseline training days (>0), and baseline bypass range (0–100%).",
+        );
     }
     if (
       key === "shell-tube-exchanger" &&
