@@ -25,6 +25,7 @@ import type {
   BlowerLimits,
   BlowerSettings,
 } from "../engineering/blower/calculations";
+import { BLOWER_DEMO_DATA } from "../engineering/blower/demoData";
 import { DataTable } from "./DataTable";
 import { ConfigEditor, type ConfigValue } from "./ConfigEditor";
 import { resolveTimeRange, rangeContextLabel } from "../lib/timeRange";
@@ -517,20 +518,39 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
               onClick={() =>
                 downloadFile(
                   id + "-input-template.csv",
-                  csv(data.rows.slice(0, 3)),
+                  csv(
+                    id === "air-blower"
+                      ? BLOWER_DEMO_DATA.slice(0, 3)
+                      : data.rows.slice(0, 3),
+                  ),
                   "text/csv",
                 )
               }
             >
               Download input template
             </button>
-            <button
-              onClick={() =>
-                downloadFile(id + "-inputs.csv", csv(data.rows), "text/csv")
-              }
-            >
-              Export inputs
-            </button>
+            {id === "air-blower" && (
+              <button
+                onClick={() =>
+                  downloadFile(
+                    "air-blower-reference.csv",
+                    csv(BLOWER_DEMO_DATA),
+                    "text/csv",
+                  )
+                }
+              >
+                Download reference CSV
+              </button>
+            )}
+            {id !== "air-blower" && (
+              <button
+                onClick={() =>
+                  downloadFile(id + "-inputs.csv", csv(data.rows), "text/csv")
+                }
+              >
+                Export inputs
+              </button>
+            )}
             <button
               onClick={() =>
                 downloadFile(
@@ -549,21 +569,23 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
             >
               Export selected results
             </button>
-            <button
-              onClick={() =>
-                downloadFile(
-                  id + "-workspace.json",
-                  JSON.stringify(
-                    { key: id, data, version: resource.version },
-                    null,
-                    2,
-                  ),
-                  "application/json",
-                )
-              }
-            >
-              Export dataset & configuration
-            </button>
+            {id !== "air-blower" && (
+              <button
+                onClick={() =>
+                  downloadFile(
+                    id + "-workspace.json",
+                    JSON.stringify(
+                      { key: id, data, version: resource.version },
+                      null,
+                      2,
+                    ),
+                    "application/json",
+                  )
+                }
+              >
+                Export dataset & configuration
+              </button>
+            )}
           </div>
           <details className="advanced-panel">
             <summary>Replace input data</summary>
