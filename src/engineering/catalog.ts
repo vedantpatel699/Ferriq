@@ -313,7 +313,7 @@ export function seedEquipment(id: EquipmentId): EquipmentData {
   return {
     rows: normalizeRows(id, rows),
     config: structuredClone(config) as unknown as Row,
-    source: "Original HTML reference dataset (not live)",
+    source: "Bundled reference dataset (not live)",
   };
 }
 export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {

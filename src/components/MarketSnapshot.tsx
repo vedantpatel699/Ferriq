@@ -78,8 +78,8 @@ export function MarketSnapshot({
           <details>
             <summary>Pricing assumptions and sources</summary>
             <p>
-              Crude: WTI plus the signed Alberta WCS differential, then Claude’s
-              configured grade spreads. LPG: Alberta propane/butanes anchors
+              Crude: WTI plus the signed Alberta WCS differential, then the
+              configured per-grade spreads. LPG: Alberta propane/butanes anchors
               moved by EIA drivers. Naphtha: Alberta pentanes-plus proxy moved
               by EIA gasoline. Kerosene and diesel: EIA Gulf Coast benchmarks.
               Swing cuts: 50/50 destination values. UCO: 82.5% of the estimated

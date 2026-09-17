@@ -113,7 +113,10 @@ export function CrudeToProfitPage() {
   return (
     <>
       <h1>Crude to Profit</h1>
-      <p>The data were obtained from open resources.</p>
+      <p>
+        All prices and yields come from open, public sources. See the
+        Engineering manual tab for where each figure comes from.
+      </p>
       {result && (
         <div className="action-bar">
           <BuildReport
@@ -346,13 +349,12 @@ export function CrudeToProfitPage() {
                   )}
                 />
                 <p>
-                  LC Finer: the revised sheet adds 11.99 wt% LPG/fuel gas; the
-                  mass yields now total 100%. This is combined gas, not a
-                  measured recoverable LPG fraction. The current scenario
-                  credits{" "}
+                  LC Finer residue includes 11.99 wt% LPG/fuel gas, so the mass
+                  yields total 100%. This is combined gas, not a measured
+                  recoverable LPG fraction. The current scenario credits{" "}
                   {formatNumber(draft.config.lpg_fuel_gas_recovered * 100, 0)}%
-                  as LPG. The revised default credits none until recovery is
-                  established.
+                  of it as saleable LPG; the default credits none until a
+                  recovery fraction is confirmed.
                 </p>
                 <p>
                   Delayed coker: at 15 wt% feed CCR, the correlation gives
@@ -372,53 +374,52 @@ export function CrudeToProfitPage() {
                   </a>
                   , at 75 wt% conversion. The measured case uses resid feed and
                   deactivated MIDAS catalyst, with no recycle. It is the closest
-                  of the four Table 1 cases by summed distance outside the
-                  client's five bounded ranges, but it does not match all of
-                  them.
+                  of the four Table 1 cases to the five specification ranges
+                  below by summed distance, but it does not match all of them.
                 </p>
                 <DataTable
-                  caption="FCC reference yields and client categories (wt% of FCC feed)"
+                  caption="FCC reference yields against specification ranges (wt% of FCC feed)"
                   rows={[
                     {
                       category: "Naphtha",
                       sourceProduct: "Gasoline (C5–430°F)",
-                      clientRange: "15–25",
+                      specRange: "15–25",
                       referenceWtPct: 51.9,
                     },
                     {
                       category: "Diesel",
                       sourceProduct: "Light cycle oil (430–650°F)",
-                      clientRange: "5–15",
+                      specRange: "5–15",
                       referenceWtPct: 16.7,
                     },
                     {
                       category: "Residue / UCO",
                       sourceProduct: "Bottoms (650°F+)",
-                      clientRange: "5–15",
+                      specRange: "5–15",
                       referenceWtPct: 8.6,
                     },
                     {
                       category: "LPG / Fuel gas",
                       sourceProduct: "LPG (saleable price proxy)",
-                      clientRange: "15–25 LPG",
+                      specRange: "15–25 LPG",
                       referenceWtPct: 13.3,
                     },
                     {
                       category: "LPG / Fuel gas",
                       sourceProduct: "Dry gas (no sales credit)",
-                      clientRange: "Approximately 5",
+                      specRange: "Approximately 5",
                       referenceWtPct: 2.2,
                     },
                     {
                       category: "Coke",
                       sourceProduct: "Coke burned in regenerator",
-                      clientRange: "3–8",
+                      specRange: "3–8",
                       referenceWtPct: 7.1,
                     },
                     {
                       category: "Unallocated balance",
                       sourceProduct: "Reported closure gap (no sales credit)",
-                      clientRange: "Not specified",
+                      specRange: "Not specified",
                       referenceWtPct: 0.2,
                     },
                   ]}
@@ -428,7 +429,7 @@ export function CrudeToProfitPage() {
                   tracked separately, not normalized into saleable products.
                   LVGO, MVGO and HVGO are not separately allocated: this model
                   retains the FCC bottoms pool. Grace's detailed boiling bins do
-                  not establish the client's VGO cut boundaries.
+                  not establish this model's VGO cut boundaries.
                 </p>
                 <p>
                   Reference conditions: reactor exit 970°F, regenerator 1270°F,
@@ -438,24 +439,21 @@ export function CrudeToProfitPage() {
                   gas oil requires feed-specific validation.
                 </p>
                 <p>
-                  Naphtha and Diesel retain the client's price categories, but
-                  the FCC contributions are gasoline and LCO proxies, not
+                  Naphtha and Diesel keep their usual price categories, but the
+                  FCC contributions to them are gasoline and LCO proxies, not
                   certified finished products. Bottoms and bypassed gas oil use
                   the UCO price proxy. Treatment costs and quality discounts are
-                  excluded. Liquid densities remain model assumptions (LPG 560,
+                  excluded. Liquid densities are model assumptions (LPG 560,
                   gasoline 730, LCO 950 and bottoms 1050 kg/m³), not Grace
                   measurements.
                 </p>
                 <p>
-                  Source assay yields are retained without normalization.
-                  Hydrocracker liquid volume gain is retained. The model
-                  corrects SimDist!AA10, which references Z9 rather than AA9 and
-                  omits direct naphtha in the sheet. Routing now includes all LC
-                  Finer gas-oil fractions and explicitly holds unconverted
-                  residue. The annual formula and fixed prices follow the sheet,
-                  but revised routing changes the product quantities.
-                  Hydrocracker yields are fixed screening assumptions; coker gas
-                  oil may need pretreatment. Serial conversion and recycle are
+                  Source assay yields and hydrocracker liquid volume gain are
+                  used as given, without normalization. Routing includes all LC
+                  Finer gas-oil fractions and holds unconverted residue
+                  separately rather than crediting it. Hydrocracker yields are
+                  fixed screening assumptions; coker gas oil may need
+                  pretreatment. Serial conversion and recycle between units are
                   not modeled.
                 </p>
               </details>
@@ -474,12 +472,12 @@ export function CrudeToProfitPage() {
       {tab === "Engineering manual" && (
         <>
           <p>
-            Nine independent routing combinations use the revised screening
-            model. Current selected units:{" "}
+            Nine independent routing combinations are available from the
+            residue and gas-oil unit choices. Current selected units:{" "}
             {RESIDUE_UNIT_LABELS[draft.residueUnit]} and{" "}
-            {GAS_OIL_UNIT_LABELS[draft.gasOilUnit]}. Live prices use the
-            original Python pricing method, fetched during website publication
-            with dated source observations.
+            {GAS_OIL_UNIT_LABELS[draft.gasOilUnit]}. Live prices are refreshed
+            once daily during publication, with dated source observations
+            shown on the Price snapshot tab.
           </p>
           <ReferenceManual id="crude-to-profit" />
         </>

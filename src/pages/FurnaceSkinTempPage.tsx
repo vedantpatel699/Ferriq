@@ -114,19 +114,19 @@ function FurnaceContent() {
         <BuildReport
           asset={furnace.label + " · Pass " + pass}
           source={
-            "Original model " +
+            "Model " +
             bundle.version +
             " · trained " +
             bundle.trained_at
           }
-          summary={`Current maximum ${formatNumber(r.skinNowC, 1)} °C; reference ${bundle.alarm_threshold_c} °C. Forecast and POC scenario limitations accompany the chart.`}
+          summary={`Current maximum ${formatNumber(r.skinNowC, 1)} °C; reference ${bundle.alarm_threshold_c} °C. Forecast and scenario limitations accompany the chart.`}
           period={
             days +
             " day display · observation cutoff " +
             new Date(last).toISOString()
           }
           quality={[
-            "Baseline uses original quantile/trend engine. Any displayed flow-split scenario is simulated and not a validated intervention.",
+            "Baseline uses the quantile/trend forecasting model. Any displayed flow-split scenario is simulated and not a validated intervention.",
             "Beyond 24 h is extrapolated.",
           ]}
           rows={r.tcResults.map((t) => ({
@@ -198,9 +198,9 @@ function FurnaceContent() {
           <section className="finding">
             <h2>
               {r.skinNowC >= 470
-                ? "Measured skin temperature meets the original alarm review criterion"
+                ? "Measured skin temperature meets the measured-status alarm criterion"
                 : r.skinNowC >= 460
-                  ? "Measured skin temperature meets the original advisory review criterion"
+                  ? "Measured skin temperature meets the measured-status advisory criterion"
                   : "Review projected approach to the configured reference"}
             </h2>
             <p>
@@ -211,9 +211,9 @@ function FurnaceContent() {
             </p>
           </section>
           <p>
-            Original measured status criteria: advisory 460 °C; alarm 470 °C.
-            Forecast reference: {bundle.alarm_threshold_c} °C. These distinct
-            inherited criteria are preserved and explicitly labelled.
+            Two threshold conventions are shown separately. Measured-status
+            criteria: advisory 460 °C; alarm 470 °C. Forecast reference:{" "}
+            {bundle.alarm_threshold_c} °C.
           </p>
           {key === "heater_1" && pass === 3 ? (
             <ScenarioWorkbench
@@ -368,7 +368,7 @@ function FurnaceContent() {
           {model.metrics && (
             <DataTable
               rows={[model.metrics]}
-              caption="Original model holdout metrics"
+              caption="Model holdout metrics"
             />
           )}
           {h ? (
@@ -473,11 +473,10 @@ function FurnaceContent() {
         <>
           <p>
             Current model {bundle.version}; trained {bundle.trained_at}.
-            Numerical feature indices, quantile trees and long-horizon
-            calculation follow the original HTML engine. Current history and
-            forecast both show the maximum over pass thermocouples. The original
-            470 °C status criterion differs from the {bundle.alarm_threshold_c}{" "}
-            °C forecast reference.
+            History and forecast both show the maximum reading over that
+            pass's thermocouples. The measured-status alarm criterion (470 °C)
+            differs from the forecast reference ({bundle.alarm_threshold_c} °C);
+            both are used and are labelled separately throughout.
           </p>
           <ReferenceManual id="furnace-skin-temp" />
         </>

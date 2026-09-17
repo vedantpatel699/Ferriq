@@ -10,10 +10,9 @@ export function HelpPage() {
         A predictor-model download failure has its own retry and does not block other dashboards.
       </p>
       <p>
-        Open an equipment page and select Engineering manual for the original
-        HTML calculation descriptions, sources and current configured reference
-        limits. Calculation basis opens the same reference material beside the
-        chart.
+        Open an equipment page and select Engineering manual for calculation
+        descriptions, sources and the currently configured reference limits.
+        Calculation basis opens the same reference material beside the chart.
       </p>
       <ul>
         {equipmentIds.map((id) => (
@@ -38,10 +37,11 @@ export function HelpPage() {
         boundaries use America/Edmonton.
       </p>
       <p>
-        This static edition uses published reference data and browser-local
-        edits. Original manuals may describe historian or market integrations;
-        those integrations are not active here. CSV imports, price snapshots and
-        workspace backups are explicit user actions.
+        Dashboards run on bundled reference data plus any CSV you upload; there
+        is no live historian connection. Crude to Profit is the exception: its
+        crude and product prices refresh daily from the public sources listed
+        on its Price snapshot tab. CSV imports, price refreshes and workspace
+        backups only happen when you trigger them.
       </p>
       <Link to="/data-export">Back up or restore your workspace</Link>
     </>
