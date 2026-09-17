@@ -5,6 +5,7 @@ import {
   DEFAULT_BLOWER_SETTINGS,
   processBlowerRow,
 } from "./calculations";
+import { calculate, seedEquipment } from "../catalog";
 
 describe("Air Blower reference dataset", () => {
   it("keeps the corrected source mapping and expected date range", () => {
@@ -36,6 +37,13 @@ describe("Air Blower reference dataset", () => {
         DEFAULT_BLOWER_SETTINGS.atmPressureBar;
       expect(p2).toBeGreaterThan(p1);
     }
+  });
+
+  it("does not elevate the page to DATA ISSUE for optional thermodynamic gaps", () => {
+    const rows = calculate("air-blower", seedEquipment("air-blower"));
+    expect(rows).toHaveLength(200);
+    expect(rows.at(-1)?.state).not.toBe("data-issue");
+    expect(rows.at(-1)?.quality.join(" ")).toContain("Suction temperature");
   });
 
   it("produces plausible power, pressure rise and fluid-power indicators", () => {
