@@ -58,7 +58,7 @@ export function BlowerConfiguration({
           { parameter: "Inlet pressure", value: BLOWER_DESIGN_REFERENCE.inletPressureKpaa, unit: "kPaa" },
           { parameter: "Discharge pressure", value: BLOWER_DESIGN_REFERENCE.dischargePressureKpaa, unit: "kPaa" },
           { parameter: "Annual-average inlet temperature", value: BLOWER_DESIGN_REFERENCE.annualAverageInletTempC, unit: "°C" },
-          { parameter: "Reference inlet volume flow", value: BLOWER_DESIGN_REFERENCE.designFlowNm3hr, unit: "m³/hr" },
+          { parameter: "Reference normal flow", value: BLOWER_DESIGN_REFERENCE.designFlowNm3hr, unit: "Nm³/hr" },
           { parameter: "Reference train power", value: BLOWER_DESIGN_REFERENCE.designTrainPowerKw, unit: "kW" },
           { parameter: "Reference polytropic efficiency", value: BLOWER_DESIGN_REFERENCE.designPolytropicEfficiencyPct, unit: "%" },
           { parameter: "Reference speed", value: BLOWER_DESIGN_REFERENCE.designSpeedRpm, unit: "rpm" },
