@@ -499,7 +499,13 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
         }
       }
     }
-    const unreliable = Object.values(qualityByMetric).some(
+    const qualityEntries =
+      id === "air-blower"
+        ? ["powerKw", "flowNm3hr", "dpBar", "maxVibrationMms", "maxBearingTempC"]
+            .map((key) => qualityByMetric[key])
+            .filter(Boolean)
+        : Object.values(qualityByMetric);
+    const unreliable = qualityEntries.some(
       (q) => q.state === "Stale" || q.state === "Missing",
     );
     const rank = { trip: 3, alarm: 3, advisory: 2, ok: 0 };
