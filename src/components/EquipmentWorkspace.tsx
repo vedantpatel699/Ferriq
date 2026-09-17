@@ -21,6 +21,8 @@ import { CalculationBasisDialog } from "./CalculationBasisDialog";
 import { ReferenceManual } from "./ReferenceManual";
 import { BlowerManual } from "./BlowerManual";
 import { BlowerOverview } from "./BlowerOverview";
+import { BlowerConfiguration } from "./BlowerConfiguration";
+import { ModelTabs } from "./ModelPagePrimitives";
 import type {
   BlowerLimits,
   BlowerSettings,
@@ -188,10 +190,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
   ];
   const manual =
     id === "air-blower" ? (
-      <BlowerManual
-        settings={(data.config as unknown as { settings: BlowerSettings }).settings}
-        limits={(data.config as unknown as { limits: BlowerLimits }).limits}
-      />
+      <BlowerManual />
     ) : (
       <>
         <h2>Current status & reference configuration</h2>
@@ -288,27 +287,17 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
           />
         </div>
       )}
-      <div className="page-tabs" role="group" aria-label="Equipment views">
-        {(id === "air-blower"
-          ? ["Overview", "Data & Log", "Engineering manual"]
-          : ["Overview", "Data & Log", "Configuration", "Engineering manual"]
-        ).map((t) => (
-            <button
-              key={t}
-              aria-pressed={tab === t}
-              onClick={() => {
-                setTab(t);
-                if (t === "Configuration") {
-                  setDraft(structuredClone(data.config) as ConfigValue);
-                  setDraftVersion(resource.version);
-                }
-              }}
-            >
-              {t === "Configuration" ? "Advanced" : t}
-            </button>
-          ),
-        )}
-      </div>
+      <ModelTabs
+        tabs={["Overview", "Data & Log", "Configuration", "Engineering manual"]}
+        active={tab}
+        onChange={(t) => {
+          setTab(t);
+          if (t === "Configuration") {
+            setDraft(structuredClone(data.config) as ConfigValue);
+            setDraftVersion(resource.version);
+          }
+        }}
+      />
       {notice && (
         <p role="status" className="callout">
           {notice}
@@ -665,17 +654,25 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
       )}
       {tab === "Configuration" && (
         <>
-          <h2>Engineering configuration</h2>
-          <p>
-            Saved configuration version {resource.version}. The dashboard uses
-            these saved assumptions automatically.
-          </p>
+          {id === "air-blower" && (
+            <BlowerConfiguration
+              settings={(data.config as unknown as { settings: BlowerSettings }).settings}
+              limits={(data.config as unknown as { limits: BlowerLimits }).limits}
+            />
+          )}
+          {id !== "air-blower" && (
+            <>
+              <h2>Engineering configuration</h2>
+              <p>
+                Saved configuration version {resource.version}. The dashboard uses
+                these saved assumptions automatically.
+              </p>
+            </>
+          )}
           <details className="advanced-panel">
-            <summary>Edit engineering configuration</summary>
-            <p>
-              These are model assumptions and reference limits, not personal
-              display preferences. Saved changes apply consistently across this
-              browser's overview and detail pages.
+            <summary>Edit configuration</summary>
+            <p className="section-note">
+              Changes apply to calculations in this browser after saving.
             </p>
             {id === "air-blower" && (
               <p>
