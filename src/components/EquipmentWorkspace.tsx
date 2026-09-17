@@ -1,7 +1,6 @@
 import { BuildReport } from "./BuildReport";
 import { rollingMean } from "../lib/rollingMean";
 import { metricFacts, windowAverage } from "../poc/blower";
-import { AssetScorecard } from "./AssetScorecard";
 import { useMemo, useState } from "react";
 import { DateTime } from "luxon";
 import { useResource, useWorkspace } from "../lib/WorkspaceContext";
@@ -21,6 +20,7 @@ import { TrendRangeSelector } from "./TrendRangeSelector";
 import { CalculationBasisDialog } from "./CalculationBasisDialog";
 import { ReferenceManual } from "./ReferenceManual";
 import { BlowerManual } from "./BlowerManual";
+import { BlowerOverview } from "./BlowerOverview";
 import { DataTable } from "./DataTable";
 import { ConfigEditor, type ConfigValue } from "./ConfigEditor";
 import { resolveTimeRange, rangeContextLabel } from "../lib/timeRange";
@@ -349,18 +349,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
             current values.
           </p>
           {id === "air-blower" ? (
-            <AssetScorecard
-              metrics={metrics}
-              latest={latest}
-              windowRows={selected}
-              selected={metric.key}
-              onSelect={(key) => {
-                setMetricKey(key);
-                document
-                  .getElementById("equipment-trend")
-                  ?.scrollIntoView({ block: "start" });
-              }}
-            />
+            <BlowerOverview latest={latest} />
           ) : (
             <>
               <div className="metrics-grid">
