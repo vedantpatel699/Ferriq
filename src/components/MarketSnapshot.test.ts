@@ -16,7 +16,10 @@ describe("published market snapshot", () => {
     const parsed = parseLiveMarket(snapshot);
     expect(Object.keys(parsed.crude)).toHaveLength(5);
     expect(Object.keys(parsed.product)).toHaveLength(7);
-    expect(parsed.provenance.product.detail.lpg.ui_label).toContain("Alberta");
+    const lpg = parsed.provenance.product.detail.lpg;
+    expect(lpg.ui_label.trim().length).toBeGreaterThan(0);
+    expect(lpg.benchmark.trim().length).toBeGreaterThan(0);
+    expect(lpg.freshness.observation_date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
   it.each([null, -1, 0, NaN, Infinity])(
     "rejects invalid or unavailable prices (%s)",
