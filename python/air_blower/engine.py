@@ -412,7 +412,8 @@ def process_single_row(row, settings=None, limits=None):
     status = roll_up_status(alerts)
 
     def _r(v, d=2):
-        return None if math.isnan(v) else round(v, d)
+        # Preserve calculation precision; presentation layers decide display rounding.
+        return None if math.isnan(v) else v
 
     return {
         "drop": False,
@@ -436,7 +437,7 @@ def process_single_row(row, settings=None, limits=None):
         "max_bearing_temp_c":    _r(brg_max, 1),
         "filter_dp_bar":         _r(filt_dp, 3),
         "bypass_op_pct":         _r(bypass, 1),
-        "t1_c_used": None if math.isnan(t1_c) else round(t1_c, 1),
+        "t1_c_used": None if math.isnan(t1_c) else t1_c,
         "t1_source": t1_source,
         "alerts": alerts,
         "status": status,
@@ -539,9 +540,9 @@ def process_batch(rows, settings=None, limits=None):
             )
             residual = ((r["flow_nm3hr"] - expected) / expected * 100.0
                         if within_baseline_envelope and expected is not None and expected > 0 else None)
-            r["expected_flow_nm3hr"] = None if expected is None else round(expected, 2)
-            r["flow_residual_pct"] = None if residual is None else round(residual, 2)
-            r["performance_degradation_pct"] = None if residual is None else round(max(0.0, -residual), 2)
+            r["expected_flow_nm3hr"] = expected
+            r["flow_residual_pct"] = residual
+            r["performance_degradation_pct"] = None if residual is None else max(0.0, -residual)
             r["performance_model_training_rows"] = 0 if model is None else model["training_rows"]
             r["performance_model_applicable"] = bool(within_baseline_envelope and model is not None)
             if residual is not None and residual <= -lim.get("performance_alarm_pct", 10.0):
@@ -564,11 +565,11 @@ def process_batch(rows, settings=None, limits=None):
                 if v is not None and math.isfinite(float(v)):
                     hist.append((datetime.fromisoformat(x["timestamp"]), float(v)))
             slope = _trend_per_day(hist)
-            r[output] = None if slope is None else round(slope, 4)
+            r[output] = slope
         bearing = r.get("max_bearing_temp_c")
         slope = r.get("bearing_trend_c_per_day")
         if bearing is not None and slope is not None and slope > 0 and bearing < lim["brg_advisory_c"]:
-            r["bearing_advisory_eta_days"] = round((lim["brg_advisory_c"] - bearing) / slope, 1)
+            r["bearing_advisory_eta_days"] = (lim["brg_advisory_c"] - bearing) / slope
         else:
             r["bearing_advisory_eta_days"] = None
         r["thrust_health"] = "unavailable"
