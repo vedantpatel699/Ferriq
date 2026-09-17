@@ -2306,3 +2306,206 @@ textarea {
   .editor-field { min-width: 0; }
   .editor-field input, .editor-field select { min-width: 0; max-width: 100%; }
 }
+
+
+/* ----------------------------------------------------------------------------
+ * Standard model-page primitives
+ * -------------------------------------------------------------------------- */
+.model-tabs {
+  border-bottom: 1px solid var(--border-card);
+  gap: 0;
+  margin: 18px 0 24px;
+}
+.model-tabs > button {
+  appearance: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 10px 14px;
+  font: 600 13px var(--font-heading);
+  cursor: pointer;
+}
+.model-tabs > button:hover {
+  color: var(--text-primary);
+}
+.model-tabs > button.active,
+.model-tabs > button[aria-current="page"] {
+  color: var(--copper-dark);
+  border-bottom-color: var(--copper);
+}
+
+.action-bar > button,
+.advanced-panel > button,
+.advanced-panel .action-bar > button {
+  appearance: none;
+  border: 1px solid var(--border-card);
+  border-radius: 5px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  min-height: 36px;
+  font: 600 12px var(--font-heading);
+  cursor: pointer;
+}
+.action-bar > button:hover,
+.advanced-panel > button:hover,
+.advanced-panel .action-bar > button:hover {
+  border-color: var(--text-secondary);
+  background: var(--canvas);
+}
+.action-bar > button:disabled,
+.advanced-panel > button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.engineering-manual {
+  max-width: 980px;
+}
+.manual-lead {
+  max-width: 840px;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+.manual-section {
+  padding: 22px 0;
+  border-top: 1px solid var(--border-card);
+}
+.manual-section:first-of-type {
+  border-top: 0;
+}
+.manual-section > h3 {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+.manual-intro {
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.formula-block {
+  max-width: 760px;
+  margin: 16px 0;
+  padding: 14px 18px;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+}
+.formula-block figcaption {
+  margin-bottom: 9px;
+  color: var(--text-secondary);
+  font: 600 11px var(--font-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.formula-expression {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  min-height: 40px;
+  overflow-x: auto;
+  font-family: Cambria, "Times New Roman", serif;
+  font-size: 21px;
+  line-height: 1.55;
+  white-space: nowrap;
+  font-variant-numeric: lining-nums;
+}
+.formula-expression sub {
+  font-size: 0.65em;
+  vertical-align: -0.35em;
+}
+.formula-expression sup {
+  font-size: 0.65em;
+}
+.formula-fraction {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  vertical-align: middle;
+  line-height: 1.15;
+  margin: 0 4px;
+}
+.formula-fraction > span:first-child {
+  padding: 0 5px 3px;
+  border-bottom: 1px solid currentColor;
+  text-align: center;
+}
+.formula-fraction > span:last-child {
+  padding: 3px 5px 0;
+  text-align: center;
+}
+.formula-note {
+  margin-top: 8px;
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+/* Technical tables stay readable by scrolling horizontally instead of
+   collapsing headers into one-character columns. */
+.data-view {
+  min-width: 0;
+}
+.table-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-width: 100%;
+  max-height: 640px;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-card);
+  background: var(--surface-card);
+}
+table.data {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+}
+table.data th,
+table.data td {
+  min-width: 92px;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  word-break: normal;
+  vertical-align: top;
+}
+table.data th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+table.data th:first-child,
+table.data td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface-card);
+}
+table.data th:first-child {
+  z-index: 3;
+  background: var(--canvas);
+}
+table.data caption {
+  position: sticky;
+  left: 0;
+  width: max-content;
+  min-width: 100%;
+  background: var(--surface-card);
+}
+
+@media (max-width: 700px) {
+  .model-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .model-tabs > button {
+    white-space: nowrap;
+  }
+  .formula-expression {
+    justify-content: flex-start;
+    font-size: 18px;
+  }
+}
