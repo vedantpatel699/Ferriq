@@ -11,6 +11,7 @@ import type { EngineeringAlert, RawSeverity } from "../types";
 export interface BlowerSettings {
   motorVoltageV: number;
   powerFactor: number;
+  powerFactorMode: "datasheet" | "fixed";
   gammaK: number;
   atmPressureBar: number;
   activeCurrentMinA: number;
@@ -25,6 +26,7 @@ export interface BlowerSettings {
 export const DEFAULT_BLOWER_SETTINGS: BlowerSettings = {
   motorVoltageV: 4000,
   powerFactor: 0.85,
+  powerFactorMode: "datasheet",
   gammaK: 1.4,
   atmPressureBar: 0.93,
   activeCurrentMinA: 10,
@@ -51,6 +53,8 @@ export interface BlowerLimits {
   bypassOpenMaxPct: number;
   performanceWatchPct: number;
   performanceAlarmPct: number;
+  thrustProxyWatchPct: number;
+  thrustProxyAlarmPct: number;
 }
 
 // blowerDpMaxBar default is 1.00, not the 0.45 documented in
@@ -70,9 +74,56 @@ export const DEFAULT_BLOWER_LIMITS: BlowerLimits = {
   bypassOpenMaxPct: 60,
   performanceWatchPct: 5,
   performanceAlarmPct: 10,
+  thrustProxyWatchPct: 15,
+  thrustProxyAlarmPct: 25,
 };
 
-/** IEEE/NEMA 3-phase motor input power. P = sqrt(3) * V * I * PF / 1000 [kW] */
+export const BLOWER_DESIGN_REFERENCE = {
+  inletPressureKpaa: 93,
+  dischargePressureKpaa: 178,
+  annualAverageInletTempC: 4,
+  designFlowNm3hr: 23187,
+  designTrainPowerKw: 711,
+  designPolytropicEfficiencyPct: 76,
+  designSpeedRpm: 3580,
+} as const;
+
+export const MOTOR_POWER_FACTOR_POINTS = [
+  { currentA: 33.1, powerFactor: 0.055, label: "no load" },
+  { currentA: 51.1, powerFactor: 0.701, label: "25% load" },
+  { currentA: 82.5, powerFactor: 0.853, label: "50% load" },
+  { currentA: 118.7, powerFactor: 0.889, label: "75% load" },
+  { currentA: 157.5, powerFactor: 0.896, label: "full load" },
+] as const;
+
+export function motorPowerFactorFromCurrent(currentA: number): number {
+  const pts = MOTOR_POWER_FACTOR_POINTS;
+  if (!Number.isFinite(currentA)) return NaN;
+  if (currentA <= pts[0].currentA) return pts[0].powerFactor;
+  if (currentA >= pts[pts.length - 1].currentA) return pts[pts.length - 1].powerFactor;
+  for (let i = 1; i < pts.length; i++) {
+    if (currentA <= pts[i].currentA) {
+      const lo = pts[i - 1], hi = pts[i];
+      const frac = (currentA - lo.currentA) / (hi.currentA - lo.currentA);
+      return lo.powerFactor + frac * (hi.powerFactor - lo.powerFactor);
+    }
+  }
+  return pts[pts.length - 1].powerFactor;
+}
+
+export function thrustOperatingDeviationPct(
+  flowNm3hr: number,
+  pressureRatio: number,
+  bypassPct: number,
+): number {
+  const designPr = BLOWER_DESIGN_REFERENCE.dischargePressureKpaa / BLOWER_DESIGN_REFERENCE.inletPressureKpaa;
+  const dq = (flowNm3hr - BLOWER_DESIGN_REFERENCE.designFlowNm3hr) / BLOWER_DESIGN_REFERENCE.designFlowNm3hr;
+  const dpr = (pressureRatio - designPr) / designPr;
+  const recycle = Math.max(0, bypassPct) / 100;
+  return Math.sqrt((dq * dq + dpr * dpr + recycle * recycle) / 3) * 100;
+}
+
+/** Three-phase electrical input power. P = sqrt(3) * V * I * PF / 1000 [kW]. */
 export function shaftPowerKw(
   voltageV: number,
   currentA: number,
@@ -97,7 +148,7 @@ export function fluidPowerKw(flowNm3hr: number, dpBar: number): number {
   return (flowNm3hr * dpBar) / 36;
 }
 
-/** Isentropic (adiabatic) efficiency, ASME PTC 10 §5.4. Returns a decimal
+/** Ideal-gas isentropic efficiency estimate for this POC. ASME PTC 10 is the compressor-performance test framework. Returns a decimal
  *  fraction (0.75 = 75%), or NaN if inputs are thermodynamically infeasible. */
 export function isentropicEfficiency(
   t1K: number,
@@ -111,7 +162,7 @@ export function isentropicEfficiency(
   return (t1K * (Math.pow(p2Bar / p1Bar, exponent) - 1)) / (t2K - t1K);
 }
 
-/** Polytropic efficiency (headline KPI), ASME PTC 10 §5.4a / API 617.
+/** Ideal-gas polytropic efficiency estimate for this POC. ASME PTC 10 is used as the compressor-performance test framework; this is not a full real-gas PTC 10 implementation.
  *  Independent of compression ratio — used for cross-machine comparison
  *  and degradation tracking. Returns a decimal fraction, or NaN if
  *  thermodynamically infeasible. */
@@ -152,6 +203,7 @@ export interface AlertInputs {
   bypassOpPct: number;
   dischargePressureKpag: number;
   controllerSpKpag: number;
+  thrustProxyPct: number;
 }
 
 const ISO = "ISO 10816-3, Group 1";
@@ -168,6 +220,7 @@ export function buildAlerts(
     bypassOpPct: byp,
     dischargePressureKpag: p2,
     controllerSpKpag: sp,
+    thrustProxyPct,
   } = inputs;
   const alerts: EngineeringAlert[] = [];
 
@@ -237,6 +290,20 @@ export function buildAlerts(
       source: "control narrative",
     });
   }
+  if (!isNaN(thrustProxyPct)) {
+    if (thrustProxyPct >= limits.thrustProxyAlarmPct)
+      alerts.push({
+        severity: "alarm",
+        message: `Thrust operating-deviation proxy ${thrustProxyPct.toFixed(1)}% exceeds the POC investigate threshold ${limits.thrustProxyAlarmPct}%.`,
+        source: "POC operating-envelope heuristic; not a direct thrust measurement",
+      });
+    else if (thrustProxyPct >= limits.thrustProxyWatchPct)
+      alerts.push({
+        severity: "advisory",
+        message: `Thrust operating-deviation proxy ${thrustProxyPct.toFixed(1)}% exceeds the POC watch threshold ${limits.thrustProxyWatchPct}%.`,
+        source: "POC operating-envelope heuristic; not a direct thrust measurement",
+      });
+  }
   return alerts;
 }
 
@@ -291,6 +358,8 @@ export interface BlowerRowSuccess {
   timestamp: string;
   activeBlower: "A" | "B";
   powerKw: number;
+  powerFactorUsed: number;
+  powerFactorSource: "motor-datasheet interpolation" | "fixed";
   pressureRatio: number;
   dpBar: number;
   p1BarAbs: number;
@@ -308,6 +377,7 @@ export interface BlowerRowSuccess {
   bypassOpPct: number;
   t1CUsed: number | null;
   t1Source: "measured" | "forward-filled" | "unavailable";
+  thrustProxyPct: number;
   alerts: EngineeringAlert[];
   severity: RawSeverity;
 }
@@ -372,10 +442,14 @@ export function processBlowerRow(
   const maxVibrationMms = vibsClean.length ? Math.max(...vibsClean) : NaN;
   const maxBearingTempC = brgsClean.length ? Math.max(...brgsClean) : NaN;
 
+  const powerFactorUsed =
+    settings.powerFactorMode === "datasheet"
+      ? motorPowerFactorFromCurrent(current)
+      : settings.powerFactor;
   const powerKw = shaftPowerKw(
     settings.motorVoltageV,
     current,
-    settings.powerFactor,
+    powerFactorUsed,
   );
   const [p1BarAbs, p2BarAbs] = normalizePressures(
     suctionKpaa,
@@ -385,6 +459,11 @@ export function processBlowerRow(
   const dpBar = p2BarAbs - p1BarAbs;
   const pressureRatio = p1BarAbs > 0 ? p2BarAbs / p1BarAbs : NaN;
   const fluidPwr = fluidPowerKw(row.totalFlowNm3hr, dpBar);
+  const thrustProxyPct = thrustOperatingDeviationPct(
+    row.totalFlowNm3hr,
+    pressureRatio,
+    bypassOp,
+  );
   const efficiencyFluidPct = powerKw > 0 ? (fluidPwr / powerKw) * 100 : NaN;
 
   const t1K = t1c === null ? NaN : t1c + 273.15;
@@ -421,6 +500,7 @@ export function processBlowerRow(
       bypassOpPct: bypassOp,
       dischargePressureKpag: dischargeKpag,
       controllerSpKpag: controllerSp,
+      thrustProxyPct,
     },
     limits,
   );
@@ -430,6 +510,11 @@ export function processBlowerRow(
     timestamp: row.timestamp,
     activeBlower: active,
     powerKw,
+    powerFactorUsed,
+    powerFactorSource:
+      settings.powerFactorMode === "datasheet"
+        ? "motor-datasheet interpolation"
+        : "fixed",
     pressureRatio,
     dpBar,
     p1BarAbs,
@@ -447,6 +532,7 @@ export function processBlowerRow(
     bypassOpPct: bypassOp,
     t1CUsed: t1c,
     t1Source,
+    thrustProxyPct,
     alerts,
     severity: rollUpSeverity(alerts),
   };
