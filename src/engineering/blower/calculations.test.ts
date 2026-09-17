@@ -10,6 +10,8 @@ import {
   DEFAULT_BLOWER_LIMITS,
   fitSimpleFlowModel,
   predictFlowNm3hr,
+  motorPowerFactorFromCurrent,
+  thrustOperatingDeviationPct,
 } from "./calculations";
 
 // Golden values from backend-air-blower.md §8 "Worked Validation Example"
@@ -154,6 +156,19 @@ describe("Air Blower — backend-air-blower.md §8 worked example", () => {
       result.efficiencyFluidPct,
       10,
     );
+  });
+
+  it("interpolates motor power factor from the supplied motor performance points", () => {
+    expect(motorPowerFactorFromCurrent(82.5)).toBeCloseTo(0.853, 6);
+    expect(motorPowerFactorFromCurrent(118.7)).toBeCloseTo(0.889, 6);
+    expect(motorPowerFactorFromCurrent(100)).toBeGreaterThan(0.85);
+    expect(motorPowerFactorFromCurrent(100)).toBeLessThan(0.889);
+  });
+
+  it("computes the POC thrust operating-deviation proxy from design-point deviations", () => {
+    const designPr = 178 / 93;
+    expect(thrustOperatingDeviationPct(23187, designPr, 0)).toBeCloseTo(0, 10);
+    expect(thrustOperatingDeviationPct(18000, designPr, 0)).toBeGreaterThan(10);
   });
 
   it("fits and applies the transparent current-to-flow baseline", () => {
