@@ -114,9 +114,12 @@ export function validateResource(key: string, input: unknown): unknown {
         !["auto", "A", "B"].includes(String(s.blowerMode)) ||
         !["polytropic", "isentropic", "fluid"].includes(
           String(s.efficiencyMethod),
-        )
+        ) ||
+        !["datasheet", "fixed"].includes(String(s.powerFactorMode))
       )
-        throw Error("Choose a supported blower mode and efficiency method.");
+        throw Error(
+          "Choose a supported blower mode, efficiency method and power-factor method.",
+        );
       if (
         Number(s.gammaK) <= 1 ||
         Number(s.motorVoltageV) <= 0 ||

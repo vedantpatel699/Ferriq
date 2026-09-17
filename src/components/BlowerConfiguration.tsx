@@ -1,7 +1,8 @@
 import { DataTable } from "./DataTable";
-import type {
-  BlowerLimits,
-  BlowerSettings,
+import {
+  BLOWER_DESIGN_REFERENCE,
+  type BlowerLimits,
+  type BlowerSettings,
 } from "../engineering/blower/calculations";
 
 export function BlowerConfiguration({
@@ -24,7 +25,8 @@ export function BlowerConfiguration({
         rows={[
           { parameter: "Blower selection mode", value: settings.blowerMode, unit: "—", purpose: "Auto-select running train or force A/B" },
           { parameter: "Motor line voltage", value: settings.motorVoltageV, unit: "V", purpose: "Three-phase motor input power" },
-          { parameter: "Motor power factor", value: settings.powerFactor, unit: "—", purpose: "Three-phase motor input power" },
+          { parameter: "Power-factor method", value: settings.powerFactorMode, unit: "—", purpose: "Datasheet interpolation by motor current or fixed fallback" },
+          { parameter: "Fixed motor power factor", value: settings.powerFactor, unit: "—", purpose: "Used only when fixed PF mode is selected" },
           { parameter: "Air heat-capacity ratio, k", value: settings.gammaK, unit: "—", purpose: "Isentropic and polytropic efficiency" },
           { parameter: "Site atmospheric pressure", value: settings.atmPressureBar, unit: "bar abs", purpose: "Gauge-to-absolute discharge pressure conversion" },
           { parameter: "Running-current threshold", value: settings.activeCurrentMinA, unit: "A", purpose: "Active blower detection" },
@@ -46,6 +48,20 @@ export function BlowerConfiguration({
           { parameter: "Bypass opening maximum", value: limits.bypassOpenMaxPct, unit: "%", application: "High recycle / bypass advisory" },
           { parameter: "Performance WATCH threshold", value: limits.performanceWatchPct, unit: "%", application: "Measured flow shortfall versus baseline" },
           { parameter: "Performance INVESTIGATE threshold", value: limits.performanceAlarmPct, unit: "%", application: "Measured flow shortfall versus baseline" },
+          { parameter: "Thrust-proxy WATCH / INVESTIGATE", value: `${limits.thrustProxyWatchPct} / ${limits.thrustProxyAlarmPct}`, unit: "%", application: "POC operating-deviation screening only" },
+        ]}
+      />
+      <DataTable
+        caption="Vendor design reference"
+        columns={["parameter", "value", "unit"]}
+        rows={[
+          { parameter: "Inlet pressure", value: BLOWER_DESIGN_REFERENCE.inletPressureKpaa, unit: "kPaa" },
+          { parameter: "Discharge pressure", value: BLOWER_DESIGN_REFERENCE.dischargePressureKpaa, unit: "kPaa" },
+          { parameter: "Annual-average inlet temperature", value: BLOWER_DESIGN_REFERENCE.annualAverageInletTempC, unit: "°C" },
+          { parameter: "Reference normal flow", value: BLOWER_DESIGN_REFERENCE.designFlowNm3hr, unit: "Nm³/hr" },
+          { parameter: "Reference train power", value: BLOWER_DESIGN_REFERENCE.designTrainPowerKw, unit: "kW" },
+          { parameter: "Reference polytropic efficiency", value: BLOWER_DESIGN_REFERENCE.designPolytropicEfficiencyPct, unit: "%" },
+          { parameter: "Reference speed", value: BLOWER_DESIGN_REFERENCE.designSpeedRpm, unit: "rpm" },
         ]}
       />
     </>

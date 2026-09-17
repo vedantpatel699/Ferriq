@@ -16,7 +16,7 @@ const tsSource = stripTypeScriptTypes(
 
 const ts = vm.runInNewContext(
   tsSource +
-    ";({DEFAULT_BLOWER_SETTINGS,DEFAULT_BLOWER_LIMITS,shaftPowerKw,normalizePressures,fluidPowerKw,isentropicEfficiency,polytropicEfficiency,detectActiveBlower,processBlowerRow,fitSimpleFlowModel,predictFlowNm3hr})",
+    ";({DEFAULT_BLOWER_SETTINGS,DEFAULT_BLOWER_LIMITS,shaftPowerKw,normalizePressures,fluidPowerKw,isentropicEfficiency,polytropicEfficiency,detectActiveBlower,processBlowerRow,fitSimpleFlowModel,predictFlowNm3hr,motorPowerFactorFromCurrent,thrustOperatingDeviationPct})",
 );
 
 const py = spawnSync(
@@ -53,6 +53,8 @@ pure = {
     )
   ],
   "python_dp_default": E.DEFAULT_LIMITS["blower_dp_max_bar"],
+  "motor_pf": [E.motor_power_factor_from_current(x) for x in (51.1,82.5,100,118.7,157.5)],
+  "thrust_proxy": E.thrust_operating_deviation_pct(18000,178/93,0),
   "flow_model": E.fit_simple_flow_model([(100,16000),(105,17500),(110,19000),(115,20500),(120,22000)]),
 }
 
@@ -144,6 +146,7 @@ const current = ts.processBlowerRow(siteRow, ts.DEFAULT_BLOWER_SETTINGS, ts.DEFA
 assert.equal(current.drop, false);
 const pairs = {
   powerKw: "power_kw",
+  powerFactorUsed: "power_factor_used",
   pressureRatio: "pressure_ratio",
   dpBar: "dp_bar",
   p1BarAbs: "p1_bar_abs",
@@ -159,6 +162,7 @@ const pairs = {
   filterDpBar: "filter_dp_bar",
   bypassOpPct: "bypass_op_pct",
   t1CUsed: "t1_c_used",
+  thrustProxyPct: "thrust_proxy_pct",
 };
 for (const [tk, pk] of Object.entries(pairs)) {
   close(current[tk], p.normal[pk]);
@@ -170,6 +174,8 @@ assert.equal(current.severity, p.normal.status);
 // Current defaults are shared across both engines.
 assert.equal(p.pure.python_dp_default, 1.0);
 assert.equal(ts.DEFAULT_BLOWER_LIMITS.blowerDpMaxBar, 1.0);
+[51.1,82.5,100,118.7,157.5].forEach((x,i)=>close(ts.motorPowerFactorFromCurrent(x),p.pure.motor_pf[i]));
+close(ts.thrustOperatingDeviationPct(18000,178/93,0),p.pure.thrust_proxy);
 
 // Missing thermodynamic temperature inputs must produce the same labelled
 // fluid-power fallback without inventing a suction temperature.

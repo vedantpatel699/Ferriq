@@ -30,7 +30,8 @@ from datetime import datetime
 DEFAULT_SETTINGS = {
     # Engineering parameters
     "motor_voltage_v": 4000.0,      # 3-phase line-to-line, from motor datasheet
-    "power_factor": 0.85,           # nameplate; replace with measured PF if available
+    "power_factor": 0.85,           # used only when power_factor_mode="fixed"
+    "power_factor_mode": "datasheet",
     "gamma_k": 1.40,                # isentropic exponent for air (ASHRAE Handbook)
     "atm_pressure_bar": 0.93,       # site atmospheric pressure, ~93 kPa
     # Data-quality rules
@@ -63,7 +64,27 @@ DEFAULT_LIMITS = {
     "bypass_open_max_pct": 60.0,
     "performance_watch_pct": 5.0,
     "performance_alarm_pct": 10.0,
+    "thrust_proxy_watch_pct": 15.0,
+    "thrust_proxy_alarm_pct": 25.0,
 }
+
+BLOWER_DESIGN_REFERENCE = {
+    "inlet_pressure_kpaa": 93.0,
+    "discharge_pressure_kpaa": 178.0,
+    "annual_average_inlet_temp_c": 4.0,
+    "design_flow_nm3hr": 20609.2866,
+    "design_train_power_kw": 711.0,
+    "design_polytropic_efficiency_pct": 76.0,
+    "design_speed_rpm": 3580.0,
+}
+
+MOTOR_POWER_FACTOR_POINTS = [
+    (33.1, 0.055),
+    (51.1, 0.701),
+    (82.5, 0.853),
+    (118.7, 0.889),
+    (157.5, 0.896),
+]
 
 # =============================================================================
 # 2. INTEGRATION HOOK  (for the live-historian implementer)
@@ -171,6 +192,36 @@ def shaft_power_kw(voltage_v, current_a, power_factor):
     return math.sqrt(3.0) * voltage_v * current_a * power_factor / 1000.0
 
 
+def motor_power_factor_from_current(current_a):
+    pts = MOTOR_POWER_FACTOR_POINTS
+    if not math.isfinite(current_a):
+        return float("nan")
+    if current_a <= pts[0][0]:
+        return pts[0][1]
+    if current_a >= pts[-1][0]:
+        return pts[-1][1]
+    for i in range(1, len(pts)):
+        if current_a <= pts[i][0]:
+            lo, hi = pts[i - 1], pts[i]
+            frac = (current_a - lo[0]) / (hi[0] - lo[0])
+            return lo[1] + frac * (hi[1] - lo[1])
+    return pts[-1][1]
+
+
+def thrust_operating_deviation_pct(flow_nm3hr, pressure_ratio, bypass_pct):
+    design_pr = (
+        BLOWER_DESIGN_REFERENCE["discharge_pressure_kpaa"]
+        / BLOWER_DESIGN_REFERENCE["inlet_pressure_kpaa"]
+    )
+    dq = (
+        (flow_nm3hr - BLOWER_DESIGN_REFERENCE["design_flow_nm3hr"])
+        / BLOWER_DESIGN_REFERENCE["design_flow_nm3hr"]
+    )
+    dpr = (pressure_ratio - design_pr) / design_pr
+    recycle = max(0.0, bypass_pct) / 100.0
+    return math.sqrt((dq * dq + dpr * dpr + recycle * recycle) / 3.0) * 100.0
+
+
 def normalize_pressures(p_suction_kpaa, p_discharge_kpag, p_atm_bar):
     """
     Convert the mixed-unit plant measurements to absolute bar.
@@ -196,7 +247,7 @@ def fluid_power_kw(flow_nm3hr, dp_bar):
 def isentropic_efficiency(t1_k, t2_k, p1_bar, p2_bar, k):
     """
     Isentropic (adiabatic) efficiency for a compressor.
-    Ref: ASME PTC 10 Section 5.4.
+    Ideal-gas POC estimate; ASME PTC 10 is the compressor-performance test framework.
       eta_s = T1 * [(P2/P1)^((k-1)/k) - 1] / (T2 - T1)
 
     Returns decimal (0.75 = 75 %), or NaN if inputs are infeasible.
@@ -212,7 +263,7 @@ def isentropic_efficiency(t1_k, t2_k, p1_bar, p2_bar, k):
 def polytropic_efficiency(t1_k, t2_k, p1_bar, p2_bar, k):
     """
     Polytropic efficiency for a compressor.
-    Ref: ASME PTC 10 Section 5.4a; API 617.
+    Ideal-gas POC estimate; ASME PTC 10 is the compressor-performance test framework.
 
     Using the polytropic temperature exponent:
       sigma = (n-1)/n = ln(T2/T1) / ln(P2/P1)
@@ -288,25 +339,25 @@ def build_alerts(vib_max, brg_max, filter_dp, dp_bar, bypass_op,
         if brg_max >= lim["brg_trip_c"]:
             a.append(_alert("trip",
                 f"Bearing temperature {brg_max:.1f} C exceeds trip limit "
-                f"{lim['brg_trip_c']} C.", "bearing datasheet"))
+                f"{lim['brg_trip_c']} C.", "configured POC bearing-temperature threshold"))
         elif brg_max >= lim["brg_alarm_c"]:
             a.append(_alert("alarm",
                 f"Bearing temperature {brg_max:.1f} C exceeds alarm limit "
-                f"{lim['brg_alarm_c']} C.", "bearing datasheet"))
+                f"{lim['brg_alarm_c']} C.", "configured POC bearing-temperature threshold"))
         elif brg_max >= lim["brg_advisory_c"]:
             a.append(_alert("advisory",
                 f"Bearing temperature {brg_max:.1f} C above advisory "
-                f"{lim['brg_advisory_c']} C.", "bearing datasheet"))
+                f"{lim['brg_advisory_c']} C.", "configured POC bearing-temperature threshold"))
 
     # Process advisories
     if not math.isnan(filter_dp) and filter_dp > lim["filter_dp_max_bar"]:
         a.append(_alert("advisory",
-            f"Filter dP {filter_dp:.3f} bar above {lim['filter_dp_max_bar']} bar "
-            f"- replace filter.", "plant setpoint"))
+            f"Filter dP {filter_dp:.3f} bar above configured limit {lim['filter_dp_max_bar']} bar.",
+            "plant setpoint"))
     if not math.isnan(dp_bar) and dp_bar > lim["blower_dp_max_bar"]:
         a.append(_alert("advisory",
-            f"Blower dP {dp_bar:.3f} bar above design {lim['blower_dp_max_bar']} bar "
-            f"- possible internal fouling.", "plant setpoint"))
+            f"Blower dP {dp_bar:.3f} bar above configured limit {lim['blower_dp_max_bar']} bar.",
+            "plant setpoint"))
     if not math.isnan(bypass_op) and bypass_op > lim["bypass_open_max_pct"]:
         a.append(_alert("advisory",
             f"Bypass valve {bypass_op:.1f}% above {lim['bypass_open_max_pct']}% "
@@ -385,12 +436,18 @@ def process_single_row(row, settings=None, limits=None):
         t1_source = "measured"
 
     # Math
-    p_elec = shaft_power_kw(s["motor_voltage_v"], current, s["power_factor"])
+    power_factor_used = (
+        motor_power_factor_from_current(current)
+        if s.get("power_factor_mode", "datasheet") == "datasheet"
+        else s["power_factor"]
+    )
+    p_elec = shaft_power_kw(s["motor_voltage_v"], current, power_factor_used)
     p1_bar, p2_bar = normalize_pressures(p1_kpaa, p2_kpag, s["atm_pressure_bar"])
     dp_bar = p2_bar - p1_bar
     p_ratio = p2_bar / p1_bar if p1_bar > 0 else float("nan")
 
     p_fluid = fluid_power_kw(flow, dp_bar)
+    thrust_proxy_pct = thrust_operating_deviation_pct(flow, p_ratio, bypass)
     eff_fluid = (p_fluid / p_elec * 100.0) if p_elec > 0 else float("nan")
 
     t1_k = t1_c + 273.15 if not math.isnan(t1_c) else float("nan")
@@ -410,6 +467,19 @@ def process_single_row(row, settings=None, limits=None):
 
     alerts = build_alerts(vib_max, brg_max, filt_dp, dp_bar, bypass,
                           p2_kpag, sp_kpag, lim)
+    if math.isfinite(thrust_proxy_pct):
+        if thrust_proxy_pct >= lim["thrust_proxy_alarm_pct"]:
+            alerts.append(_alert(
+                "alarm",
+                f"Thrust operating-deviation proxy {thrust_proxy_pct:.1f}% exceeds the POC investigate threshold {lim['thrust_proxy_alarm_pct']:.0f}%.",
+                "POC operating-envelope heuristic; not a direct thrust measurement",
+            ))
+        elif thrust_proxy_pct >= lim["thrust_proxy_watch_pct"]:
+            alerts.append(_alert(
+                "advisory",
+                f"Thrust operating-deviation proxy {thrust_proxy_pct:.1f}% exceeds the POC watch threshold {lim['thrust_proxy_watch_pct']:.0f}%.",
+                "POC operating-envelope heuristic; not a direct thrust measurement",
+            ))
     status = roll_up_status(alerts)
 
     def _r(v, d=2):
@@ -421,6 +491,8 @@ def process_single_row(row, settings=None, limits=None):
         "timestamp": ts.isoformat(),
         "active_blower": active,
         "power_kw":              _r(p_elec, 2),
+        "power_factor_used":     _r(power_factor_used, 4),
+        "power_factor_source":   "motor-datasheet interpolation" if s.get("power_factor_mode", "datasheet") == "datasheet" else "fixed",
         "pressure_ratio":        _r(p_ratio, 4),
         "dp_bar":                _r(dp_bar, 4),
         "p1_bar_abs":            _r(p1_bar, 4),
@@ -440,6 +512,7 @@ def process_single_row(row, settings=None, limits=None):
         "bypass_op_pct":         _r(bypass, 1),
         "t1_c_used": None if math.isnan(t1_c) else t1_c,
         "t1_source": t1_source,
+        "thrust_proxy_pct": _r(thrust_proxy_pct, 2),
         "alerts": alerts,
         "status": status,
     }

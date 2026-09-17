@@ -39,6 +39,10 @@ export function BlowerHealthPanel({ latest }: { latest: Reading }) {
     const rank = { trip: 3, alarm: 2, advisory: 1, ok: 0 };
     return rank[b.severity] - rank[a.severity];
   });
+  const thrust =
+    typeof v.thrustProxyPct === "number" && Number.isFinite(v.thrustProxyPct)
+      ? Number(v.thrustProxyPct)
+      : null;
   const degradation =
     typeof v.performanceDegradationPct === "number" &&
     Number.isFinite(v.performanceDegradationPct)
@@ -86,7 +90,10 @@ export function BlowerHealthPanel({ latest }: { latest: Reading }) {
           </strong>
         </span>
         <span>
-          Thrust <strong>Not instrumented</strong>
+          Thrust proxy{" "}
+          <strong>
+            {thrust === null ? "N/A" : `${formatNumber(thrust, 1)}%`}
+          </strong>
         </span>
       </div>
 
