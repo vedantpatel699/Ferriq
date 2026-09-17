@@ -16,6 +16,8 @@ export interface BlowerSettings {
   activeCurrentMinA: number;
   suctionTempFallbackC: number;
   suctionTempFfMaxHours: number;
+  baselineTrainingDays: number;
+  performanceBypassMaxPct: number;
   blowerMode: "auto" | "A" | "B";
   efficiencyMethod: "polytropic" | "isentropic" | "fluid";
 }
@@ -31,6 +33,8 @@ export const DEFAULT_BLOWER_SETTINGS: BlowerSettings = {
   // is unavailable.
   suctionTempFallbackC: 4.0,
   suctionTempFfMaxHours: 4,
+  baselineTrainingDays: 14,
+  performanceBypassMaxPct: 5,
   blowerMode: "auto",
   efficiencyMethod: "polytropic",
 };
