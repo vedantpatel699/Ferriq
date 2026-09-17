@@ -1,12 +1,14 @@
-import math
+import importlib.util
 import pathlib
-import sys
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "python" / "air_blower"))
+ENGINE_PATH = ROOT / "python" / "air_blower" / "engine.py"
 
-import engine  # noqa: E402
+spec = importlib.util.spec_from_file_location("air_blower_engine", ENGINE_PATH)
+engine = importlib.util.module_from_spec(spec)
+assert spec and spec.loader
+spec.loader.exec_module(engine)
 
 
 class AirBlowerReferenceDataTests(unittest.TestCase):
