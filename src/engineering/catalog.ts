@@ -320,7 +320,7 @@ export function seedEquipment(id: EquipmentId): EquipmentData {
     config: structuredClone(config) as unknown as Row,
     source:
       id === "air-blower"
-        ? "Client workbook demo — corrected tag mapping (not live)"
+        ? "Reference historian dataset (not live)"
         : "Bundled reference dataset (not live)",
   };
 }
