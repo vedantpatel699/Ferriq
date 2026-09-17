@@ -94,6 +94,18 @@ export function validateResource(key: string, input: unknown): unknown {
       })
       .strict()
       .parse(input);
+    if (key === "air-blower") {
+      const defaults = seedEquipment("air-blower").config as Record<string, unknown>;
+      const current = v.config as Record<string, unknown>;
+      current.settings = {
+        ...(defaults.settings as Record<string, unknown>),
+        ...((current.settings as Record<string, unknown>) ?? {}),
+      };
+      current.limits = {
+        ...(defaults.limits as Record<string, unknown>),
+        ...((current.limits as Record<string, unknown>) ?? {}),
+      };
+    }
     validateShape(v.config, seedEquipment(key as EquipmentId).config);
     const config = v.config as Record<string, unknown>;
     if (key === "air-blower") {
