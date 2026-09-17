@@ -320,7 +320,7 @@ export function seedEquipment(id: EquipmentId): EquipmentData {
     config: structuredClone(config) as unknown as Row,
     source:
       id === "air-blower"
-        ? "Reference test dataset (not live)"
+        ? "POC simulated reference dataset (not live)"
         : "Bundled reference dataset (not live)",
   };
 }
@@ -575,6 +575,8 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
       r.values.performanceDegradationPct =
         residual === null ? null : Math.max(0, -residual);
       r.values.performanceModelTrainingRows = model?.trainingRows ?? 0;
+      r.values.performanceModelIntercept = model?.intercept ?? null;
+      r.values.performanceModelSlope = model?.slope ?? null;
       r.values.performanceModelApplicable = withinBaselineEnvelope && model !== null;
       if (!withinBaselineEnvelope) {
         r.qualityByMetric = {
@@ -642,7 +644,7 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
       bearing < cfg.limits.brgAdvisoryC
         ? (cfg.limits.brgAdvisoryC - bearing) / slope
         : null;
-    r.values.thrustHealth = "unavailable";
+    r.values.thrustHealth = "screening-proxy";
   });
   return calculated;
 }
@@ -673,6 +675,7 @@ export function metricsFor(
       metric("efficiencyPolytropicPct", "Polytropic efficiency", "%"),
       metric("efficiencyIsentropicPct", "Isentropic efficiency", "%"),
       metric("powerKw", "Motor input power", "kW"),
+      metric("powerFactorUsed", "Motor power factor used", ""),
       metric("flowNm3hr", "Measured flow", "Nm³/hr"),
       metric("expectedFlowNm3hr", "Expected flow (baseline model)", "Nm³/hr"),
       metric("flowResidualPct", "Flow residual vs model", "%"),
@@ -685,6 +688,7 @@ export function metricsFor(
       metric("filterDpBar", "Filter pressure drop", "bar"),
       metric("bypassOpPct", "Bypass opening", "%"),
       metric("pressureRatio", "Pressure ratio", ""),
+      metric("thrustProxyPct", "Thrust operating-deviation proxy", "%"),
       metric("t1CUsed", "Suction temperature used", "°C"),
     ].map((m) => {
       const lim = c.limits as unknown as BlowerLimits;
@@ -714,7 +718,12 @@ export function metricsFor(
                           { name: "Watch", value: lim.performanceWatchPct },
                           { name: "Investigate", value: lim.performanceAlarmPct },
                         ]
-                      : undefined,
+                      : m.key === "thrustProxyPct"
+                        ? [
+                            { name: "POC watch", value: lim.thrustProxyWatchPct },
+                            { name: "POC investigate", value: lim.thrustProxyAlarmPct },
+                          ]
+                        : undefined,
       };
     });
   if (id === "fired-heater") {
