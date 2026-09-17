@@ -38,6 +38,8 @@ jobs:
         env:
           EIA_API_KEY: ${{ secrets.EIA_API_KEY }}
       - run: npm ci
+      - run: npm test
+      - run: npm run test:python
       - run: npm run build
         env:
           # Served at https://vedantpatel699.github.io/Ferriq/ — see the
