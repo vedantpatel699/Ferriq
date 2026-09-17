@@ -72,7 +72,7 @@ BLOWER_DESIGN_REFERENCE = {
     "inlet_pressure_kpaa": 93.0,
     "discharge_pressure_kpaa": 178.0,
     "annual_average_inlet_temp_c": 4.0,
-    "design_flow_nm3hr": 23187.0,
+    "design_flow_nm3hr": 20609.2866,
     "design_train_power_kw": 711.0,
     "design_polytropic_efficiency_pct": 76.0,
     "design_speed_rpm": 3580.0,
