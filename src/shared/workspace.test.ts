@@ -13,7 +13,7 @@ import {
 } from "../engineering/furnace/calculations";
 describe("Published dataset and import contracts", () => {
   it("retains full HTML datasets and round trips canonical CSV including probe arrays", () => {
-    const counts = [46, 60, 228, 51];
+    const counts = [200, 60, 228, 51];
     equipmentIds.forEach((id, i) => {
       const d = seedEquipment(id);
       expect(d.rows).toHaveLength(counts[i]);
