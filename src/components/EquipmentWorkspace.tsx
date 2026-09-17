@@ -359,7 +359,6 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
                 Latest observation; the trend window below does not change these
                 current values.
               </p>
-            <>
               <div className="metrics-grid">
                 {metrics.slice(0, id === "fired-heater" ? 8 : 4).map((m) => (
                   <MetricCard
