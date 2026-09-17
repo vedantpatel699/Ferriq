@@ -339,25 +339,25 @@ def build_alerts(vib_max, brg_max, filter_dp, dp_bar, bypass_op,
         if brg_max >= lim["brg_trip_c"]:
             a.append(_alert("trip",
                 f"Bearing temperature {brg_max:.1f} C exceeds trip limit "
-                f"{lim['brg_trip_c']} C.", "bearing datasheet"))
+                f"{lim['brg_trip_c']} C.", "configured POC bearing-temperature threshold"))
         elif brg_max >= lim["brg_alarm_c"]:
             a.append(_alert("alarm",
                 f"Bearing temperature {brg_max:.1f} C exceeds alarm limit "
-                f"{lim['brg_alarm_c']} C.", "bearing datasheet"))
+                f"{lim['brg_alarm_c']} C.", "configured POC bearing-temperature threshold"))
         elif brg_max >= lim["brg_advisory_c"]:
             a.append(_alert("advisory",
                 f"Bearing temperature {brg_max:.1f} C above advisory "
-                f"{lim['brg_advisory_c']} C.", "bearing datasheet"))
+                f"{lim['brg_advisory_c']} C.", "configured POC bearing-temperature threshold"))
 
     # Process advisories
     if not math.isnan(filter_dp) and filter_dp > lim["filter_dp_max_bar"]:
         a.append(_alert("advisory",
-            f"Filter dP {filter_dp:.3f} bar above {lim['filter_dp_max_bar']} bar "
-            f"- replace filter.", "plant setpoint"))
+            f"Filter dP {filter_dp:.3f} bar above configured limit {lim['filter_dp_max_bar']} bar.",
+            "plant setpoint"))
     if not math.isnan(dp_bar) and dp_bar > lim["blower_dp_max_bar"]:
         a.append(_alert("advisory",
-            f"Blower dP {dp_bar:.3f} bar above design {lim['blower_dp_max_bar']} bar "
-            f"- possible internal fouling.", "plant setpoint"))
+            f"Blower dP {dp_bar:.3f} bar above configured limit {lim['blower_dp_max_bar']} bar.",
+            "plant setpoint"))
     if not math.isnan(bypass_op) and bypass_op > lim["bypass_open_max_pct"]:
         a.append(_alert("advisory",
             f"Bypass valve {bypass_op:.1f}% above {lim['bypass_open_max_pct']}% "
