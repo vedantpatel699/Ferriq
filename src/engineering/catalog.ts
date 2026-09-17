@@ -552,8 +552,11 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
         r.values[train === "A" ? "motorCurrentA" : "motorCurrentB"],
       );
       const expected = predictFlowNm3hr(model, current);
+      const withinBaselineEnvelope =
+        Number(r.values.bypassOpPct ?? 0) < 5 &&
+        Number(r.values.filterDpBar ?? 0) <= cfg.limits.filterDpMaxBar;
       const residual =
-        expected !== null && expected > 0
+        withinBaselineEnvelope && expected !== null && expected > 0
           ? ((Number(r.values.totalFlowNm3hr) - expected) / expected) * 100
           : null;
       r.values.expectedFlowNm3hr = expected;
@@ -561,6 +564,17 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
       r.values.performanceDegradationPct =
         residual === null ? null : Math.max(0, -residual);
       r.values.performanceModelTrainingRows = model?.trainingRows ?? 0;
+      r.values.performanceModelApplicable = withinBaselineEnvelope && model !== null;
+      if (!withinBaselineEnvelope) {
+        r.qualityByMetric = {
+          ...(r.qualityByMetric ?? {}),
+          performanceDegradationPct: {
+            state: "Missing",
+            reason:
+              "Baseline comparison is not applied while bypass is 5% or greater or filter differential pressure exceeds its limit.",
+          },
+        };
+      }
       if (residual !== null && residual <= -cfg.limits.performanceAlarmPct) {
         r.alerts.push({
           severity: "alarm",
@@ -577,10 +591,7 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
           source: "healthy-baseline linear regression",
         });
       }
-      r.state = stateFromAlerts(
-        r.alerts,
-        r.state === "data-issue",
-      );
+      r.state = stateFromAlerts(r.alerts, r.state === "data-issue");
     }
   }
 
