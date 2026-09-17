@@ -436,12 +436,18 @@ def process_single_row(row, settings=None, limits=None):
         t1_source = "measured"
 
     # Math
-    p_elec = shaft_power_kw(s["motor_voltage_v"], current, s["power_factor"])
+    power_factor_used = (
+        motor_power_factor_from_current(current)
+        if s.get("power_factor_mode", "datasheet") == "datasheet"
+        else s["power_factor"]
+    )
+    p_elec = shaft_power_kw(s["motor_voltage_v"], current, power_factor_used)
     p1_bar, p2_bar = normalize_pressures(p1_kpaa, p2_kpag, s["atm_pressure_bar"])
     dp_bar = p2_bar - p1_bar
     p_ratio = p2_bar / p1_bar if p1_bar > 0 else float("nan")
 
     p_fluid = fluid_power_kw(flow, dp_bar)
+    thrust_proxy_pct = thrust_operating_deviation_pct(flow, p_ratio, bypass)
     eff_fluid = (p_fluid / p_elec * 100.0) if p_elec > 0 else float("nan")
 
     t1_k = t1_c + 273.15 if not math.isnan(t1_c) else float("nan")
@@ -461,6 +467,19 @@ def process_single_row(row, settings=None, limits=None):
 
     alerts = build_alerts(vib_max, brg_max, filt_dp, dp_bar, bypass,
                           p2_kpag, sp_kpag, lim)
+    if math.isfinite(thrust_proxy_pct):
+        if thrust_proxy_pct >= lim["thrust_proxy_alarm_pct"]:
+            alerts.append(_alert(
+                "alarm",
+                f"Thrust operating-deviation proxy {thrust_proxy_pct:.1f}% exceeds the POC investigate threshold {lim['thrust_proxy_alarm_pct']:.0f}%.",
+                "POC operating-envelope heuristic; not a direct thrust measurement",
+            ))
+        elif thrust_proxy_pct >= lim["thrust_proxy_watch_pct"]:
+            alerts.append(_alert(
+                "advisory",
+                f"Thrust operating-deviation proxy {thrust_proxy_pct:.1f}% exceeds the POC watch threshold {lim['thrust_proxy_watch_pct']:.0f}%.",
+                "POC operating-envelope heuristic; not a direct thrust measurement",
+            ))
     status = roll_up_status(alerts)
 
     def _r(v, d=2):
@@ -472,6 +491,8 @@ def process_single_row(row, settings=None, limits=None):
         "timestamp": ts.isoformat(),
         "active_blower": active,
         "power_kw":              _r(p_elec, 2),
+        "power_factor_used":     _r(power_factor_used, 4),
+        "power_factor_source":   "motor-datasheet interpolation" if s.get("power_factor_mode", "datasheet") == "datasheet" else "fixed",
         "pressure_ratio":        _r(p_ratio, 4),
         "dp_bar":                _r(dp_bar, 4),
         "p1_bar_abs":            _r(p1_bar, 4),
