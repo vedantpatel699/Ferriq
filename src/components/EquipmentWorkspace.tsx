@@ -1,12 +1,6 @@
 import { BuildReport } from "./BuildReport";
 import { rollingMean } from "../lib/rollingMean";
-import {
-  demoBlower,
-  cleanBaseline,
-  alignComparison,
-  metricFacts,
-  windowAverage,
-} from "../poc/blower";
+import { metricFacts, windowAverage } from "../poc/blower";
 import { AssetScorecard } from "./AssetScorecard";
 import { useMemo, useState } from "react";
 import { DateTime } from "luxon";
@@ -26,6 +20,7 @@ import { FerriqTrendChart, type ChartSeries } from "./FerriqTrendChart";
 import { TrendRangeSelector } from "./TrendRangeSelector";
 import { CalculationBasisDialog } from "./CalculationBasisDialog";
 import { ReferenceManual } from "./ReferenceManual";
+import { BlowerManual } from "./BlowerManual";
 import { DataTable } from "./DataTable";
 import { ConfigEditor, type ConfigValue } from "./ConfigEditor";
 import { resolveTimeRange, rangeContextLabel } from "../lib/timeRange";
@@ -46,11 +41,6 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
     rows = useMemo(() => calculate(id, data), [id, data]),
     latest = rows.at(-1)!;
   const metrics = metricsFor(id, data.config, latest);
-  const [compare, setCompare] = useState(false);
-  const baselineRows = useMemo(
-    () => (id === "air-blower" ? cleanBaseline(data.config) : []),
-    [id, data.config],
-  );
   const [tab, setTab] = useState("Overview"),
     [range, setRange] = useState<TimeRangeId>("30d"),
     [custom, setCustom] = useState<{ start: Date; end: Date }>(),
@@ -95,28 +85,6 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
   const selected = rows.filter(
     (r) => r.epoch >= +period.start && r.epoch <= +period.end,
   );
-  const baselineWindow = baselineRows.filter(
-    (r) =>
-      r.epoch >=
-      (baselineRows.at(-1)?.epoch ?? 0) - (+period.end - +period.start),
-  );
-  const comparison = compare
-    ? alignComparison(selected, baselineWindow, metric)
-    : [];
-  const sourceTimes = compare
-    ? {
-        "A current": Object.fromEntries(
-          comparison
-            .filter((p) => p.aTime !== null)
-            .map((p) => [p.elapsed, p.aTime!]),
-        ),
-        "B clean-filter baseline": Object.fromEntries(
-          comparison
-            .filter((p) => p.bTime !== null)
-            .map((p) => [p.elapsed, p.bTime!]),
-        ),
-      }
-    : undefined;
   const series: ChartSeries[] = [
     {
       name: metric.label,
@@ -202,25 +170,6 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
         data: statePoints("Fallback"),
       });
   }
-  if (compare)
-    series.splice(
-      0,
-      series.length,
-      {
-        name: "A current",
-        kind: "measured",
-        color: "#2F6F9F",
-        symbol: "rect",
-        data: comparison.map((p) => [p.elapsed, p.a]),
-      },
-      {
-        name: "B clean-filter baseline",
-        kind: "baseline",
-        color: "#2F6F9F",
-        symbol: "emptyCircle",
-        data: comparison.map((p) => [p.elapsed, p.b]),
-      },
-    );
   const limits = [
     ...(metric.limits ?? []),
     ...(metric.reference !== undefined
@@ -261,7 +210,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
         ])}
         caption="Active metric references"
       />
-      <ReferenceManual id={id} />
+      {id === "air-blower" ? <BlowerManual /> : <ReferenceManual id={id} />}
     </>
   );
   const local =
@@ -305,96 +254,35 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
           />
         }
       />
-      <div className="action-bar">
-        <BuildReport
-          asset={identities[id].name + " " + identities[id].tag}
-          source={data.source + " · configuration version " + resource.version}
-          summary={
-            latest.alerts[0]?.message ??
-            latest.quality.find((q) => /^(Missing|Stale):/.test(q)) ??
-            latest.quality[0] ??
-            "No configured condition is exceeded."
-          }
-          period={
-            rangeContextLabel(period) +
-            (compare ? " · Compared with simulated clean-filter baseline" : "")
-          }
-          quality={[
-            ...latest.quality,
-            ...(compare
-              ? [
-                  "Baseline B is a canned POC simulation, not a maintenance-verified clean-filter observation.",
-                ]
-              : []),
-          ]}
-          rows={metrics.map((m) => ({
-            metric: m.label,
-            latest: metricFacts(m, latest).value,
-            windowAverage: windowAverage(m, selected),
-            unit: m.unit,
-            state:
-              id === "air-blower" ? metricFacts(m, latest).state : latest.state,
-            quality: metricFacts(m, latest).quality?.state ?? "Valid",
-            ...(compare
-              ? { baselineAverage: windowAverage(m, baselineWindow) }
-              : {}),
-          }))}
-        />
-        {id === "air-blower" && (
-          <>
-            <button aria-pressed={compare} onClick={() => setCompare(!compare)}>
-              {compare ? "Compare: Clean-filter baseline" : "Compare: Off"}
-            </button>
-            <details>
-              <summary>POC demo data</summary>
-              <p>
-                Explicit simulations for the client walkthrough. Original
-                published data can be restored under Advanced.
-              </p>
-              {(["current", "stale", "missing"] as const).map((kind) => (
-                <button
-                  key={kind}
-                  disabled={busy || readOnly}
-                  onClick={() =>
-                    void action(async () => {
-                      const demo = demoBlower(kind);
-                      await save(
-                        id,
-                        demo,
-                        "POC demo " + kind,
-                        resource.version,
-                      );
-                      setCustom({
-                        start: new Date(String(demo.rows[0].timestamp)),
-                        end: new Date(String(demo.rows.at(-1)!.timestamp)),
-                      });
-                      setRange("custom");
-                      setMetricKey("maxBearingTempC");
-                    })
-                  }
-                >
-                  Load {kind} POC demo
-                </button>
-              ))}
-            </details>
-          </>
-        )}
-      </div>
-      {compare && (
-        <p className="source-note">
-          B: simulated clean-filter baseline ·{" "}
-          {new Date(baselineWindow[0]?.epoch ?? 0).toISOString().slice(0, 10)}–
-          {new Date(baselineWindow.at(-1)?.epoch ?? 0)
-            .toISOString()
-            .slice(0, 10)}
-          . Both datasets use the current configuration. Alignment uses elapsed
-          time from each first observation; unmatched samples have no delta and
-          are never interpolated.
-        </p>
+      {id !== "air-blower" && (
+        <div className="action-bar">
+          <BuildReport
+            asset={identities[id].name + " " + identities[id].tag}
+            source={data.source + " · configuration version " + resource.version}
+            summary={
+              latest.alerts[0]?.message ??
+              latest.quality.find((q) => /^(Missing|Stale):/.test(q)) ??
+              latest.quality[0] ??
+              "No configured condition is exceeded."
+            }
+            period={rangeContextLabel(period)}
+            quality={latest.quality}
+            rows={metrics.map((m) => ({
+              metric: m.label,
+              latest: metricFacts(m, latest).value,
+              windowAverage: windowAverage(m, selected),
+              unit: m.unit,
+              state: latest.state,
+              quality: metricFacts(m, latest).quality?.state ?? "Valid",
+            }))}
+          />
+        </div>
       )}
       <div className="page-tabs" role="group" aria-label="Equipment views">
-        {["Overview", "Data & Log", "Configuration", "Engineering manual"].map(
-          (t) => (
+        {(id === "air-blower"
+          ? ["Overview", "Data & Log", "Engineering manual"]
+          : ["Overview", "Data & Log", "Configuration", "Engineering manual"]
+        ).map((t) => (
             <button
               key={t}
               aria-pressed={tab === t}
@@ -450,9 +338,11 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
           </FindingTag>
           <div className="section-heading-row">
             <h2>Current measurements</h2>
-            <button onClick={() => setDrawer(true)}>
-              Calculation basis & references
-            </button>
+            {id !== "air-blower" && (
+              <button onClick={() => setDrawer(true)}>
+                Calculation basis & references
+              </button>
+            )}
           </div>
           <p className="source-note">
             Latest observation; the trend window below does not change these
@@ -461,7 +351,6 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
           {id === "air-blower" ? (
             <AssetScorecard
               metrics={metrics}
-              baseline={compare ? baselineWindow : undefined}
               latest={latest}
               windowRows={selected}
               selected={metric.key}
@@ -524,15 +413,9 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
               . Gaps are not filled.
             </p>
             <FerriqTrendChart
-              key={String(compare) + range + metric.key + String(+period.start)}
+              key={range + metric.key + String(+period.start)}
               title={metric.label}
-              elapsed={compare}
-              sourceTimes={sourceTimes}
-              xBounds={
-                compare
-                  ? [0, Math.max(1, ...comparison.map((p) => p.elapsed))]
-                  : [+period.start, +period.end]
-              }
+              xBounds={[+period.start, +period.end]}
               series={series}
               unit={metric.unit}
               constraints={limits}
@@ -558,27 +441,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
               {metric.unit === "%" ? "pp" : metric.unit} (first to last
               observation).
             </p>
-            {compare && (
-              <details>
-                <summary>Comparison data and original timestamps</summary>
-                <DataTable
-                  rows={comparison.map((p) => ({
-                    elapsedDay: p.elapsed / 86400000,
-                    currentTime: p.aTime
-                      ? new Date(p.aTime).toISOString()
-                      : null,
-                    baselineTime: p.bTime
-                      ? new Date(p.bTime).toISOString()
-                      : null,
-                    current: p.a,
-                    baseline: p.b,
-                    delta: p.delta,
-                    unit: metric.unit,
-                  }))}
-                  caption="Elapsed comparison without interpolation"
-                />
-              </details>
-            )}
+            {id !== "air-blower" && (
             <details>
               <summary>Axis bounds</summary>
               {bounds.min !== undefined &&
@@ -624,14 +487,17 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
               </label>
               <button onClick={() => setBounds({})}>Automatic bounds</button>
             </details>
+            )}
           </div>
-          <details>
-            <summary>All current inputs and calculated results</summary>
-            <DataTable
-              rows={[latest.values]}
-              caption="Current engineering values"
-            />
-          </details>
+          {id !== "air-blower" && (
+            <details>
+              <summary>All current inputs and calculated results</summary>
+              <DataTable
+                rows={[latest.values]}
+                caption="Current engineering values"
+              />
+            </details>
+          )}
         </>
       )}
       {tab === "Data & Log" && (
