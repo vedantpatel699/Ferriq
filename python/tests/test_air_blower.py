@@ -29,8 +29,9 @@ class AirBlowerReferenceDataTests(unittest.TestCase):
             self.assertTrue(0.8 < result["dp_bar"] < 1.0)
             self.assertTrue(1.9 < result["pressure_ratio"] < 2.1)
             self.assertTrue(40 < result["efficiency_fluid_pct"] < 85)
-            self.assertEqual(result["t1_source"], "unavailable")
-            self.assertIn("fallback to fluid", result["efficiency_method_used"])
+            self.assertEqual(result["t1_source"], "measured")
+            self.assertTrue(result["efficiency_polytropic_pct"] > 0)
+            self.assertTrue(result["thrust_proxy_pct"] >= 0)
 
     def test_performance_model_uses_time_window_and_operating_envelope(self):
         batch = engine.process_batch(
