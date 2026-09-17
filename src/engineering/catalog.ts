@@ -525,21 +525,25 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
     limits: BlowerLimits;
   };
   for (const train of ["A", "B"] as const) {
-    const training = calculated
-      .filter(
-        (r) =>
-          r.values.activeBlower === train &&
-          typeof r.values.totalFlowNm3hr === "number" &&
-          Number.isFinite(r.values.totalFlowNm3hr) &&
-          typeof r.values[train === "A" ? "motorCurrentA" : "motorCurrentB"] ===
-            "number" &&
-          Number.isFinite(
-            r.values[train === "A" ? "motorCurrentA" : "motorCurrentB"],
-          ) &&
-          Number(r.values.bypassOpPct ?? 0) < 5 &&
-          Number(r.values.filterDpBar ?? 0) <= cfg.limits.filterDpMaxBar,
-      )
-      .slice(0, 14)
+    const candidates = calculated.filter(
+      (r) =>
+        r.values.activeBlower === train &&
+        typeof r.values.totalFlowNm3hr === "number" &&
+        Number.isFinite(r.values.totalFlowNm3hr) &&
+        typeof r.values[train === "A" ? "motorCurrentA" : "motorCurrentB"] ===
+          "number" &&
+        Number.isFinite(
+          r.values[train === "A" ? "motorCurrentA" : "motorCurrentB"],
+        ) &&
+        Number(r.values.bypassOpPct ?? 0) <
+          cfg.settings.performanceBypassMaxPct &&
+        Number(r.values.filterDpBar ?? 0) <= cfg.limits.filterDpMaxBar,
+    );
+    const trainingStart = candidates[0]?.epoch ?? 0;
+    const trainingEnd =
+      trainingStart + cfg.settings.baselineTrainingDays * 86400000;
+    const training = candidates
+      .filter((r) => r.epoch <= trainingEnd)
       .map((r) => ({
         currentA: Number(
           r.values[train === "A" ? "motorCurrentA" : "motorCurrentB"],
@@ -553,7 +557,8 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
       );
       const expected = predictFlowNm3hr(model, current);
       const withinBaselineEnvelope =
-        Number(r.values.bypassOpPct ?? 0) < 5 &&
+        Number(r.values.bypassOpPct ?? 0) <
+          cfg.settings.performanceBypassMaxPct &&
         Number(r.values.filterDpBar ?? 0) <= cfg.limits.filterDpMaxBar;
       const residual =
         withinBaselineEnvelope && expected !== null && expected > 0
@@ -571,7 +576,7 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
           performanceDegradationPct: {
             state: "Missing",
             reason:
-              "Baseline comparison is not applied while bypass is 5% or greater or filter differential pressure exceeds its limit.",
+              `Baseline comparison is not applied while bypass is ${cfg.settings.performanceBypassMaxPct}% or greater or filter differential pressure exceeds its limit.`,
           },
         };
       }
