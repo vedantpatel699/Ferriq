@@ -35,6 +35,9 @@ class Contract(unittest.TestCase):
                 result=json.loads((Path(folder)/(module+'_results.json')).read_text(encoding='utf-8'))
                 self.assertTrue(result['ok'],result.get('errors'))
                 self.assertTrue(result['units'])
+                if model=='air-blower':
+                    self.assertTrue(result['result'][-1]['performanceModelApplicable'])
+                    self.assertIsNotNone(result['result'][-1]['performanceDegradationPct'])
 
     def test_reject_malformed_envelopes(self):
         for model in MODULES:

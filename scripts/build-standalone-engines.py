@@ -22,7 +22,12 @@ tz=repr(base64.b64encode(tzfile.read_bytes()).decode())
 for module,model in models.items():
  sample=read(f'examples/{model}.input.json')
  # Embedded sample is concise except where a forecast needs its complete history.
- if model!='furnace-skin-temp':sample['measurements']=sample['measurements'][-48:]
+ if model=='air-blower':
+  workspace=json.loads((root/'public/data/workspace.json').read_text())
+  data=next(r['data'] for r in workspace['resources'] if r['key']==model)
+  sample['measurements']=[{'timestamp':r['timestamp'],'values':{k:v for k,v in r.items() if k!='timestamp'}} for r in data['rows']]
+  sample['source']=data['source']
+ elif model!='furnace-skin-temp':sample['measurements']=sample['measurements'][-48:]
  parameters=sample.get('parameters',{})
  parameters.pop('model',None)
  header=f'''"""{model}: standalone calculation file.
