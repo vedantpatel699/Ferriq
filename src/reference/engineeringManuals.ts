@@ -473,7 +473,7 @@ export const engineeringManuals: Record<string, EngineeringManual> = {
       [
         "Economics",
         "Hourly margin = Σ(product volume × price) − Σ(crude volume × price)",
-        "Annual workbook result = hourly margin × 24 × 330 / 1,000,000 in million C$/year. Gross margin is retained separately.",
+        "Annual gross margin = hourly margin × 24 × 330 / 1,000,000 in million C$/year. Gross margin is retained separately.",
       ],
       [
         "Operating costs",

@@ -142,7 +142,7 @@ export function CrudeToProfitPage() {
               draftVersion +
               (market
                 ? " · price snapshot " + market.date + " " + market.source
-                : " · fixed workbook price cases")
+                : " · fixed Low/High price cases")
             }
             summary={
               annualCases
@@ -151,7 +151,7 @@ export function CrudeToProfitPage() {
                     `${c.label}: annual gross margin ${formatNumber(c.margin, 2)}; margin after configured OPEX ${formatNumber(c.afterOpex, 2)}; annual sales revenue ${formatNumber(c.sales, 2)} million CAD/year`,
                 )
                 .join(". ") +
-              ". Workbook basis: 24 hours/day × 330 operating days/year. Configured operating costs are deducted once after gross margin. Capital, financing, depreciation, taxes and unconfigured costs are excluded."
+              ". Operating basis: 24 hours/day × 330 operating days/year. Configured operating costs are deducted once after gross margin. Capital, financing, depreciation, taxes and unconfigured costs are excluded."
             }
             period="Current draft scenario"
             quality={[
@@ -309,7 +309,7 @@ export function CrudeToProfitPage() {
               )}
               <h2>Annual estimate</h2>
               <p>
-                Workbook basis: {HOURS_PER_DAY} hours/day ×{" "}
+                Operating basis: {HOURS_PER_DAY} hours/day ×{" "}
                 {OPERATING_DAYS_PER_YEAR} operating days/year (
                 {HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR} hours/year).
               </p>
@@ -340,14 +340,11 @@ export function CrudeToProfitPage() {
                   : live.status}
               </p>
               <p>
-                The Excel annual figure (H54/H55) is gross margin: product sales
-                revenue less crude feed cost, multiplied by 24 × 330 ÷
-                1,000,000. Annual sales revenue above is before crude cost.
-                Configured OPEX is deducted separately from gross margin. This
-                is a partial operating margin, not net profit: unconfigured
-                expenses, depreciation, financing, tax and capital expenditure
-                are excluded. Low/High retain the client’s paired price
-                scenarios.
+                Gross margin is sales revenue minus crude feed cost. Operating
+                margin also deducts configured OPEX. Unconfigured expenses,
+                depreciation, financing, tax and capital expenditure are excluded.
+                All annual amounts are shown in million CAD. Low and High use
+                their respective price assumptions.
               </p>
               <DataTable
                 caption="Annual profit reconciliation (million CAD/year)"

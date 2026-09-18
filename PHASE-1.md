@@ -52,3 +52,8 @@ Requested OPEX is a separate plant-level component, applied once after gross mar
 - The active repository's Python counterparts for blower/economics are updated and tested. Legacy heater/exchanger/membrane/predictor Python delivery outside this checkout is not a newly synchronized six-engine Python release.
 - The earlier full-suite failures involving obsolete controls/comparison/report workflows remain recorded in `ENGINEERING-REVIEW.md`; broad UI remediation belongs to later phases. No claim of full application readiness is made.
 - Earlier unfinished YTD/demo work in `../react-app` is untouched. Build-generated workspace JSON is excluded from these source changes. Private client files remain outside the repository. Publication is authorized after successful checks; GitHub Pages deploys automatically from main.
+
+## Publication follow-up
+
+- Verified the Phase 1 Pages deployment succeeded and the live page includes Operating costs below Adjust scenario.
+- Removed Excel cell references and workbook commentary from the economics overview and report; retained operating hours and cost exclusions.

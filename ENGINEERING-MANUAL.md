@@ -315,7 +315,7 @@ Hydrocracker uses the workbook volume yields. FCC uses the Grace 75 wt% conversi
 
 **Economics:** Hourly margin = Σ(product volume × price) − Σ(crude volume × price)
 
-Annual workbook result = hourly margin × 24 × 330 / 1,000,000 in million C$/year. Gross margin is retained separately.
+Annual gross margin = hourly margin × 24 × 330 / 1,000,000 in million C$/year. Gross margin is retained separately.
 
 **Operating costs:** Annual variable cost = consumption/h × CAD/unit × 7,920; or consumption/m³ feed × feed m³/h × CAD/unit × 7,920
 
