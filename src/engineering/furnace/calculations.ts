@@ -48,6 +48,7 @@ export interface FurnaceEntry {
   cadence_hours: number;
   tc_models: Record<string, ThermocoupleModel>;
   history: Record<string, number | string | null>[];
+  reference_history?: Record<string, number | string | null>[];
 }
 
 export interface FurnaceModelBundle {

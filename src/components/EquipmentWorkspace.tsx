@@ -245,6 +245,38 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
           }
         }}
       />
+      {local &&
+        data.source !==
+          (published.find((p) => p.key === id)?.data as EquipmentData)
+            ?.source && (
+          <aside className="callout" aria-label="Saved dataset">
+            <p>
+              This browser is using a saved dataset. YTD uses that dataset’s
+              year and available dates.
+            </p>
+            <button
+              disabled={busy || readOnly}
+              onClick={() =>
+                action(async () => {
+                  const sample = published.find((p) => p.key === id)!
+                    .data as EquipmentData;
+                  await save(
+                    id,
+                    { ...data, rows: sample.rows, source: sample.source },
+                    "Loaded published sample data; retained configuration",
+                    resource.version,
+                  );
+                })
+              }
+            >
+              Load current YTD sample data
+            </button>
+            <p>
+              Your configuration is retained. Earlier saved versions remain in
+              the change log.
+            </p>
+          </aside>
+        )}
       {notice && (
         <p role="status" className="callout">
           {notice}

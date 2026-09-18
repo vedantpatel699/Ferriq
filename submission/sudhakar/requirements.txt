@@ -1,1 +1,3 @@
+# Build-only timezone source for regenerating standalone files.
+# End users do not need to install anything.
 tzdata==2026.4

@@ -265,7 +265,9 @@ function FurnaceContent() {
                   nowBoundary={last}
                   series={[
                     {
-                      name: "Measured pass maximum",
+                      name: bundle.demo_source
+                        ? "Simulated pass maximum"
+                        : "Measured pass maximum",
                       kind: "measured",
                       data: measured,
                     },
@@ -490,6 +492,35 @@ function FurnaceContent() {
             </label>
           </details>
           <DataTable rows={history} caption="Observed furnace history" />
+          {furnace.reference_history && (
+            <>
+              <h2>Original recorded history</h2>
+              <p>
+                Source timestamps are retained. These records precede the 2026
+                simulation; missing measurements remain blank.
+              </p>
+              <FerriqTrendChart
+                title="Original recorded pass maximum"
+                unit="°C"
+                series={[
+                  {
+                    name: "Recorded pass maximum",
+                    kind: "measured",
+                    data: furnace.reference_history.map((row) => [
+                      timestamp(row.t),
+                      typeof row[`skin_max_p${pass}`] === "number"
+                        ? Number(row[`skin_max_p${pass}`])
+                        : null,
+                    ]),
+                  },
+                ]}
+              />
+              <DataTable
+                rows={furnace.reference_history}
+                caption="Original dated furnace records"
+              />
+            </>
+          )}
         </>
       )}
       {tab === "Engineering manual" && (

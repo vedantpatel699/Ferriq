@@ -76,6 +76,17 @@ describe("Reproducible YTD engineering data", () => {
     expect(bundle.trained_at).toBe(original.trained_at);
     for (const [key, f] of Object.entries(bundle.furnaces)) {
       expect(f.tc_models).toEqual(original.furnaces[key].tc_models);
+      expect(f.reference_history).toEqual(original.furnaces[key].history);
+      const temperatures = f.history.map((row) => Number(row.skin_max_p1));
+      const steps = temperatures.slice(1).map((v, i) => v - temperatures[i]);
+      expect(steps.some((v) => v > 0.1)).toBe(true);
+      expect(steps.some((v) => v < -0.1)).toBe(true);
+      expect(
+        f.history.every(
+          (row) =>
+            row.data_source === "Simulated from recorded operating patterns",
+        ),
+      ).toBe(true);
       expect(timestamp(f.history[0].t)).toBe(DEMO_START);
       expect(timestamp(f.history.at(-1)!.t)).toBe(DEMO_END);
       for (let pass = 1; pass <= f.passes; pass++) {

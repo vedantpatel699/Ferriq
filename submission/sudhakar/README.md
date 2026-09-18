@@ -2,20 +2,18 @@
 
 Six offline calculation engines and the engineering manual. Demo observations are simulated, not plant measurements. This folder runs independently of the Ferriq website repository. No live AVEVA connection is included.
 
-## Setup and execution
+## Run a model
 
-Use Python 3.12 or newer. From this folder:
+1. Install Python 3.10 or newer if it is not already installed.
+2. Open the desired file from **engines** in Python IDLE.
+3. Select **Run > Run Module (F5)**. A built-in example runs and saves a results JSON file beside the Python file.
+4. Edit **SETTINGS** near the top of the file and run again to change assumptions.
 
-```text
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-# macOS/Linux: source .venv/bin/activate
-python -m pip install -r requirements.txt
-python engines/air_blower_engine.py examples/air-blower.input.json > blower-result.json
-python -m unittest discover -s tests -v
-```
+Each of the six Python files works on its own. No extra packages, helper files, network access or setup commands are required. The embedded examples are simulated. The furnace file includes its trained model and sample history.
 
-The only runtime dependency is the pinned IANA time-zone database. Installation needs package access; calculations and tests then run offline. Use `python -X utf8` if an older Windows console cannot print Unicode. Each engine also accepts a JSON envelope on standard input. Exit status is zero for a successful envelope and one for a rejected request.
+For your own input JSON, run `python engines/air_blower_engine.py examples/air-blower.input.json > results.json`. Each file also exposes `run(payload)` and a provisional `map_records` tag mapper. A live AVEVA connection is not included or verified.
+
+Read the corresponding PDF in **manuals**. Each manual is printed from the website's own manual, using the same content and formula elements. Examples and tests are supporting verification material; they are not needed to run the built-in examples.
 
 | Model | Engine | Example name |
 |---|---|---|
@@ -77,11 +75,11 @@ Economics observations may include `intervalEnd`; `parameters.integrationWindow`
 
 ## Provisional AVEVA adapter
 
-No confirmed AVEVA payload specification or sample was supplied. `engines/adapter.py` maps caller-provided timestamped tag dictionaries through an explicit `tag_map`. Each mapping supplies `field` and canonical `unit`. A unit mismatch is rejected; upstream code must make documented conversions. Tag identifiers, authentication, endpoint, subscription, quality-code translation and historian retrieval remain site integration work. The envelope is provisional, not a claim of AVEVA API compatibility.
+No confirmed AVEVA payload specification or sample was supplied. `map_records` in each engine maps caller-provided timestamped tag dictionaries through an explicit `tag_map`. Each mapping supplies `field` and canonical `unit`. A unit mismatch is rejected; upstream code must make documented conversions. Tag identifiers, authentication, endpoint, subscription, quality-code translation and historian retrieval remain site integration work. The envelope is provisional, not a claim of AVEVA API compatibility.
 
 ## Evidence, assumptions and verification
 
-Requirement mapping is carried forward from client emails and attachments: blower/membrane 11 February 2026; heater/furnace October 2025; exchanger 25 October 2025; economics 19/25 August 2026. Private messages and original attachments are excluded. Engineering assumptions and public references appear in `engineering-manual.pdf` and its Markdown source.
+Requirement mapping is carried forward from client emails and attachments: blower/membrane 11 February 2026; heater/furnace October 2025; exchanger 25 October 2025; economics 19/25 August 2026. Private messages and original attachments are excluded. Engineering assumptions and public references appear in the six PDFs in `manuals/`, printed from the website manual content.
 
 Simulated history runs from 1 January through 17 September 2026, 17:00 Edmonton: hourly equipment samples, four-hour furnace history and daily financial intervals with a final partial day. The captured parity fixtures include the actual calculation outputs, not invented chart curves. Simulation does not validate plant performance or forecast accuracy.
 

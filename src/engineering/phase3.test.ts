@@ -46,3 +46,11 @@ it("does not project a bearing crossing from cancellation in a symmetric trend",
   expect(last.values.bearingTrendCPerDay).toBe(0);
   expect(last.values.bearingAdvisoryEtaDays).toBeNull();
 });
+
+
+it("rejects malformed original furnace history before rendering", async () => {
+  const { readFileSync } = await import("node:fs");
+  const bundle = JSON.parse(readFileSync("public/data/furnace-skin-temp-model.json", "utf8"));
+  bundle.furnaces.heater_1.reference_history = "not an array";
+  expect(() => validateResource("furnace-model", bundle)).toThrow();
+});

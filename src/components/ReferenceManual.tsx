@@ -9,6 +9,30 @@ export function ReferenceManual({ id }: { id: string }) {
     <article className="reference-manual engineering-manual">
       <h2>{manual.title} engineering manual</h2>
       <p className="manual-lead">{manual.purpose}</p>
+      <ManualSection title="Run the Python model">
+        <p>
+          Open{" "}
+          {id === "furnace-skin-temp"
+            ? "furnace_skin_ti_predictor"
+            : id.replaceAll("-", "_")}
+          _engine.py in Python IDLE. Select Run, then Run Module (F5). Python
+          3.10 or newer is required; no extra packages or other files are
+          needed.
+        </p>
+        <p>
+          The built-in example writes a results JSON file beside the Python
+          file. Edit SETTINGS near the top and run again to change assumptions.
+          To use your own measurements, run the file with an input JSON
+          filename. Inputs use the fields and units below.
+        </p>
+        <p>
+          The input envelope contains schemaVersion, model, source, timezone,
+          config and measurements. Each measurement contains timestamp, values
+          and optional quality. Use ISO timestamps with an offset. Bad, stale
+          and missing signals remain unavailable. The AVEVA mapping is
+          provisional; a live connection has not been verified.
+        </p>
+      </ManualSection>
       <ManualSection title="Inputs and units">
         <DataTable
           caption="Model inputs"

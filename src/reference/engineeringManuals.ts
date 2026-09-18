@@ -403,6 +403,7 @@ export const engineeringManuals: Record<string, EngineeringManual> = {
     ],
     limits: [
       "Missing operating inputs use the trees' missing-value branches; accuracy with incomplete inputs is unverified. Holdout accuracy describes the original training data and prediction horizon, not simulated history or the full multi-year trend extrapolation. The internal search extends up to 2,555 days and is not a validated service-life forecast.",
+      "Original recorded history retains its 2024–2025 timestamps in Data & Log. The 2026 YTD sample replays complete operating records in reproducible blocks, interpolated to four-hour intervals. It preserves temperature/flow relationships and is labelled simulated. Block transitions are not evidence of real maintenance or process events.",
       "Projection starts at the last available pass observation. Its age relative to the dataset end and any missing thermocouples are disclosed. A projected crossing is not evidence of future operating conditions.",
       "Only mapped thermocouples contribute. An unavailable or unmapped sensor cannot establish a pass is safe.",
       "The flow-split response and extra scenario uncertainty are assumptions, not a plant-validated causal effect. Simulated inputs do not add validation evidence.",

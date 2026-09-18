@@ -14,7 +14,6 @@ import type {
 import type { TimeRangeId } from "../engineering/types";
 import { resolveTimeRange, rangeContextLabel } from "../lib/timeRange";
 import { TrendRangeSelector } from "./TrendRangeSelector";
-import { FerriqTrendChart } from "./FerriqTrendChart";
 import { DataTable } from "./DataTable";
 export function EconomicsHistory({
   flows,
@@ -60,22 +59,6 @@ export function EconomicsHistory({
         contextLabel={rangeContextLabel(period)}
       />
       <DataTable caption="Selected period totals (CAD)" rows={[totals]} />
-      <FerriqTrendChart
-        title="Simulated interval revenue and margin"
-        unit="CAD"
-        series={[
-          {
-            name: "Sales revenue",
-            kind: "measured",
-            data: rows.map((r) => [Date.parse(r.timestamp), r.revenueCad]),
-          },
-          {
-            name: "Margin after OPEX",
-            kind: "measured",
-            data: rows.map((r) => [Date.parse(r.timestamp), r.marginCad]),
-          },
-        ]}
-      />
       <details className="advanced-panel">
         <summary>Supporting financial intervals</summary>
         <DataTable caption="Simulated financial intervals" rows={rows} />

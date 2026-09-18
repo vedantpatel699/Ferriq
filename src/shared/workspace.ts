@@ -272,6 +272,7 @@ export function validateResource(key: string, input: unknown): unknown {
           label: z.string(),
           passes: z.number().int().positive(),
           cadence_hours: z.number().positive(),
+          reference_history: z.array(z.record(z.string(), z.union([z.string(), z.number().finite(), z.null()]))).optional(),
           history: z
             .array(
               z.record(
@@ -296,6 +297,9 @@ export function validateResource(key: string, input: unknown): unknown {
       for (const row of entry.history)
         if (!Number.isFinite(timestamp(row.t)))
           throw Error("Each model history row needs a valid timestamp.");
+      for (const row of entry.reference_history ?? [])
+        if (!Number.isFinite(timestamp(row.t)))
+          throw Error("Each original history row needs a valid timestamp.");
       const epochs = entry.history.map((row) => timestamp(row.t));
       if (epochs.some((t, i) => i > 0 && t <= epochs[i - 1]))
         throw Error(

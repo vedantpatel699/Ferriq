@@ -8,8 +8,8 @@ import unittest
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'engines'))
-from common import epoch
-from adapter import map_records
+from air_blower_engine import epoch
+from air_blower_engine import map_records
 from test_parity import MODULES, compare
 
 def sample(model):return json.loads((ROOT/f'examples/{model}.input.json').read_text())
@@ -23,6 +23,18 @@ class Contract(unittest.TestCase):
                 self.assertEqual(proc.returncode,0,proc.stderr)
                 out=json.loads(proc.stdout);self.assertTrue(out['ok']);self.assertTrue(out['units'])
                 compare(self,out['result'],json.loads((ROOT/f'examples/{model}.expected.json').read_text()))
+
+    def test_single_file_without_any_helpers_or_data(self):
+        import tempfile, shutil
+        for model,module in MODULES.items():
+            with self.subTest(model=model), tempfile.TemporaryDirectory() as folder:
+                engine=Path(folder)/(module+'_engine.py')
+                shutil.copyfile(ROOT/'engines'/engine.name,engine)
+                proc=subprocess.run([sys.executable,'-I',str(engine)],capture_output=True,text=True,encoding='utf-8',cwd=folder)
+                self.assertEqual(proc.returncode,0,proc.stderr)
+                result=json.loads((Path(folder)/(module+'_results.json')).read_text(encoding='utf-8'))
+                self.assertTrue(result['ok'],result.get('errors'))
+                self.assertTrue(result['units'])
 
     def test_reject_malformed_envelopes(self):
         for model in MODULES:

@@ -2,7 +2,7 @@
 
 Executed from the standalone submission folder. All tests passed.
 
-Python 3.14.5; 8 test methods, 141 production-TypeScript comparison cases and six command-line examples.
+Python 3.14.5; 9 test methods, 141 production-TypeScript comparison cases and six command-line examples plus six isolated single-file runs.
 
 | Model | Identical-input cases | Result |
 |---|---:|---|
@@ -18,7 +18,7 @@ Coverage: complete simulated monitor YTD histories; missing fields; zero/negativ
 Raw numeric tolerance: 1e-9 relative or absolute, to allow floating-point operation order. Exact comparison for keys, strings, nulls, booleans, array sizes and discrete states. Sampled display strings are checked exactly at 1, 2 and 4 decimal places. Selected seven-day sample averages are checked independently. Envelope tests cover quality, mapping units, duplicate timestamps, invalid configuration, DST ambiguity and execution of every packaged CLI example.
 
 Display string comparisons: 22,452.
-Fixture SHA-256: `a4caa94ebce39501f35bbce12912faf99a49718f70d4bb96fcc242bef2bb746d`.
+Fixture SHA-256: `55434634d074a03c32c000f80ba0d3b636b5f9d48507edc4d780e8267c419cef`.
 
 Reproduce: `python verify.py` or `python -m unittest discover -s tests -v`. Fixture generation imports the actual website calculation modules; CI separately checks fixture freshness. No private source files, website installation or live services are needed to run these captured comparisons.
 
