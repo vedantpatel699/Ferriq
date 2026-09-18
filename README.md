@@ -70,4 +70,4 @@ IBM Plex Sans and IBM Plex Mono are bundled locally through `@fontsource`. Initi
 
 ### Reproducible verification runtime
 
-Use Node 24.15.0 from `.node-version` for builds and submission fixture generation. CI uses that same version. JavaScript runtime versions can differ in the final binary digits of transcendental calculations; the exact fixture-freshness assertion is retained. Standalone submission calculations require only the Python setup in `submission/sudhakar/README.md`.
+Use Node 24.15.0 from `.node-version` for builds and submission fixture generation. CI uses that same version. JavaScript runtime versions can differ in the final binary digits of transcendental calculations; fixture freshness uses the same documented 1e-9 numeric tolerance as Python parity, with exact discrete values and displayed rounding. Standalone submission calculations require only the Python setup in `submission/sudhakar/README.md`.

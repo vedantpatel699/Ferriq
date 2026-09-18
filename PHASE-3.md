@@ -36,3 +36,8 @@ Remote main was fetched and still matched e99ca6880cffc65bb991b4789404eaf1df15c2
 
 
 Publication follow-up: 8a9afe5 pushed successfully. Run 35299025187 passed the original timeout test and all existing checks, then rejected new fixture freshness because Node 22 and Node 24 generate slightly different floating-point demo inputs (first difference: discharge temperature 67.07131529415886 versus 67.07131529415892 degC). Reproduced locally using Node 22.23.2. Keep the exact fixture-content check and all tests unchanged; pin development/CI to Node 24.15.0 via .node-version, with package engine metadata. The Python engine tolerance is unchanged. The next commit's deployment and live checks must still pass.
+
+
+Second publication check: 1426a64 pushed successfully; run 35299509045 passed existing checks but found the same last-bit simulation difference on Linux with Node 24.15.0 (87.28771180983392 versus 87.28771180983398 degC). Runtime pinning alone was insufficient. Fixture freshness now uses the original specified 1e-9 absolute/relative numerical contract; defaults/source data, discrete values and display strings remain exact. Added regressions reject meaningful numerical drift, changed alarms, missing/extra outputs, changed display rounding and type changes. No numerical tolerance was increased and no engineering assertion or check was removed.
+
+Validation after the cross-platform comparator correction: 133/133 unit tests passed. All 141 captured cases also passed freshness verification on the reproduced Node 22 runtime, with exact display/discrete comparisons retained. Python implementation and its previously passing parity suite are unchanged.
