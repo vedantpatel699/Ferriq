@@ -1,4 +1,3 @@
-import { BuildReport } from "./BuildReport";
 import { rollingMean } from "../lib/rollingMean";
 import { metricFacts, windowAverage } from "../poc/blower";
 import { useMemo, useState } from "react";
@@ -51,7 +50,9 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
   const [tab, setTab] = useState("Overview"),
     [range, setRange] = useState<TimeRangeId>("30d"),
     [custom, setCustom] = useState<{ start: Date; end: Date }>(),
-    [metricKey, setMetricKey] = useState(""),
+    [metricKey, setMetricKey] = useState(
+      id === "air-blower" ? "performanceDegradationPct" : "",
+    ),
     [drawer, setDrawer] = useState(false),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false),
@@ -106,11 +107,14 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
     },
   ];
   if (id === "air-blower" && metric.key === "efficiencyPolytropicPct") {
-    const baseline = rollingMean(rows.map(r => ({ epoch: r.epoch, value: r.values[metric.key] })), 7 * 86400000);
+    const baseline = rollingMean(
+      rows.map((r) => ({ epoch: r.epoch, value: r.values[metric.key] })),
+      7 * 86400000,
+    );
     series.push({
       name: "7-day rolling baseline (valid observations)",
       kind: "baseline",
-      data: selected.map(r => [r.epoch, baseline.get(r.epoch) ?? null]),
+      data: selected.map((r) => [r.epoch, baseline.get(r.epoch) ?? null]),
     });
   }
   if (
@@ -230,30 +234,6 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
           />
         }
       />
-      {id !== "air-blower" && (
-        <div className="action-bar">
-          <BuildReport
-            asset={identities[id].name + " " + identities[id].tag}
-            source={data.source + " · configuration version " + resource.version}
-            summary={
-              latest.alerts[0]?.message ??
-              latest.quality.find((q) => /^(Missing|Stale):/.test(q)) ??
-              latest.quality[0] ??
-              "No configured condition is exceeded."
-            }
-            period={rangeContextLabel(period)}
-            quality={latest.quality}
-            rows={metrics.map((m) => ({
-              metric: m.label,
-              latest: metricFacts(m, latest).value,
-              windowAverage: windowAverage(m, selected),
-              unit: m.unit,
-              state: latest.state,
-              quality: metricFacts(m, latest).quality?.state ?? "Valid",
-            }))}
-          />
-        </div>
-      )}
       <ModelTabs
         tabs={["Overview", "Data & Log", "Configuration", "Engineering manual"]}
         active={tab}
@@ -277,7 +257,9 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
               <BlowerHealthPanel latest={latest} />
               <BlowerOverview
                 latest={latest}
-                limits={(data.config as unknown as { limits: BlowerLimits }).limits}
+                limits={
+                  (data.config as unknown as { limits: BlowerLimits }).limits
+                }
                 onSelectMetric={(key) => {
                   setMetricKey(key);
                   document
@@ -390,6 +372,11 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
               }
             />
             <p className="source-note">
+              Window sample average:{" "}
+              {formatNumber(windowAverage(metric, selected), 2)} {metric.unit}.
+              Equal-weight observed samples; not an integrated energy total.
+            </p>
+            <p className="source-note">
               Window change:{" "}
               {formatNumber(
                 selected.length > 1 &&
@@ -404,51 +391,51 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
               observation).
             </p>
             {id !== "air-blower" && (
-            <details>
-              <summary>Axis bounds</summary>
-              {bounds.min !== undefined &&
-                bounds.max !== undefined &&
-                bounds.min >= bounds.max && (
-                  <p role="alert">
-                    Minimum must be below maximum; automatic bounds are shown.
-                  </p>
-                )}
-              <label>
-                Minimum
-                <input
-                  type="number"
-                  step="any"
-                  value={bounds.min ?? ""}
-                  onChange={(e) =>
-                    setBounds((b) => ({
-                      ...b,
-                      min:
-                        e.target.value === ""
-                          ? undefined
-                          : e.target.valueAsNumber,
-                    }))
-                  }
-                />
-              </label>
-              <label>
-                Maximum
-                <input
-                  type="number"
-                  step="any"
-                  value={bounds.max ?? ""}
-                  onChange={(e) =>
-                    setBounds((b) => ({
-                      ...b,
-                      max:
-                        e.target.value === ""
-                          ? undefined
-                          : e.target.valueAsNumber,
-                    }))
-                  }
-                />
-              </label>
-              <button onClick={() => setBounds({})}>Automatic bounds</button>
-            </details>
+              <details>
+                <summary>Axis bounds</summary>
+                {bounds.min !== undefined &&
+                  bounds.max !== undefined &&
+                  bounds.min >= bounds.max && (
+                    <p role="alert">
+                      Minimum must be below maximum; automatic bounds are shown.
+                    </p>
+                  )}
+                <label>
+                  Minimum
+                  <input
+                    type="number"
+                    step="any"
+                    value={bounds.min ?? ""}
+                    onChange={(e) =>
+                      setBounds((b) => ({
+                        ...b,
+                        min:
+                          e.target.value === ""
+                            ? undefined
+                            : e.target.valueAsNumber,
+                      }))
+                    }
+                  />
+                </label>
+                <label>
+                  Maximum
+                  <input
+                    type="number"
+                    step="any"
+                    value={bounds.max ?? ""}
+                    onChange={(e) =>
+                      setBounds((b) => ({
+                        ...b,
+                        max:
+                          e.target.value === ""
+                            ? undefined
+                            : e.target.valueAsNumber,
+                      }))
+                    }
+                  />
+                </label>
+                <button onClick={() => setBounds({})}>Automatic bounds</button>
+              </details>
             )}
           </div>
           {id !== "air-blower" && (
@@ -654,16 +641,21 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
         <>
           {id === "air-blower" && (
             <BlowerConfiguration
-              settings={(data.config as unknown as { settings: BlowerSettings }).settings}
-              limits={(data.config as unknown as { limits: BlowerLimits }).limits}
+              settings={
+                (data.config as unknown as { settings: BlowerSettings })
+                  .settings
+              }
+              limits={
+                (data.config as unknown as { limits: BlowerLimits }).limits
+              }
             />
           )}
           {id !== "air-blower" && (
             <>
               <h2>Engineering configuration</h2>
               <p>
-                Saved configuration version {resource.version}. The dashboard uses
-                these saved assumptions automatically.
+                Saved configuration version {resource.version}. The dashboard
+                uses these saved assumptions automatically.
               </p>
             </>
           )}

@@ -5,7 +5,7 @@ import {
   DEFAULT_BLOWER_SETTINGS,
   processBlowerRow,
 } from "./calculations";
-import { calculate, seedEquipment } from "../catalog";
+import { calculate, seedEquipment, normalizeRows } from "../catalog";
 
 describe("Air Blower reference dataset", () => {
   it("keeps the corrected source mapping and expected date range", () => {
@@ -42,7 +42,7 @@ describe("Air Blower reference dataset", () => {
   });
 
   it("exercises thermodynamic efficiency and the thrust screening proxy", () => {
-    const rows = calculate("air-blower", seedEquipment("air-blower"));
+    const rows = calculate("air-blower", {...seedEquipment("air-blower"), rows: normalizeRows("air-blower", BLOWER_DEMO_DATA as unknown as Record<string, unknown>[])});
     expect(rows).toHaveLength(200);
     expect(
       Number.isFinite(Number(rows.at(-1)?.values.efficiencyPolytropicPct)),
@@ -53,7 +53,7 @@ describe("Air Blower reference dataset", () => {
   });
 
   it("uses the configured time-based baseline and suppresses off-envelope degradation", () => {
-    const rows = calculate("air-blower", seedEquipment("air-blower"));
+    const rows = calculate("air-blower", {...seedEquipment("air-blower"), rows: normalizeRows("air-blower", BLOWER_DEMO_DATA as unknown as Record<string, unknown>[])});
     const trained = rows.filter(
       (r) => Number(r.values.performanceModelTrainingRows) > 0,
     );

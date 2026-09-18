@@ -75,6 +75,12 @@ export function resolveTimeRange(
     const { start, end } = currentShiftWindow(siteNow, settings);
     return { id, start: start.toJSDate(), end: end.toJSDate() };
   }
+  if (id === "ytd")
+    return {
+      id,
+      start: siteNow.startOf("year").toJSDate(),
+      end: siteNow.toJSDate(),
+    };
   if (id !== "custom") {
     const match = id.match(/^(\d+)([hd])$/)!;
     return {
@@ -118,4 +124,5 @@ export const TIME_RANGE_LABELS: Record<TimeRangeId, string> = {
   "90d": "90D",
   "7d": "7D",
   custom: "Custom",
+  ytd: "YTD",
 };

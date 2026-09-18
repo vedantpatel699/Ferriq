@@ -157,6 +157,48 @@ describe("Furnace timestamps and trained horizon", () => {
     p50: tree(440),
     p90: tree(450),
   };
+  it("passes current TC temperature to the trained feature name and reports missing drivers", () => {
+    const t = {
+      feature_names: ["tc_now", "fuel_gas_kg_hr"],
+      base_score: 0,
+      trees: [{ f: 0, t: 420, m: 1, l: { v: 410 }, r: { v: 450 } }],
+    };
+    const m = {
+      pass: 1,
+      feature_names: t.feature_names,
+      p10: t,
+      p50: t,
+      p90: t,
+    };
+    const r = forecastThermocouple(m, {}, [425, 430], 24, "TC")!;
+    expect(r.modelPrediction.p50).toBe(450);
+    expect(r.missingModelInputs).toEqual(["fuel_gas_kg_hr"]);
+  });
+  it("uses the training seven-day lag velocity rather than the regression slope", () => {
+    const t = {
+      feature_names: ["tc_velocity_c_per_d"],
+      base_score: 0,
+      trees: [{ f: 0, t: 1.1, m: 0, l: { v: 410 }, r: { v: 450 } }],
+    };
+    const m = {
+      pass: 1,
+      feature_names: t.feature_names,
+      p10: t,
+      p50: t,
+      p90: t,
+    };
+    const r = forecastThermocouple(
+      m,
+      {},
+      [400, 400, 400, 400, 400, 400, 400, 407],
+      24,
+      "TC",
+    )!;
+    expect(r.modelPrediction.p50).toBe(410);
+    expect(r.missingModelInputs).toEqual([]);
+    const short = forecastThermocouple(m, {}, [400, 407], 24, "TC")!;
+    expect(short.missingModelInputs).toEqual(["tc_velocity_c_per_d"]);
+  });
   it("keeps gaps and irregular sample intervals; separates quantiles from trend", () => {
     const r = forecastThermocouple(
       model,

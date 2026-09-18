@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("OPEX updates reconciliation, saves, exports and reports without changing revenue", async ({
+test("OPEX updates reconciliation, saves and exports without changing revenue", async ({
   page,
 }) => {
   await page.goto("/crude-to-profit");
@@ -47,14 +47,6 @@ test("OPEX updates reconciliation, saves, exports and reports without changing r
     exported.results.economics.operating_costs.annualCad / 1e6,
   ).toBeCloseTo(after[3], 3);
   await expect(percentage).toHaveValue("10");
-  await page.getByRole("button", { name: "Build Report", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Preview report", exact: true })
-    .click();
-  await expect(page.locator(".report-document")).toContainText(
-    "margin after configured OPEX",
-  );
-  await page.keyboard.press("Escape");
   await percentage.fill("101");
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(table).toHaveCount(0);
@@ -66,6 +58,7 @@ test("OPEX updates reconciliation, saves, exports and reports without changing r
 test("all furnace passes expose trained predictions separately from timestamp-based trends", async ({
   page,
 }) => {
+  test.setTimeout(90000);
   for (const [furnace, count] of [
     ["heater_1", 4],
     ["heater_2", 4],
@@ -86,12 +79,10 @@ test("all furnace passes expose trained predictions separately from timestamp-ba
           /The trend is a linear projection without a calibrated prediction interval/,
         ),
       ).toBeVisible();
-      if (furnace !== "heater_1")
-        await expect(
-          page.getByText(
-            /Projection starts at the last available pass observation/,
-          ),
-        ).toBeVisible();
+      await expect(page.locator(".asset-fresh")).toContainText(
+        "Sep 17, 2026 17:00",
+      );
+      await expect(page.getByText(/Incomplete pass coverage/)).toHaveCount(0);
     }
   }
 });

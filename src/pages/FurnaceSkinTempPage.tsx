@@ -1,5 +1,7 @@
+import { TrendRangeSelector } from "../components/TrendRangeSelector";
+import { resolveTimeRange, rangeContextLabel } from "../lib/timeRange";
+import type { TimeRangeId } from "../engineering/types";
 import { ScenarioWorkbench } from "../components/ScenarioWorkbench";
-import { BuildReport } from "../components/BuildReport";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { DateTime } from "luxon";
@@ -45,6 +47,7 @@ function FurnaceContent() {
       Number(params.get("pass")) || (key === "heater_1" ? 3 : 1),
     ),
   );
+  const [historyRange, setHistoryRange] = useState<TimeRangeId>("30d");
   const [days, setDays] = useState(30),
     [tab, setTab] = useState("Forecast"),
     [tc, setTc] = useState(""),
@@ -87,9 +90,16 @@ function FurnaceContent() {
     ),
     alias = aliases.includes(tc) ? tc : aliases[0],
     model = furnace.tc_models[alias];
-  const last = r.observationEpoch,
-    cut = last - days * 86400000;
-  const history = furnace.history.filter((h) => timestamp(h.t) >= cut);
+  const last = r.observationEpoch;
+  const historyPeriod = resolveTimeRange(
+    historyRange,
+    DateTime.fromMillis(last),
+  );
+  const history = furnace.history.filter(
+    (h) =>
+      timestamp(h.t) >= +historyPeriod.start &&
+      timestamp(h.t) <= +historyPeriod.end,
+  );
   const projection = r.forecast.filter((f) => f.day <= days);
   const measured = history.map((h) => {
     const values = aliases
@@ -125,27 +135,18 @@ function FurnaceContent() {
         freshness={`Observation ${DateTime.fromMillis(last, { zone: "America/Edmonton" }).toFormat("LLL d, yyyy HH:mm")} Edmonton · Model trained ${bundle.trained_at}`}
         state={toEquipmentState(statusForSkin(r.skinNowC, r.hoursToAlarm))}
       />
-      <div className="action-bar">
-        <BuildReport
-          asset={furnace.label + " · Pass " + pass}
-          source={"Model " + bundle.version + " · trained " + bundle.trained_at}
-          summary={`Current maximum ${formatNumber(r.skinNowC, 1)} °C; reference ${bundle.alarm_threshold_c} °C. Forecast and scenario limitations accompany the chart.`}
-          period={
-            days +
-            " day display · observation cutoff " +
-            new Date(last).toISOString()
-          }
-          quality={[
-            "Baseline uses a linear trend; trained-horizon quantiles are reported separately. Any displayed flow-split scenario is simulated and not a validated intervention.",
-            "The trend is not a validated forecast; model holdout performance applies only to the trained horizon.",
-          ]}
-          rows={r.tcResults.map((t) => ({
-            thermocouple: t.tcAlias,
-            currentC: t.tcNow,
-            slopeCPerDay: t.slopePerDay,
-          }))}
-        />
-      </div>
+      {bundle.demo_source && (
+        <p>
+          {bundle.demo_source}. As of {bundle.demo_as_of}. Simulated drivers are
+          not validation of trained forecasts.
+        </p>
+      )}
+      <TrendRangeSelector
+        value={historyRange}
+        onChange={setHistoryRange}
+        includeCustom={false}
+        contextLabel={rangeContextLabel(historyPeriod)}
+      />
       <div className="action-bar">
         <label>
           Furnace
@@ -177,7 +178,7 @@ function FurnaceContent() {
           </select>
         </label>
         <label>
-          Display horizon
+          Projection horizon
           <select
             value={days}
             onChange={(e) => setDays(Number(e.target.value))}
@@ -301,12 +302,15 @@ function FurnaceContent() {
               p10C: tc.modelPrediction.p10,
               medianC: tc.modelPrediction.p50,
               p90C: tc.modelPrediction.p90,
+              missingInputs: tc.missingModelInputs.join(", ") || "None",
             }))}
           />
           <p>
             These are separate model predictions at the training horizon, not
             bounds on the long-range trend. Per-thermocouple intervals do not
-            establish a pass-maximum interval.
+            establish a pass-maximum interval. Missing inputs use the trained
+            model’s missing-value branches; these predictions have not been
+            validated for incomplete operating data.
           </p>
           <DataTable
             rows={results.flatMap((v, i) =>

@@ -2,6 +2,8 @@
 
 See the [engineering manual](ENGINEERING-MANUAL.md) for model inputs, calculations and trends, and the [requirements review](ENGINEERING-REVIEW.md) for coverage and remaining gaps.
 
+Latest local simulation and review: [FINAL-REVIEW.md](FINAL-REVIEW.md). Build Report has been removed; CSV/JSON exports remain.
+
 Current remediation: see [REMEDIATION.md](REMEDIATION.md), [QUALITY.md](QUALITY.md), [DATABASE.md](DATABASE.md), and [DEMO.md](DEMO.md). Data storage is static GitHub Pages JSON plus browser-local IndexedDB. No external backend is required.
 
 Industrial engineering surveillance for process equipment - proactive

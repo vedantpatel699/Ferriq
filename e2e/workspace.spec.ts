@@ -43,7 +43,7 @@ test("all furnace passes, holdout data and manuals work", async ({
     .getByRole("button", { name: "Drivers & validation", exact: true })
     .click();
   await expect(
-    page.getByText("Original model holdout metrics", { exact: false }),
+    page.getByText("Model holdout metrics", { exact: false }),
   ).toBeVisible();
   await expect(
     page
@@ -105,16 +105,16 @@ test("six vital dashboards keep engineering edits collapsed until requested", as
     "membrane-analyzer",
   ]) {
     await page.goto("/equipment/" + id);
-    await page.getByRole("button", { name: "Advanced", exact: true }).click();
+    await page.getByRole("button", { name: "Configuration", exact: true }).click();
     const panel = page
       .locator("details")
       .filter({
-        has: page.getByText("Edit engineering configuration", { exact: true }),
+        has: page.getByText("Edit configuration", { exact: true }),
       });
     await expect(panel).not.toHaveAttribute("open", "");
     await expect(panel.locator("input:visible")).toHaveCount(0);
     await page
-      .getByText("Edit engineering configuration", { exact: true })
+      .getByText("Edit configuration", { exact: true })
       .click();
     await expect(panel).toHaveAttribute("open", "");
   }

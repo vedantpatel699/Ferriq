@@ -35,6 +35,7 @@ export function TrendRangeSelector({
             "7d",
             "30d",
             "90d",
+            "ytd",
             ...(includeCustom ? ["custom"] : []),
           ] as TimeRangeId[]
         ).map((id) => (

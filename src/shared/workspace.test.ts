@@ -12,15 +12,12 @@ import {
   buildFeatureVector,
 } from "../engineering/furnace/calculations";
 describe("Published dataset and import contracts", () => {
-  it("retains full HTML datasets and round trips canonical CSV including probe arrays", () => {
-    const counts = [200, 60, 228, 51];
-    equipmentIds.forEach((id, i) => {
+  for (const id of equipmentIds) it(id + " round trips the full simulated YTD CSV", () => {
       const d = seedEquipment(id);
-      expect(d.rows).toHaveLength(counts[i]);
+      expect(d.rows).toHaveLength(6233);
       expect(normalizeRows(id, parseCsv(csv(d.rows)))).toEqual(d.rows);
-      expect(calculate(id, d)).toHaveLength(counts[i]);
+      expect(calculate(id, d)).toHaveLength(6233);
       expect(() => validateResource(id, d)).not.toThrow();
-    });
   });
   it("rejects reversed shifts, negative crude flow, duplicate times and incomplete snapshots", () => {
     expect(() =>

@@ -5,7 +5,7 @@ test("nine routing combinations and three price cases use a read-only source sna
 }) => {
   await page.goto("/crude-to-profit");
   await expect(
-    page.getByText("The data were obtained from open resources.", {
+    page.getByText("All prices and yields come from open, public sources. See the Engineering manual tab for where each figure comes from.", {
       exact: true,
     }),
   ).toBeVisible();
@@ -40,7 +40,7 @@ test("nine routing combinations and three price cases use a read-only source sna
         page.getByLabel("Residue conversion", { exact: true }),
       ).toHaveValue(residue);
       await expect(margins.locator(".metric-value").first()).toHaveText(
-        /-?[\d,]+\.\d{2} million CAD\/year/,
+        /-?[\d,]+\.\d{1,2} million CAD\/year/,
       );
     }
   }

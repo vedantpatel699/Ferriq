@@ -34,7 +34,7 @@ import {
 } from "./membrane/calculations";
 import type { EngineeringAlert, EquipmentState } from "./types";
 import { reviewMessage } from "../lib/format";
-import { BLOWER_DEMO_DATA } from "./blower/demoData";
+import { simulatedEquipment, DEMO_SOURCE } from "./simulation";
 export const equipmentIds = [
   "air-blower",
   "fired-heater",
@@ -271,41 +271,7 @@ export function normalizeRows(id: EquipmentId, raw: Row[]): Row[] {
     .sort((a, b) => timestamp(a.timestamp) - timestamp(b.timestamp));
 }
 export function seedEquipment(id: EquipmentId): EquipmentData {
-  let rows: Row[];
-  if (id === "shell-tube-exchanger")
-    rows = reference[id].rows.map((r) =>
-      Object.fromEntries(
-        [
-          "timestamp",
-          "hotInC",
-          "hotOutC",
-          "hotFlowKgHr",
-          "hotCpKjKgK",
-          "coldInC",
-          "coldOutC",
-          "coldFlowKgHr",
-          "coldCpKjKgK",
-        ].map((k, i) => [k, r[i]]),
-      ),
-    );
-  else if (id === "membrane-analyzer")
-    rows = reference[id].rows.map((r) => ({
-      ...Object.fromEntries(
-        [
-          "timestamp",
-          "feedFlowNm3Hr",
-          "nonPermeateFlowNm3Hr",
-          "permeateFlowNm3Hr",
-          "permeateH2OnlinePct",
-          "permeateH2LabPct",
-          "feedH2LabPct",
-          "feedPressureKpag",
-        ].map((k, i) => [k, r[i]]),
-      ),
-      feedH2OnlinePct: null,
-    }));
-  else if (id === "air-blower") rows = BLOWER_DEMO_DATA as unknown as Row[];
-  else rows = reference[id].rows as unknown as Row[];
+  const rows = simulatedEquipment(id);
   const config =
     id === "air-blower"
       ? { settings: DEFAULT_BLOWER_SETTINGS, limits: DEFAULT_BLOWER_LIMITS }
@@ -317,10 +283,7 @@ export function seedEquipment(id: EquipmentId): EquipmentData {
   return {
     rows: normalizeRows(id, rows),
     config: structuredClone(config) as unknown as Row,
-    source:
-      id === "air-blower"
-        ? "POC simulated reference dataset (not live)"
-        : "Bundled reference dataset (not live)",
+    source: DEMO_SOURCE,
   };
 }
 export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {

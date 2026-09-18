@@ -47,33 +47,29 @@ test.describe("Air Blower — time range, chart, and Calculation basis dialog", 
     );
   });
 
-  test("Calculation basis & references opens a real dialog with formula content, and closes", async ({
-    page,
-  }) => {
+  test("engineering manual exposes calculation basis", async ({ page }) => {
     await page
-      .getByRole("button", { name: "Calculation basis & references" })
+      .getByRole("button", { name: "Engineering manual", exact: true })
       .click();
-    const dialog = page.locator("dialog.drawer");
-    await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText("ASME PTC 10");
-    await expect(dialog).toContainText("Polytropic efficiency");
-    await page.locator(".drawer-close").click();
-    await expect(dialog).not.toBeVisible();
+    await expect(page.locator(".reference-manual:visible")).toContainText(
+      "NASA Glenn: compressor thermodynamics",
+    );
+    await expect(page.locator(".reference-manual:visible")).toContainText(
+      /polytropic/i,
+    );
   });
-
-  test("key metrics show real computed values, not placeholders", async ({
+  test("current metrics show valid computed values and explicit thrust limitation", async ({
     page,
   }) => {
-    const scorecard = page.getByRole("region", {
-      name: "Asset health metrics",
-      exact: true,
-    });
-    await expect(scorecard).toBeVisible();
-    await expect(scorecard).toContainText("71.84");
-    await expect(scorecard).toContainText("Missing");
-    await page
-      .getByRole("button", { name: "All metrics", exact: true })
-      .click();
-    await expect(scorecard).toContainText("685.24");
+    await expect(
+      page.getByRole("heading", { name: "Power & efficiency", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Thermodynamic efficiency from supplied/),
+    ).toBeVisible();
+    await expect(page.getByText(/2.6% degradation/)).toBeVisible();
+    await expect(
+      page.getByText(/Direct thrust assessment is unavailable/),
+    ).toBeVisible();
   });
 });

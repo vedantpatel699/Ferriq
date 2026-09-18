@@ -51,6 +51,8 @@ export interface FurnaceEntry {
 }
 
 export interface FurnaceModelBundle {
+  demo_source?: string;
+  demo_as_of?: string;
   version: string;
   trained_at: string;
   horizon_hours: number;
@@ -95,9 +97,14 @@ export function buildFeatureVector(
 ): number[] {
   const vec: number[] = [];
   for (const name of featureNames) {
-    if (name === "skin_max_now") vec.push(skinNow);
-    else if (name === "skin_max_7d_mean") vec.push(skin7dMean);
-    else if (name === "skin_max_velocity_c_per_d") vec.push(skinVelocity);
+    if (name === "skin_max_now" || name === "tc_now") vec.push(skinNow);
+    else if (name === "skin_max_7d_mean" || name === "tc_7d_mean")
+      vec.push(skin7dMean);
+    else if (
+      name === "skin_max_velocity_c_per_d" ||
+      name === "tc_velocity_c_per_d"
+    )
+      vec.push(skinVelocity);
     else if (name in currentState) vec.push(currentState[name]);
     else vec.push(NaN);
   }
@@ -126,6 +133,7 @@ export interface TcForecastResult {
   forecast: ForecastStep[];
   modelPrediction: { hours: number; p10: number; p50: number; p90: number };
   mean7d: number;
+  missingModelInputs: string[];
 }
 
 /** Linear trend projection and a separate, single trained-horizon prediction.
@@ -180,15 +188,19 @@ export function forecastThermocouple(
   };
   const slopePerDay = slope(points);
   if (slopePerDay === null) return null;
-  const week = points.filter((p) => p.time >= last.time - 7 * 86400000);
+  const weekStart = last.time - 7 * 86400000;
+  const week = points.filter((p) => p.time > weekStart);
   const mean7d = week.reduce((a, p) => a + p.value, 0) / week.length;
   const velocity = slope(week) ?? slopePerDay;
+  // Training uses a seven-day lag difference, not the trend regression slope.
+  const lag = all.find((p) => p.time === weekStart && Number.isFinite(p.value));
+  const trainedVelocity = lag ? (last.value - lag.value) / 7 : NaN;
   const x = buildFeatureVector(
     model.feature_names,
     currentState,
     last.value,
     mean7d,
-    velocity,
+    trainedVelocity,
   );
   const median = predictTreeModel(model.p50, x);
   const low = predictTreeModel(model.p10, x),
@@ -207,6 +219,9 @@ export function forecastThermocouple(
     slopePerDay,
     forecast,
     mean7d,
+    missingModelInputs: model.feature_names.filter(
+      (_, i) => !Number.isFinite(x[i]),
+    ),
     modelPrediction: {
       hours: modelHorizonHours,
       p10: Math.min(low, median, high),

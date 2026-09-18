@@ -10,94 +10,24 @@ async function checkAccessibility(page: import("@playwright/test").Page) {
     ),
   ).toEqual([]);
 }
-test("POC comparison, quality and printable report", async ({ page }, info) => {
-  const errors: string[] = [];
-  page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/equipment/air-blower");
-  await page.getByText("POC demo data", { exact: true }).click();
-  await page
-    .getByRole("button", { name: "Load current POC demo", exact: true })
-    .click();
-  const score = page.getByRole("region", {
-    name: "Asset health scorecard",
-    exact: true,
-  });
-  await expect(score).toContainText("71.8");
-  await expect(score).toContainText("82 / 100");
-  await page.getByRole("button", { name: "Compare: Off", exact: true }).click();
-  await expect(score).toContainText("B: 100");
-  await expect(
-    score.getByRole("columnheader", { name: "Δ avg", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByLabel("B clean-filter baseline", { exact: true }),
-  ).toBeChecked();
-  await page.screenshot({
-    path: info.outputPath("comparison.png"),
-    fullPage: true,
-  });
-  await page.getByRole("button", { name: "Build Report", exact: true }).click();
-  const report = page.getByRole("dialog", {
-    name: "Build report",
-    exact: true,
-  });
-  await expect(report).toHaveAttribute("aria-modal", "false");
-  await report
-    .getByLabel("Engineer notes", { exact: true })
-    .fill(
-      "Client review: compare bearing trend against the simulated baseline.",
-    );
-  await report
-    .getByRole("button", { name: "Preview report", exact: true })
-    .click();
-  await expect(
-    report.getByRole("heading", { name: "Executive summary" }),
-  ).toBeVisible();
-  await expect(report.locator(".report-document img")).toHaveCount(1);
-  await expect(
-    report.getByRole("button", { name: "Export PDF", exact: true }),
-  ).toBeEnabled();
-  await checkAccessibility(page);
-  await page.emulateMedia({ media: "print" });
-  await expect(page.locator("nav.sidebar")).toBeHidden();
-  const pdf = await page.pdf({
-    path: info.outputPath("report.pdf"),
-    printBackground: true,
-    preferCSSPageSize: true,
-  });
-  expect(pdf.length).toBeGreaterThan(20000);
-  await page.screenshot({
-    path: info.outputPath("report-print.png"),
-    fullPage: true,
-  });
-  await page.emulateMedia({ media: "screen" });
-  await page.keyboard.press("Escape");
-  await expect(report).toHaveCount(0);
-  await page
-    .getByRole("button", {
-      name: "Compare: Clean-filter baseline",
-      exact: true,
-    })
-    .click();
-  await page
-    .getByRole("button", { name: "Load stale POC demo", exact: true })
-    .click();
-  await expect(score).toContainText("3.0 h old");
-  await expect(score).toContainText("Unreliable");
-  await expect(score).toContainText("POC health index A: —");
-  await expect(
-    page.getByLabel("Stale held value (not a fresh measurement)", {
-      exact: true,
-    }),
-  ).toBeChecked();
-  await page.screenshot({ path: info.outputPath("stale.png"), fullPage: true });
-  await page
-    .getByRole("button", { name: "Load missing POC demo", exact: true })
-    .click();
-  await expect(score).toContainText("Missing");
-  expect(errors).toEqual([]);
+test("report feature is removed from all six models", async ({ page }) => {
+  for (const route of [
+    "equipment/air-blower",
+    "equipment/fired-heater",
+    "equipment/shell-tube-exchanger",
+    "equipment/membrane-analyzer",
+    "predictors/furnace-skin-temp",
+    "crude-to-profit",
+  ]) {
+    await page.goto("/" + route);
+    await expect(page.locator("#main-content h1")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Build Report", exact: true }),
+    ).toHaveCount(0);
+  }
 });
-test("Pass 3 scenario applies only on run, resets and reports uncertainty", async ({
+
+test("Pass 3 scenario applies only on run, resets and labels uncertainty", async ({
   page,
 }, info) => {
   await page.goto("/predictors/furnace-skin-temp?furnace=heater_1&pass=3");
@@ -133,27 +63,21 @@ test("Pass 3 scenario applies only on run, resets and reports uncertainty", asyn
   await expect(
     page.getByLabel("POC simulated scenario", { exact: true }),
   ).toHaveCount(0);
-  await page.getByRole("button", { name: "Build Report", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Preview report", exact: true })
-    .click();
-  await expect(page.locator(".report-document")).toContainText(
-    "No intervention effect has been validated",
-  );
 });
-test("local saves work after network loss and versions are inspectable", async ({
+test("local configuration saves work offline and versions remain inspectable", async ({
   page,
   context,
 }) => {
   await page.goto("/equipment/air-blower");
-  await page.getByText("POC demo data", { exact: true }).click();
+  await page
+    .getByRole("button", { name: "Configuration", exact: true })
+    .click();
+  await page.getByText("Edit configuration", { exact: true }).click();
   await context.setOffline(true);
   await page
-    .getByRole("button", { name: "Load current POC demo", exact: true })
+    .getByRole("button", { name: "Save configuration", exact: true })
     .click();
-  await expect(
-    page.getByRole("region", { name: "Asset health scorecard", exact: true }),
-  ).toContainText("82 / 100");
+  await expect(page.getByRole("status")).toContainText("Saved");
   await context.setOffline(false);
   await page.goto("/data-export");
   await page

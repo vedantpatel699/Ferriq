@@ -398,11 +398,11 @@ export const engineeringManuals: Record<string, EngineeringManual> = {
     ],
     trends: [
       "Each pass's hottest measured temperature and projected trajectory against 475 °C.",
-      "The thermocouple driving the pass maximum and the upper/lower projection band.",
+      "The thermocouple driving the pass maximum and its separate trained-horizon quantiles.",
       "Baseline versus the applied Pass 3 scenario, with its assumptions and model-support label.",
     ],
     limits: [
-      "Holdout accuracy describes the trained prediction horizon, not the full multi-year trend extrapolation. The internal search extends up to 2,555 days and is not a validated service-life forecast.",
+      "Missing operating inputs use the trees' missing-value branches; accuracy with incomplete inputs is unverified. Holdout accuracy describes the original training data and prediction horizon, not simulated history or the full multi-year trend extrapolation. The internal search extends up to 2,555 days and is not a validated service-life forecast.",
       "Projection starts at the last available pass observation. Its age relative to the dataset end and any missing thermocouples are disclosed. A projected crossing is not evidence of future operating conditions.",
       "Only mapped thermocouples contribute. An unavailable or unmapped sensor cannot establish a pass is safe.",
       "The flow-split response and extra scenario uncertainty are assumptions, not a plant-validated causal effect. Simulated inputs do not add validation evidence.",

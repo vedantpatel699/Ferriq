@@ -2150,66 +2150,12 @@ a {
 .recommendation-card h3 {
   font-size: 14px;
 }
-.report-drawer {
-  position: fixed;
-  right: 0;
-  top: 0;
-  width: 500px;
-  max-width: 100vw;
-  height: 100dvh;
-  overflow: auto;
-  background: var(--canvas);
-  border-left: 1px solid var(--border-card);
-  z-index: 120;
-  padding: 20px;
-  box-shadow: -4px 0 18px #0002;
-}
-.report-controls header,
-.report-drawer > header {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-.report-footer {
-  position: sticky;
-  bottom: -20px;
-  background: var(--canvas);
-  padding: 12px 0;
-  border-top: 1px solid var(--border-card);
-}
-.report-document {
-  padding: 16px;
-  background: white;
-  margin: 16px 0;
-}
-.report-document img {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-.report-document section {
-  margin: 18px 0;
-}
-.report-document figcaption {
-  font-size: 11px;
-  color: #615e5c;
-}
-.report-document td {
-  font-size: 11px;
-}
-.report-notes {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
 textarea {
   font: inherit;
   padding: 10px;
   border: 1px solid #8a8580;
   border-radius: 4px;
   resize: vertical;
-}
-.report-document h1 {
-  font-size: 22px;
 }
 @media (max-width: 1150px) {
   .scenario-columns {
@@ -2230,60 +2176,6 @@ textarea {
   body {
     background: white;
     color: #111;
-  }
-  body:has(#report-portal) > *:not(#report-portal) {
-    display: none !important;
-  }
-  #report-portal {
-    display: block !important;
-  }
-  .report-drawer {
-    position: static;
-    width: auto;
-    max-width: none;
-    height: auto;
-    overflow: visible;
-    padding: 0;
-    border: 0;
-    box-shadow: none;
-    background: white;
-  }
-  .report-controls {
-    display: none !important;
-  }
-  .report-document {
-    padding: 0;
-    margin: 0;
-  }
-  .report-document section,
-  .report-document figure {
-    break-inside: avoid;
-  }
-  .report-document .table-scroll {
-    overflow: visible;
-  }
-  .report-document table {
-    font-size: 10px;
-    table-layout: fixed;
-  }
-  .report-document th,
-  .report-document td {
-    padding: 5px;
-    overflow-wrap: anywhere;
-    white-space: normal !important;
-  }
-  .report-document h1 {
-    font-size: 20pt;
-  }
-  .report-document h2 {
-    font-size: 14pt;
-  }
-  .report-document p {
-    font-size: 10pt;
-  }
-  .report-document img {
-    max-height: 110mm;
-    object-fit: contain;
   }
   * {
     print-color-adjust: exact;

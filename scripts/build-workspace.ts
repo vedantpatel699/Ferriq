@@ -1,3 +1,4 @@
+import { simulatedFurnace } from "../src/engineering/simulatedFurnace";
 import {
   defaultResources,
   validateResource,
@@ -6,6 +7,16 @@ import {
 import { writeFile, mkdir, readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 const data = defaultResources();
+await writeFile(
+  "public/data/furnace-skin-temp-model.json",
+  JSON.stringify(
+    simulatedFurnace(
+      JSON.parse(
+        await readFile("reference/furnace-trained-model.json", "utf8"),
+      ),
+    ),
+  ),
+);
 let overrides: Resource[] = [];
 try {
   overrides = JSON.parse(

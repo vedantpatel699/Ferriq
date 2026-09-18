@@ -1,5 +1,5 @@
+import { EconomicsHistory } from "../components/EconomicsHistory";
 import { OpexConfiguration } from "../components/OpexConfiguration";
-import { BuildReport } from "../components/BuildReport";
 import { useMemo, useState } from "react";
 import { useResource, useWorkspace } from "../lib/WorkspaceContext";
 import {
@@ -136,45 +136,6 @@ export function CrudeToProfitPage() {
         All prices and yields come from open, public sources. See the
         Engineering manual tab for where each figure comes from.
       </p>
-      {result && (
-        <div className="action-bar">
-          <BuildReport
-            asset="Crude to Profit"
-            source={
-              "Scenario version " +
-              draftVersion +
-              (market
-                ? " · price snapshot " + market.date + " " + market.source
-                : " · fixed Low/High price cases")
-            }
-            summary={
-              annualCases
-                .map(
-                  (c) =>
-                    `${c.label}: annual gross margin ${formatNumber(c.margin, 2)}; margin after configured OPEX ${formatNumber(c.afterOpex, 2)}; annual sales revenue ${formatNumber(c.sales, 2)} million CAD/year`,
-                )
-                .join(". ") +
-              ". Operating basis: 24 hours/day × 330 operating days/year. Configured operating costs are deducted once after gross margin. Capital, financing, depreciation, taxes and unconfigured costs are excluded."
-            }
-            period="Current draft scenario"
-            quality={[
-              "Scenario inputs are assumptions, not live process observations.",
-              ...(draft.gasOilUnit === "fcc"
-                ? [
-                    `${GRACE_FCC_REFERENCE.source}; reported closure gap: ${formatNumber(result.gas_oil_byproducts.unallocated_kghr, 2)} kg/h, unpriced. Source: ${GRACE_FCC_REFERENCE.url}`,
-                  ]
-                : []),
-              `${RESIDUE_UNIT_LABELS[draft.residueUnit]} + ${GAS_OIL_UNIT_LABELS[draft.gasOilUnit]}; once-through illustrative yields.`,
-              `Unpriced residue: ${formatNumber(result.unpriced_residue_m3hr, 2)} m³/h; no sales credit.`,
-              "FCC uses Grace Table 1 at 75% conversion. Naphtha includes FCC gasoline; Diesel includes LCO; Residue/UCO includes bottoms. These are price proxies. Pretreatment, quality discounts and recycle are excluded.",
-            ]}
-            rows={PRODUCTS.map((p) => ({
-              product: p.replaceAll("_", " "),
-              flowM3Hr: result.product_slate_m3hr[p],
-            }))}
-          />
-        </div>
-      )}
 
       <p>
         Refinery yield, gross margin and margin after configured OPEX. The saved
@@ -363,6 +324,12 @@ export function CrudeToProfitPage() {
                   configuredOpex: c.opex ? c.opex.annualCad / 1e6 : undefined,
                   marginAfterOpex: c.afterOpex,
                 }))}
+              />
+              <EconomicsHistory
+                flows={draft.flows}
+                config={draft.config}
+                residue={draft.residueUnit}
+                gas={draft.gasOilUnit}
               />
               <DataTable
                 rows={PRODUCTS.map((p) => ({

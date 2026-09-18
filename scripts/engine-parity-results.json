@@ -11,20 +11,20 @@
     {
       "name": "Heater all current demo rows plus missing/zero-input cases",
       "status": "PASS",
-      "comparisons": 1016,
-      "detail": "63 rows; unchanged derived fields, with wet-basis and inert-gas corrections tested independently."
+      "comparisons": 112230,
+      "detail": "6236 rows; unchanged derived fields, with wet-basis and inert-gas corrections tested independently."
     },
     {
       "name": "Exchanger all demo rows, crossover, missing inputs and F edge cases",
       "status": "PASS",
-      "comparisons": 3914,
-      "detail": "230 rows, 17 derived outputs; five F cases."
+      "comparisons": 105999,
+      "detail": "6235 rows, 17 derived outputs; five F cases."
     },
     {
       "name": "Membrane original batch versus current row engine",
       "status": "PASS",
-      "comparisons": 212,
-      "detail": "53 rows including deterministic synthetic feed and missing/zero flow."
+      "comparisons": 24940,
+      "detail": "6235 rows including deterministic synthetic feed and missing/zero flow."
     },
     {
       "name": "Historical Crude to Profit workbook model across four process combinations",
@@ -39,5 +39,5 @@
       "detail": "Intentional replacement of compressed-time trend and recursive shifted bands; independently tested irregular timestamps and crossing times in phase1.test.ts."
     }
   ],
-  "comparisons": 156806
+  "comparisons": 394833
 }
