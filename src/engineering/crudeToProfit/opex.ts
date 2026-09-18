@@ -81,3 +81,44 @@ export function operatingCosts(value: unknown, feedM3Hr: number) {
     hoursPerYear: hours,
   };
 }
+
+// Suncor 2025 R&M OS&G / operating revenues: 2,439 / 30,671 = 7.95%.
+// Rounded planning allowance; includes selling/general costs, not just utilities.
+export const DEFAULT_OPEX_REVENUE_PERCENT = 8;
+export function revenueOpex(
+  percent: unknown,
+  legacy: unknown,
+  feed: number,
+  revenueCadHr: number,
+) {
+  if (percent === undefined && legacy !== undefined)
+    return operatingCosts(legacy, feed);
+  const rate = percent === undefined ? DEFAULT_OPEX_REVENUE_PERCENT : percent;
+  if (
+    typeof rate !== "number" ||
+    !Number.isFinite(rate) ||
+    rate < 0 ||
+    rate > 100
+  )
+    throw Error("OPEX must be between 0 and 100% of sales revenue.");
+  if (!Number.isFinite(revenueCadHr) || revenueCadHr < 0)
+    throw Error("Sales revenue must be finite and nonnegative.");
+  const hours = HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR;
+  const cost = (revenueCadHr * rate) / 100;
+  const annualCad = cost * hours;
+  if (!Number.isFinite(annualCad))
+    throw Error("Operating cost exceeds the supported numeric range.");
+  return {
+    items: [
+      {
+        key: "revenue",
+        category: "Operating allowance",
+        annualCad,
+        cadPerOperatingHour: cost,
+      },
+    ],
+    annualCad,
+    cadPerOperatingHour: cost,
+    hoursPerYear: hours,
+  };
+}

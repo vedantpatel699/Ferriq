@@ -57,3 +57,9 @@ Requested OPEX is a separate plant-level component, applied once after gross mar
 
 - Verified the Phase 1 Pages deployment succeeded and the live page includes Operating costs below Adjust scenario.
 - Removed Excel cell references and workbook commentary from the economics overview and report; retained operating hours and cost exclusions.
+
+## Revenue-percentage OPEX follow-up
+
+- User requested one configurable percentage of revenue. Default 8%, derived from Suncor 2025 R&M OS&G / operating revenue (2,439 / 30,671 = 7.95%). This broad operating/marketing/general allowance is not a site-specific estimate or a supported five-category allocation.
+- Each pricing case uses its own sales revenue. Percentage mode replaces itemized costs; earlier saved itemized settings are preserved until the user selects percentage mode. New scenarios default to 8%. Save/export/report and Python share the same calculation. Zero is allowed explicitly; values outside 0–100% are rejected.
+- Validation: 109 unit tests; 175 Python/TypeScript cases with 59,584 comparisons; production build; desktop/tablet OPEX save, reload, export and report checks passed. Lint has no errors and eight existing warnings.

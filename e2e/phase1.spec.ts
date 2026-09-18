@@ -15,21 +15,16 @@ test("OPEX updates reconciliation, saves, exports and reports without changing r
       .slice(1)
       .map((s) => Number(s.replaceAll(",", "")));
   const before = await read();
-  await page.getByText("Operating costs", { exact: true }).click();
-  await page.getByLabel("Electricity cost basis").selectOption("hourly");
-  await page
-    .getByLabel("Electricity Consumption (kWh/h)", { exact: true })
-    .fill("1000");
-  await page
-    .getByLabel("Electricity Rate (CAD/kWh)", { exact: true })
-    .fill("0.1");
-  await page
-    .getByLabel("Maintenance Budget (CAD/year)", { exact: true })
-    .fill("1000000");
+  const percentage = page.getByLabel("OPEX (% of sales revenue)", {
+    exact: true,
+  });
+  await expect(percentage).toHaveValue("8");
+  expect(before[3]).toBeCloseTo(before[0] * 0.08, 3);
+  await percentage.fill("10");
   const after = await read();
   expect(after.slice(0, 3)).toEqual(before.slice(0, 3));
-  expect(after[3]).toBe(1.792);
-  expect(after[4]).toBeCloseTo(after[2] - 1.792, 3);
+  expect(after[3]).toBeCloseTo(after[0] * 0.1, 3);
+  expect(after[4]).toBeCloseTo(after[2] - after[3], 3);
   await page
     .getByRole("button", { name: "Save scenario", exact: true })
     .click();
@@ -47,9 +42,11 @@ test("OPEX updates reconciliation, saves, exports and reports without changing r
   const stream = await file.createReadStream();
   let json = "";
   for await (const chunk of stream!) json += chunk.toString();
-  expect(JSON.parse(json).results.economics.operating_costs.annualCad).toBe(
-    1792000,
-  );
+  const exported = JSON.parse(json);
+  expect(
+    exported.results.economics.operating_costs.annualCad / 1e6,
+  ).toBeCloseTo(after[3], 3);
+  await expect(percentage).toHaveValue("10");
   await page.getByRole("button", { name: "Build Report", exact: true }).click();
   await page
     .getByRole("button", { name: "Preview report", exact: true })
@@ -58,10 +55,7 @@ test("OPEX updates reconciliation, saves, exports and reports without changing r
     "margin after configured OPEX",
   );
   await page.keyboard.press("Escape");
-  await page.getByText("Operating costs", { exact: true }).click();
-  await page
-    .getByLabel("Electricity Rate (CAD/kWh)", { exact: true })
-    .fill("-1");
+  await percentage.fill("101");
   await expect(page.getByRole("alert")).toBeVisible();
   await expect(table).toHaveCount(0);
   await expect(

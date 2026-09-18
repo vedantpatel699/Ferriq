@@ -163,6 +163,7 @@ export interface FuelPricingMode {
 
 export interface CrudeToProfitConfig {
   opex?: OperatingCosts;
+  opexRevenuePercent?: number;
   primary_yield_volpct: Record<CrudeCode, Record<PrimaryCut, number>>;
   residue_unit: ResidueUnit;
   coker_feed_ccr_wtpct: number;

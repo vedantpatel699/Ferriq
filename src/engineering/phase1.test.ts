@@ -21,7 +21,11 @@ import {
   calcMembraneRow,
   DEFAULT_MEMBRANE_CONFIG,
 } from "./membrane/calculations";
-import { DEFAULT_OPEX, operatingCosts } from "./crudeToProfit/opex";
+import {
+  DEFAULT_OPEX,
+  operatingCosts,
+  revenueOpex,
+} from "./crudeToProfit/opex";
 import { runModel } from "./crudeToProfit/calculations";
 import {
   DEFAULT_CRUDE_TO_PROFIT_CONFIG as cfg,
@@ -436,5 +440,37 @@ describe("Operating-cost reconciliation", () => {
         100,
       ),
     ).toThrow();
+  });
+});
+
+describe("Revenue percentage OPEX", () => {
+  it("defaults to 8%, handles zero and rejects invalid percentages", () => {
+    expect(revenueOpex(undefined, undefined, 1, 1000).annualCad).toBe(633600);
+    expect(revenueOpex(0, undefined, 1, 1000).annualCad).toBe(0);
+    expect(revenueOpex(8, undefined, 0, 0).annualCad).toBe(0);
+    for (const p of [-1, 101, NaN, Infinity, "8", null])
+      expect(() => revenueOpex(p, undefined, 1, 1000)).toThrow();
+  });
+  it("uses each case revenue and replaces rather than adds legacy costs", () => {
+    const r = runModel(
+      flows,
+      { ...cfg, opexRevenuePercent: 10, opex: DEFAULT_OPEX },
+      cfg.crude_price_low_cad_m3,
+      cfg.product_price_high_cad_m3,
+    ).economics;
+    for (const [key, cost] of [
+      ["low", r.operating_costs],
+      ["high", r.operating_costs_high],
+      ["market", r.operating_costs_market],
+    ] as const) {
+      expect(cost!.annualCad).toBeCloseTo(
+        r[`revenue_${key}_cad_hr`]! * 7920 * 0.1,
+        5,
+      );
+      expect(r[`margin_after_opex_${key}_mcad_yr`]).toBeCloseTo(
+        r[`margin_${key}_mcad_yr`]! - cost!.annualCad / 1e6,
+        8,
+      );
+    }
   });
 });

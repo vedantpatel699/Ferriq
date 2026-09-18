@@ -1,4 +1,4 @@
-import { operatingCosts } from "../engineering/crudeToProfit/opex";
+import { revenueOpex } from "../engineering/crudeToProfit/opex";
 import { z } from "zod";
 import {
   timestamp,
@@ -193,9 +193,11 @@ export function validateResource(key: string, input: unknown): unknown {
           checkNumbers(n, path + "." + k);
     };
     checkNumbers(v.config, "Configuration");
-    operatingCosts(
+    revenueOpex(
+      v.config.opexRevenuePercent,
       v.config.opex,
       Object.values(v.flows).reduce((a, b) => a + b, 0),
+      0,
     );
     if (Number(v.config.lpg_fuel_gas_recovered) > 1)
       throw Error("LPG recovery must be between 0 and 1.");

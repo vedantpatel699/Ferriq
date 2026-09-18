@@ -1,4 +1,4 @@
-import { operatingCosts } from "./opex";
+import { revenueOpex } from "./opex";
 // Workbook primitives plus the current once-through routing model.
 // runWorkbookModel is retained for historical audit only.
 
@@ -368,7 +368,9 @@ export function finalProductSlate(
 }
 
 export interface EconomicsResult {
-  operating_costs: ReturnType<typeof operatingCosts>;
+  operating_costs: ReturnType<typeof revenueOpex>;
+  operating_costs_high: ReturnType<typeof revenueOpex>;
+  operating_costs_market?: ReturnType<typeof revenueOpex>;
   margin_after_opex_low_mcad_yr: number;
   margin_after_opex_high_mcad_yr: number;
   margin_after_opex_market_mcad_yr?: number;
@@ -416,14 +418,17 @@ export function economics(
   const marginHigh = revHigh - costHigh;
   const annual = (HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR) / 1e6;
 
-  const opex = operatingCosts(
-    cfg.opex,
-    CRUDES.reduce((sum, c) => sum + (crudeFlows[c] ?? 0), 0),
-  );
+  const feed = CRUDES.reduce((sum, c) => sum + (crudeFlows[c] ?? 0), 0);
+  const costForRevenue = (r: number) =>
+    revenueOpex(cfg.opexRevenuePercent, cfg.opex, feed, r);
+  const opex = costForRevenue(revLow);
+  const opexHigh = costForRevenue(revHigh);
   const out: EconomicsResult = {
     operating_costs: opex,
+    operating_costs_high: opexHigh,
     margin_after_opex_low_mcad_yr: marginLow * annual - opex.annualCad / 1e6,
-    margin_after_opex_high_mcad_yr: marginHigh * annual - opex.annualCad / 1e6,
+    margin_after_opex_high_mcad_yr:
+      marginHigh * annual - opexHigh.annualCad / 1e6,
     crude_cost_low_cad_hr: costLow,
     crude_cost_high_cad_hr: costHigh,
     revenue_low_cad_hr: revLow,
@@ -452,8 +457,9 @@ export function economics(
     out.revenue_market_cad_hr = revMarket;
     out.margin_market_cad_hr = marginMarket;
     out.margin_market_mcad_yr = marginMarket * annual;
+    out.operating_costs_market = costForRevenue(revMarket);
     out.margin_after_opex_market_mcad_yr =
-      marginMarket * annual - opex.annualCad / 1e6;
+      marginMarket * annual - out.operating_costs_market.annualCad / 1e6;
     out.has_market_case = true;
   }
   return out;

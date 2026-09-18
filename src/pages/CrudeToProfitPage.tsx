@@ -84,6 +84,7 @@ export function CrudeToProfitPage() {
     ? [
         {
           label: "Low",
+          opex: result.economics.operating_costs,
           margin: result.economics.margin_low_mcad_yr,
           afterOpex: result.economics.margin_after_opex_low_mcad_yr,
           feed:
@@ -94,6 +95,7 @@ export function CrudeToProfitPage() {
         },
         {
           label: "High",
+          opex: result.economics.operating_costs_high,
           margin: result.economics.margin_high_mcad_yr,
           afterOpex: result.economics.margin_after_opex_high_mcad_yr,
           feed:
@@ -104,6 +106,7 @@ export function CrudeToProfitPage() {
         },
         {
           label: "Live market",
+          opex: result.economics.operating_costs_market,
           margin: result.economics.margin_market_mcad_yr,
           afterOpex: result.economics.margin_after_opex_market_mcad_yr,
           feed:
@@ -274,9 +277,13 @@ export function CrudeToProfitPage() {
             </div>
           </details>
           <OpexConfiguration
-            value={draft.config.opex}
-            onChange={(opex) =>
-              setDraft((d) => ({ ...d, config: { ...d.config, opex } }))
+            value={draft.config.opexRevenuePercent}
+            legacy={draft.config.opex !== undefined}
+            onChange={(opexRevenuePercent) =>
+              setDraft((d) => ({
+                ...d,
+                config: { ...d.config, opexRevenuePercent },
+              }))
             }
           />
           {result && (
@@ -342,9 +349,9 @@ export function CrudeToProfitPage() {
               <p>
                 Gross margin is sales revenue minus crude feed cost. Operating
                 margin also deducts configured OPEX. Unconfigured expenses,
-                depreciation, financing, tax and capital expenditure are excluded.
-                All annual amounts are shown in million CAD. Low and High use
-                their respective price assumptions.
+                depreciation, financing, tax and capital expenditure are
+                excluded. All annual amounts are shown in million CAD. Low and
+                High use their respective price assumptions.
               </p>
               <DataTable
                 caption="Annual profit reconciliation (million CAD/year)"
@@ -353,27 +360,10 @@ export function CrudeToProfitPage() {
                   sales: c.sales,
                   crudePurchases: c.feed,
                   grossMargin: c.margin,
-                  configuredOpex:
-                    result.economics.operating_costs.annualCad / 1e6,
+                  configuredOpex: c.opex ? c.opex.annualCad / 1e6 : undefined,
                   marginAfterOpex: c.afterOpex,
                 }))}
               />
-              <DataTable
-                caption="Configured operating costs (CAD)"
-                rows={result.economics.operating_costs.items.map((item) => ({
-                  category: item.category,
-                  annualCad: item.annualCad,
-                  cadPerOperatingHour: item.cadPerOperatingHour,
-                }))}
-              />
-              {result.economics.operating_costs.items.some(
-                (item) => item.annualCad === 0,
-              ) && (
-                <p role="status">
-                  Zero-cost categories are unconfigured or explicitly zero. They
-                  do not establish zero actual expense.
-                </p>
-              )}
               <DataTable
                 rows={PRODUCTS.map((p) => ({
                   product: p.replaceAll("_", " "),

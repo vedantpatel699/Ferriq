@@ -317,13 +317,13 @@ Hydrocracker uses the workbook volume yields. FCC uses the Grace 75 wt% conversi
 
 Annual gross margin = hourly margin × 24 × 330 / 1,000,000 in million C$/year. Gross margin is retained separately.
 
-**Operating costs:** Annual variable cost = consumption/h × CAD/unit × 7,920; or consumption/m³ feed × feed m³/h × CAD/unit × 7,920
+**Operating costs:** Annual OPEX = annual sales revenue × OPEX percentage / 100
 
-Electricity: kWh; steam: t; natural gas: GJ on the same heating-value basis as its rate; chemicals: kg. Maintenance is fixed CAD/year or CAD/m³ feed × annual feed. Each category uses one selected basis; fixed annual budgets are not multiplied by operating hours.
+Editable default: 8% for each price case. A single allowance covers operating costs including utilities, chemicals, maintenance and overhead. Earlier saved itemized costs remain active until replaced with the percentage.
 
 **Margin after configured OPEX:** Annual margin after OPEX = annual sales − annual crude purchases − annual configured OPEX
 
-Partial operating margin, not net profit. All values are CAD. Costs are plant totals with no technology allocation. Enter net purchased consumption once; do not duplicate purchased steam and its boiler fuel. Zero defaults are unconfigured, not evidence of zero expense.
+Operating margin before depreciation, financing, tax and capital expenditure. The percentage replaces itemized OPEX rather than adding to it. Crude purchases remain separate.
 
 ### Useful trends
 
@@ -337,12 +337,13 @@ Partial operating margin, not net profit. All values are CAD. Costs are plant to
 - Four technologies form two independent selections, giving nine routing combinations including bypass. Feed is counted once and no inter-unit recycle is modelled.
 - Grace FCC yields are 2.2% dry gas, 13.3% LPG, 51.9% gasoline, 16.7% LCO, 8.6% bottoms and 7.1% coke. The reported 0.2% gap is unallocated, not saleable product.
 - Client product headings are retained: FCC gasoline uses Naphtha, LCO uses Diesel, and bottoms uses UCO pricing proxies. These are not certified finished products.
-- Coke, dry gas and held residue have no sales credit. Configured electricity, steam, natural gas, chemicals and maintenance are deducted once after gross margin. Hydrogen, unconfigured costs, capital, depreciation, financing and taxes are excluded. Fixed yields and densities do not replace a refinery simulation.
+- Coke, dry gas and held residue have no sales credit. The total operating allowance is deducted once after gross margin. Capital, depreciation, financing and taxes are excluded. Fixed yields and densities do not replace a refinery simulation.
 - Low and High pair their respective crude and product prices; they are not guaranteed worst/best margins. Live uses the latest published observations and derived prices, not executable quotes.
 - The data were obtained from open resources. Client workbook assumptions and separately sourced yield cases are identified above.
 
 ### Sources
 
+- [Suncor 2025: R&M operating, selling and general expenses CAD 2,439 million / operating revenue CAD 30,671 million = 7.95%, rounded to an 8% planning allowance. Includes marketing/general costs; not a technology-specific utility estimate.](https://www.sec.gov/Archives/edgar/data/311337/000110465926020411/su-20251231xex99d3.htm)
 - Client Crude to Profit Rev 1 workbook: feed, product headings, fixed prices and annualization
 - [Grace: Strategies for Maximizing FCC Light Cycle Oil, Table 1, printed p.48](https://grace.com/content/dam/grace-site/english/grace-publications/Grace-The-Essential-Articles-Vol-1_WEB.pdf#page=49)
 - Price snapshot: observation dates and individual pricing sources

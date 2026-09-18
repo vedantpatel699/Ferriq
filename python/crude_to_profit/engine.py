@@ -1218,6 +1218,22 @@ def operating_costs(value, feed_m3hr):
     return {"items":items,"annualCad":annual,"cadPerOperatingHour":annual/hours,"hoursPerYear":hours}
 
 
+def revenue_opex(percent, legacy, feed, revenue):
+    if percent is None and legacy is not None:
+        return operating_costs(legacy, feed)
+    rate = 8 if percent is None else percent
+    if isinstance(rate, bool) or not isinstance(rate, (int,float)) or not math.isfinite(rate) or not 0 <= rate <= 100:
+        raise ValueError("OPEX must be between 0 and 100% of sales revenue")
+    if not math.isfinite(revenue) or revenue < 0:
+        raise ValueError("Sales revenue must be finite and nonnegative")
+    hours = HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR
+    cost = revenue * rate / 100
+    annual = cost * hours
+    if not math.isfinite(annual):
+        raise ValueError("Operating cost exceeds numeric range")
+    return {"items":[{"key":"revenue","category":"Operating allowance","annualCad":annual,"cadPerOperatingHour":cost}],"annualCad":annual,"cadPerOperatingHour":cost,"hoursPerYear":hours}
+
+
 def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
               market_crude_prices=None, market_product_prices=None):
     """
@@ -1261,11 +1277,15 @@ def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
     margin_high = rev_high - cost_high
     annual = HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR / 1e6
 
-    opex = operating_costs(cfg.get("opex"), sum(crude_flows_m3hr.get(c,0) for c in CRUDES))
+    def cost_for_revenue(r):
+        return revenue_opex(cfg.get("opexRevenuePercent"), cfg.get("opex"), sum(crude_flows_m3hr.get(c,0) for c in CRUDES), r)
+    opex = cost_for_revenue(rev_low)
+    opex_high = cost_for_revenue(rev_high)
     out = {
         "operating_costs": opex,
+        "operating_costs_high": opex_high,
         "margin_after_opex_low_mcad_yr": margin_low * annual - opex["annualCad"] / 1e6,
-        "margin_after_opex_high_mcad_yr": margin_high * annual - opex["annualCad"] / 1e6,
+        "margin_after_opex_high_mcad_yr": margin_high * annual - opex_high["annualCad"] / 1e6,
         "crude_cost_low_cad_hr": cost_low,
         "crude_cost_high_cad_hr": cost_high,
         "revenue_low_cad_hr": rev_low,
@@ -1284,12 +1304,14 @@ def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
         cost_market = _crude_cost(market_crude_prices)
         rev_market = _revenue(market_product_prices)
         margin_market = rev_market - cost_market
+        opex_market = cost_for_revenue(rev_market)
         out.update({
+            "operating_costs_market": opex_market,
             "crude_cost_market_cad_hr": cost_market,
             "revenue_market_cad_hr": rev_market,
             "margin_market_cad_hr": margin_market,
             "margin_market_mcad_yr": margin_market * annual,
-            "margin_after_opex_market_mcad_yr": margin_market * annual - opex["annualCad"] / 1e6,
+            "margin_after_opex_market_mcad_yr": margin_market * annual - opex_market["annualCad"] / 1e6,
             "market_case": "complete",
         })
     elif market_crude_prices or market_product_prices:
