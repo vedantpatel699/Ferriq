@@ -5,7 +5,6 @@ import {
   metricsFor,
   equipmentIds,
   identities,
-  timestamp,
   type EquipmentData,
   type Reading,
   type Metric,
@@ -116,6 +115,7 @@ export function useSummaries(): Summary[] {
             current,
             by,
             model.alarm_threshold_c,
+            model.horizon_hours,
           );
           if (result)
             passes.push({
@@ -159,8 +159,17 @@ export function useSummaries(): Summary[] {
           },
           value: p.result.skinNowC,
           rows: [],
-          asOf: timestamp(p.f.history.at(-1)!.t),
-          quality: [],
+          asOf: p.result.observationEpoch,
+          quality: [
+            ...(p.result.dataAgeHours > 0
+              ? [
+                  `Pass observations end ${p.result.dataAgeHours.toFixed(1)} h before dataset end.`,
+                ]
+              : []),
+            ...(p.result.missingThermocouples.length
+              ? ["Incomplete thermocouple coverage"]
+              : []),
+          ],
           duration: "Forecast snapshot; duration unavailable",
           priority: state === "investigate" ? 3 : state === "watch" ? 2 : 0,
         });

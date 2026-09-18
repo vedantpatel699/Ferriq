@@ -19,8 +19,16 @@ import { formatNumber } from "../lib/format";
 import { csv, downloadFile } from "../lib/files";
 export function FurnaceSkinTempPage() {
   const { snapshot } = useWorkspace();
-  if (!snapshot.resources.some(r => r.key === "furnace-model"))
-    return <><h1>Furnace Skin TI Predictor</h1><p>Forecasts require a valid predictor model. Model status and retry controls are shown above.</p></>;
+  if (!snapshot.resources.some((r) => r.key === "furnace-model"))
+    return (
+      <>
+        <h1>Furnace Skin TI Predictor</h1>
+        <p>
+          Forecasts require a valid predictor model. Model status and retry
+          controls are shown above.
+        </p>
+      </>
+    );
   return <FurnaceContent />;
 }
 function FurnaceContent() {
@@ -56,9 +64,16 @@ function FurnaceContent() {
       ]),
     );
     return Array.from({ length: furnace.passes }, (_, i) =>
-      forecastPass(furnace, i + 1, current, history, bundle.alarm_threshold_c),
+      forecastPass(
+        furnace,
+        i + 1,
+        current,
+        history,
+        bundle.alarm_threshold_c,
+        bundle.horizon_hours,
+      ),
     );
-  }, [furnace, bundle.alarm_threshold_c]);
+  }, [furnace, bundle.alarm_threshold_c, bundle.horizon_hours]);
   const r = results[pass - 1];
   if (!r)
     return (
@@ -72,7 +87,7 @@ function FurnaceContent() {
     ),
     alias = aliases.includes(tc) ? tc : aliases[0],
     model = furnace.tc_models[alias];
-  const last = timestamp(furnace.history.at(-1)!.t),
+  const last = r.observationEpoch,
     cut = last - days * 86400000;
   const history = furnace.history.filter((h) => timestamp(h.t) >= cut);
   const projection = r.forecast.filter((f) => f.day <= days);
@@ -113,12 +128,7 @@ function FurnaceContent() {
       <div className="action-bar">
         <BuildReport
           asset={furnace.label + " · Pass " + pass}
-          source={
-            "Model " +
-            bundle.version +
-            " · trained " +
-            bundle.trained_at
-          }
+          source={"Model " + bundle.version + " · trained " + bundle.trained_at}
           summary={`Current maximum ${formatNumber(r.skinNowC, 1)} °C; reference ${bundle.alarm_threshold_c} °C. Forecast and scenario limitations accompany the chart.`}
           period={
             days +
@@ -126,8 +136,8 @@ function FurnaceContent() {
             new Date(last).toISOString()
           }
           quality={[
-            "Baseline uses the quantile/trend forecasting model. Any displayed flow-split scenario is simulated and not a validated intervention.",
-            "Beyond 24 h is extrapolated.",
+            "Baseline uses a linear trend; trained-horizon quantiles are reported separately. Any displayed flow-split scenario is simulated and not a validated intervention.",
+            "The trend is not a validated forecast; model holdout performance applies only to the trained horizon.",
           ]}
           rows={r.tcResults.map((t) => ({
             thermocouple: t.tcAlias,
@@ -195,6 +205,19 @@ function FurnaceContent() {
       {notice && <p role="status">{notice}</p>}
       {tab === "Forecast" && (
         <>
+          {r.dataAgeHours > 0 && (
+            <p role="status">
+              Projection starts at the last available pass observation,{" "}
+              {formatNumber(r.dataAgeHours, 1)} hours before the dataset end. No
+              new measurement is inferred for that gap.
+            </p>
+          )}
+          {r.missingThermocouples.length > 0 && (
+            <p role="alert">
+              Incomplete pass coverage: {r.missingThermocouples.join(", ")}. The
+              hottest missing thermocouple and its time to limit are unknown.
+            </p>
+          )}
           <section className="finding">
             <h2>
               {r.skinNowC >= 470
@@ -205,9 +228,9 @@ function FurnaceContent() {
             </h2>
             <p>
               Current hottest pass thermocouple: {formatNumber(r.skinNowC, 1)}{" "}
-              °C. Median projection to {bundle.alarm_threshold_c} °C:{" "}
-              {eta(r.hoursToAlarm)}. Upper-band projection:{" "}
-              {eta(r.hoursToAlarmUpperBand)}.
+              °C. Trend projection to {bundle.alarm_threshold_c} °C:{" "}
+              {eta(r.hoursToAlarm)}. No calibrated long-range interval is
+              available.
             </p>
           </section>
           <p>
@@ -246,27 +269,11 @@ function FurnaceContent() {
                       data: measured,
                     },
                     {
-                      name: "Forecast P50 pass maximum",
+                      name: "Trend projection of pass maximum",
                       kind: "prediction",
                       data: predicted,
                     },
                   ]}
-                  uncertainty={{
-                    lower: [
-                      [last, r.skinNowC],
-                      ...projection.map(
-                        (f) =>
-                          [last + f.day * 86400000, f.p10] as [number, number],
-                      ),
-                    ],
-                    upper: [
-                      [last, r.skinNowC],
-                      ...projection.map(
-                        (f) =>
-                          [last + f.day * 86400000, f.p90] as [number, number],
-                      ),
-                    ],
-                  }}
                   constraints={[
                     { name: "Measured advisory", value: 460 },
                     { name: "Measured alarm criterion", value: 470 },
@@ -281,10 +288,25 @@ function FurnaceContent() {
           )}
 
           <p className="source-note">
-            P10–P90 is the model interval, not a guaranteed safety envelope. All
-            horizon estimates use the full 2,555-day internal projection.
-            Operating drivers are held at their snapshot assumptions; extended
-            forecasts require engineering review.
+            The trend is a linear projection without a calibrated prediction
+            interval. Time-to-limit estimates search up to 2,555 days with
+            operating drivers held constant. Accuracy over that period has not
+            been established.
+          </p>
+          <DataTable
+            caption="Trained-horizon predictions by thermocouple (°C)"
+            rows={r.tcResults.map((tc) => ({
+              thermocouple: tc.tcAlias,
+              horizonHours: tc.modelPrediction.hours,
+              p10C: tc.modelPrediction.p10,
+              medianC: tc.modelPrediction.p50,
+              p90C: tc.modelPrediction.p90,
+            }))}
+          />
+          <p>
+            These are separate model predictions at the training horizon, not
+            bounds on the long-range trend. Per-thermocouple intervals do not
+            establish a pass-maximum interval.
           </p>
           <DataTable
             rows={results.flatMap((v, i) =>
@@ -366,10 +388,7 @@ function FurnaceContent() {
             </select>
           </label>
           {model.metrics && (
-            <DataTable
-              rows={[model.metrics]}
-              caption="Model holdout metrics"
-            />
+            <DataTable rows={[model.metrics]} caption="Model holdout metrics" />
           )}
           {h ? (
             <FerriqTrendChart
@@ -472,11 +491,11 @@ function FurnaceContent() {
       {tab === "Engineering manual" && (
         <>
           <p>
-            Current model {bundle.version}; trained {bundle.trained_at}.
-            History and forecast both show the maximum reading over that
-            pass's thermocouples. The measured-status alarm criterion (470 °C)
-            differs from the forecast reference ({bundle.alarm_threshold_c} °C);
-            both are used and are labelled separately throughout.
+            Current model {bundle.version}; trained {bundle.trained_at}. History
+            and forecast both show the maximum reading over that pass's
+            thermocouples. The measured-status alarm criterion (470 °C) differs
+            from the forecast reference ({bundle.alarm_threshold_c} °C); both
+            are used and are labelled separately throughout.
           </p>
           <ReferenceManual id="furnace-skin-temp" />
         </>

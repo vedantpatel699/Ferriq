@@ -49,7 +49,11 @@ export function BlowerOverview({
 
   const TrendButton = ({ metric }: { metric: string }) =>
     onSelectMetric ? (
-      <button className="text-action" type="button" onClick={() => onSelectMetric(metric)}>
+      <button
+        className="text-action"
+        type="button"
+        onClick={() => onSelectMetric(metric)}
+      >
         View trend
       </button>
     ) : null;
@@ -60,13 +64,15 @@ export function BlowerOverview({
         <div className="section-heading-row">
           <div>
             <h2>Power &amp; efficiency</h2>
-            <p className="section-note">Current operating point and energy-performance indicators.</p>
+            <p className="section-note">
+              Current operating point and energy-performance indicators.
+            </p>
           </div>
         </div>
         <div className="metrics-grid">
           <MetricCard
-            label="Motor input power"
-            value={formatNumber(v.powerKw, 1)}
+            label="Total electrical input"
+            value={formatNumber(v.totalPowerKw, 1)}
             unit="kW"
             facts={[
               {
@@ -74,38 +80,67 @@ export function BlowerOverview({
                   powerFactorUsed === null
                     ? undefined
                     : `PF ${formatNumber(powerFactorUsed, 3)}`,
-                rest: ` ${String(v.powerFactorSource ?? "")}`,
+                rest: ` ${String(v.powerFactorSource ?? "")} for selected train; each running motor uses its own current.`,
               },
             ]}
           />
-          <MetricCard label="Measured flow" value={formatNumber(v.flowNm3hr, 0)} unit="Nm³/hr" />
-          <MetricCard label="Pressure ratio" value={formatNumber(v.pressureRatio, 3)} unit="" />
-          <MetricCard label="Pressure rise" value={formatNumber(v.dpBar, 3)} unit="bar" />
           <MetricCard
-            label={thermoAvailable ? "Polytropic efficiency" : "Fluid-power indicator"}
+            label="Measured flow"
+            value={formatNumber(v.flowNm3hr, 0)}
+            unit="Nm³/hr"
+          />
+          <MetricCard
+            label="Pressure ratio"
+            value={formatNumber(v.pressureRatio, 3)}
+            unit=""
+          />
+          <MetricCard
+            label="Pressure rise"
+            value={formatNumber(v.dpBar, 3)}
+            unit="bar"
+          />
+          <MetricCard
+            label={
+              thermoAvailable
+                ? "Polytropic efficiency"
+                : "Fluid-power indicator"
+            }
             value={formatNumber(
-              thermoAvailable ? v.efficiencyPolytropicPct : v.efficiencyFluidPct,
+              thermoAvailable
+                ? v.efficiencyPolytropicPct
+                : v.efficiencyFluidPct,
               1,
             )}
             unit="%"
             facts={[
               {
                 rest: thermoAvailable
-                  ? " Thermodynamic efficiency from measured suction and discharge temperatures."
+                  ? " Thermodynamic efficiency from supplied suction and discharge temperatures."
                   : " Thermodynamic efficiency unavailable because a required temperature measurement is missing.",
               },
             ]}
-            method={thermoAvailable ? "Polytropic method" : "Performance indicator only"}
+            method={
+              thermoAvailable
+                ? "Polytropic method"
+                : "Performance indicator only"
+            }
           />
         </div>
-        <TrendButton metric={thermoAvailable ? "efficiencyPolytropicPct" : "efficiencyFluidPct"} />
+        <TrendButton
+          metric={
+            thermoAvailable ? "efficiencyPolytropicPct" : "efficiencyFluidPct"
+          }
+        />
       </section>
 
       <section className="blower-section">
         <div className="section-heading-row">
           <div>
             <h2>Performance degradation</h2>
-            <p className="section-note">Measured performance compared with the healthy-reference model at the current motor load.</p>
+            <p className="section-note">
+              Measured performance compared with the healthy-reference model at
+              the current motor load.
+            </p>
           </div>
         </div>
         <div className="performance-comparison">
@@ -119,19 +154,33 @@ export function BlowerOverview({
           </div>
           <div>
             <span>Flow residual</span>
-            <strong>{flowResidual === null ? "N/A" : `${formatNumber(flowResidual, 1)}%`}</strong>
+            <strong>
+              {flowResidual === null
+                ? "N/A"
+                : `${formatNumber(flowResidual, 1)}%`}
+            </strong>
           </div>
           <div>
             <span>Performance degradation</span>
-            <strong>{degradation === null ? "N/A" : `${formatNumber(degradation, 1)}%`}</strong>
+            <strong>
+              {degradation === null
+                ? "N/A"
+                : `${formatNumber(degradation, 1)}%`}
+            </strong>
           </div>
         </div>
-        <div className={`model-applicability ${modelApplicable ? "valid" : "unavailable"}`}>
-          <strong>{modelApplicable ? "Baseline comparison valid" : "Baseline comparison not applied"}</strong>
+        <div
+          className={`model-applicability ${modelApplicable ? "valid" : "unavailable"}`}
+        >
+          <strong>
+            {modelApplicable
+              ? "Within reference range"
+              : "Baseline comparison not applied"}
+          </strong>
           <span>
             {modelApplicable
-              ? " Current bypass position and filter differential pressure are inside the configured baseline envelope."
-              : " Current operating conditions are outside the configured baseline envelope."}
+              ? " Current, pressure ratio, bypass and filter differential pressure meet the reference checks. Constant speed is assumed."
+              : " A completed reference period and complete comparable measurements are required."}
           </span>
         </div>
         <details className="disclosure">
@@ -145,8 +194,8 @@ export function BlowerOverview({
               <strong>{formatNumber(modelTrainingRows, 0)}</strong>.
             </p>
             <p>
-              a and b are fitted from the configured healthy-reference window,
-              not taken from the vendor datasheet.
+              a and b are fitted from the initial assumed-healthy reference
+              window, not taken from the vendor datasheet.
             </p>
           </div>
         </details>
@@ -157,7 +206,10 @@ export function BlowerOverview({
         <div className="section-heading-row">
           <div>
             <h2>Bearing health</h2>
-            <p className="section-note">Active-train vibration, bearing temperature and short-window condition trends.</p>
+            <p className="section-note">
+              Active-train vibration, bearing temperature and short-window
+              condition trends.
+            </p>
           </div>
         </div>
         <div className="metrics-grid">
@@ -172,7 +224,10 @@ export function BlowerOverview({
               limits.vibTripMms,
             )}
             facts={[
-              { bold: `${limits.vibAdvisoryMms} mm/s`, rest: " advisory threshold" },
+              {
+                bold: `${limits.vibAdvisoryMms} mm/s`,
+                rest: " advisory threshold",
+              },
               {
                 rest:
                   vibrationTrend === null
@@ -192,7 +247,10 @@ export function BlowerOverview({
               limits.brgTripC,
             )}
             facts={[
-              { bold: `${limits.brgAdvisoryC} °C`, rest: " advisory threshold" },
+              {
+                bold: `${limits.brgAdvisoryC} °C`,
+                rest: " advisory threshold",
+              },
               {
                 rest:
                   bearingTrend === null
@@ -218,7 +276,12 @@ export function BlowerOverview({
             label="Filter differential pressure"
             value={formatNumber(v.filterDpBar, 4)}
             unit="bar"
-            facts={[{ bold: `${limits.filterDpMaxBar} bar`, rest: " configured maximum" }]}
+            facts={[
+              {
+                bold: `${limits.filterDpMaxBar} bar`,
+                rest: " configured maximum",
+              },
+            ]}
           />
         </div>
         <div className="inline-actions">
@@ -229,34 +292,24 @@ export function BlowerOverview({
 
       <section className="blower-section thrust-section">
         <div>
-          <h2>Thrust health</h2>
+          <h2>Thrust assessment</h2>
           <p className="section-note">
-            POC screening based on deviation from the vendor design operating
-            point. This is not a direct axial-thrust measurement.
+            Direct thrust assessment is unavailable. The index below shows
+            operating deviation only; it does not measure thrust or predict
+            failure.
           </p>
         </div>
         <div className="metrics-grid">
           <MetricCard
-            label="Thrust operating-deviation proxy"
+            label="Operating-deviation index"
             value={formatNumber(thrustProxy, 1)}
             unit="%"
-            state={
-              thrustProxy === null
-                ? undefined
-                : thrustProxy >= limits.thrustProxyAlarmPct
-                  ? "investigate"
-                  : thrustProxy >= limits.thrustProxyWatchPct
-                    ? "watch"
-                    : "normal"
-            }
             facts={[
               {
-                bold: `${limits.thrustProxyWatchPct}%`,
-                rest: " POC watch threshold",
+                rest: " Informational index; no health alarm is assigned.",
               },
               {
-                rest:
-                  " Direct axial or thrust-bearing instrumentation is still required for a true thrust assessment.",
+                rest: " Direct axial or thrust-bearing instrumentation is still required for a true thrust assessment.",
               },
             ]}
             method="Equal-weight RMS of flow, pressure-ratio and bypass deviations from the design point"

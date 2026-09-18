@@ -21,6 +21,7 @@ Usage:
 """
 
 import csv
+import math
 import json
 import os
 import urllib.error
@@ -1191,6 +1192,32 @@ def final_product_slate(direct_totals, hc_products, residue_byproducts=None):
 
 
 # -- 5.6 ------------------------------------------------------------------
+def operating_costs(value, feed_m3hr):
+    labels = {"electricity":"Electricity", "steam":"Steam", "naturalGas":"Natural gas", "chemicals":"Chemicals", "maintenance":"Maintenance"}
+    if not isinstance(feed_m3hr, (int,float)) or not math.isfinite(feed_m3hr) or feed_m3hr < 0:
+        raise ValueError("Feed flow must be finite and nonnegative")
+    if value is None:
+        value = {key: {"basis":"annual", "consumption":0, "rate":0, "annualCad":0} for key in labels}
+    if not isinstance(value, dict) or set(value) != set(labels):
+        raise ValueError("Operating costs need all five categories")
+    hours = HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR
+    items = []
+    for key, label in labels.items():
+        item = value[key]
+        if not isinstance(item, dict) or item.get("basis") not in ("hourly", "throughput", "annual") or any(not isinstance(item.get(k), (int,float)) or not math.isfinite(item[k]) or item[k] < 0 for k in ("consumption", "rate", "annualCad")):
+            raise ValueError("Invalid operating cost: " + key)
+        if key == "maintenance" and item["basis"] == "hourly":
+            raise ValueError("Maintenance uses annual CAD or CAD per m3 feed")
+        annual = item["annualCad"] if item["basis"] == "annual" else hours * item["rate"] * (feed_m3hr if key == "maintenance" else item["consumption"] * (feed_m3hr if item["basis"] == "throughput" else 1))
+        if not math.isfinite(annual):
+            raise ValueError("Operating cost exceeds numeric range")
+        items.append({"key":key,"category":label,"annualCad":annual,"cadPerOperatingHour":annual/hours})
+    annual = sum(item["annualCad"] for item in items)
+    if not math.isfinite(annual):
+        raise ValueError("Operating cost exceeds numeric range")
+    return {"items":items,"annualCad":annual,"cadPerOperatingHour":annual/hours,"hoursPerYear":hours}
+
+
 def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
               market_crude_prices=None, market_product_prices=None):
     """
@@ -1234,7 +1261,11 @@ def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
     margin_high = rev_high - cost_high
     annual = HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR / 1e6
 
+    opex = operating_costs(cfg.get("opex"), sum(crude_flows_m3hr.get(c,0) for c in CRUDES))
     out = {
+        "operating_costs": opex,
+        "margin_after_opex_low_mcad_yr": margin_low * annual - opex["annualCad"] / 1e6,
+        "margin_after_opex_high_mcad_yr": margin_high * annual - opex["annualCad"] / 1e6,
         "crude_cost_low_cad_hr": cost_low,
         "crude_cost_high_cad_hr": cost_high,
         "revenue_low_cad_hr": rev_low,
@@ -1247,8 +1278,8 @@ def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
     }
 
     complete = (market_crude_prices and market_product_prices
-                and all(market_crude_prices.get(c) is not None for c in CRUDES)
-                and all(market_product_prices.get(p) is not None for p in PRODUCTS))
+                and all(isinstance(market_crude_prices.get(c), (int,float)) and math.isfinite(market_crude_prices[c]) and market_crude_prices[c] >= 0 for c in CRUDES)
+                and all(isinstance(market_product_prices.get(p), (int,float)) and math.isfinite(market_product_prices[p]) and market_product_prices[p] >= 0 for p in PRODUCTS))
     if complete:
         cost_market = _crude_cost(market_crude_prices)
         rev_market = _revenue(market_product_prices)
@@ -1258,6 +1289,7 @@ def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
             "revenue_market_cad_hr": rev_market,
             "margin_market_cad_hr": margin_market,
             "margin_market_mcad_yr": margin_market * annual,
+            "margin_after_opex_market_mcad_yr": margin_market * annual - opex["annualCad"] / 1e6,
             "market_case": "complete",
         })
     elif market_crude_prices or market_product_prices:

@@ -26,7 +26,19 @@ export function resolveFuelComposition(
   nameOrCustom: string,
   customCase?: FuelGasCase,
 ): FuelGasCase {
-  if (nameOrCustom === "Custom" && customCase) return customCase;
+  if (nameOrCustom === "Custom" && customCase) {
+    const props = calcCompositionProps(customCase.fractions);
+    return {
+      ...customCase,
+      ...props,
+      fractions: Object.fromEntries(
+        Object.entries(customCase.fractions).map(([k, v]) => [
+          k,
+          props.sum > 0 ? v / props.sum : 0,
+        ]),
+      ),
+    };
+  }
   return (
     FUEL_GAS_CASES[nameOrCustom] ??
     FUEL_GAS_CASES["Sheet Reference Case (83.64%)"]
@@ -89,13 +101,19 @@ export interface CombustionMassFlows {
 }
 
 /** Solve combustion-air and flue-gas mass flows from fuel flow and target
- *  dry stack O2%, given the resolved fuel composition. */
+ *  wet stack O2%, given the resolved fuel composition. */
 export function combustionMassFlows(
   mFuelKgS: number,
-  targetO2PctDry: number,
+  targetO2PctWet: number,
   comp: FuelGasCase,
 ): CombustionMassFlows {
-  if (!mFuelKgS || mFuelKgS <= 0 || !comp.averageMw)
+  if (
+    ![mFuelKgS, targetO2PctWet, comp.averageMw].every(Number.isFinite) ||
+    mFuelKgS <= 0 ||
+    comp.averageMw <= 0 ||
+    targetO2PctWet < 0 ||
+    targetO2PctWet >= 100 * O2_VOL_FRAC_AIR
+  )
     return { mCaKgS: null, mSKgS: null, afRatio: null };
   const fuelKmolS = mFuelKgS / comp.averageMw;
   let nO2St = 0,
@@ -110,11 +128,13 @@ export function combustionMassFlows(
     nO2St += flow * props.o2;
     nH2O += flow * props.h2o;
     nCO2 += flow * props.co2;
+    // Inert feed CO2 and SO2 formed by complete H2S combustion remain in wet flue gas.
+    if (k === "CO2" || k === "Hydrogen_Sulfide") nCO2 += flow;
     if (k === "Nitrogen") nN2Fuel += flow;
   }
   const nN2StAir = nO2St * (N2_VOL_FRAC_AIR / O2_VOL_FRAC_AIR);
   const nFgSt = nCO2 + nH2O + nN2Fuel + nN2StAir;
-  const yO2 = targetO2PctDry / 100.0;
+  const yO2 = targetO2PctWet / 100.0;
   const denom = 1 - yO2 * (1 + N2_VOL_FRAC_AIR / O2_VOL_FRAC_AIR);
   if (Math.abs(denom) < 1e-9)
     return { mCaKgS: null, mSKgS: null, afRatio: null };
@@ -225,6 +245,20 @@ export function calcHeaterRow(
   r: HeaterRowInput,
   cfg: HeaterConfig,
 ): HeaterRowResult {
+  r = { ...r };
+  for (const key of Object.keys(r) as (keyof HeaterRowInput)[]) {
+    if (key === "timestamp" || key === "fuelCaseOverride") continue;
+    const value = r[key];
+    if (
+      typeof value !== "number" ||
+      !Number.isFinite(value) ||
+      (key.endsWith("C") && value <= -273.15) ||
+      (key.includes("Flow") && value < 0) ||
+      (key.includes("Cp") && value <= 0) ||
+      (key === "stackO2Pct" && (value < 0 || value >= 100 * O2_VOL_FRAC_AIR))
+    )
+      (r as unknown as Record<string, unknown>)[key] = null;
+  }
   const out: HeaterRowResult = {
     timestamp: r.timestamp,
     stackTempC: r.stackTempC,
@@ -258,15 +292,36 @@ export function calcHeaterRow(
   else if (r.bridgewallAC !== null) out.bridgewallAvgC = r.bridgewallAC;
   else if (r.bridgewallBC !== null) out.bridgewallAvgC = r.bridgewallBC;
 
-  if (r.stackO2Pct !== null && r.stackO2Pct < 20.9)
-    out.excessAirPct = (100.0 * r.stackO2Pct) / (20.95 - r.stackO2Pct);
-
+  const fuelName = r.fuelCaseOverride || cfg.fuelCase;
+  if (fuelName !== "Custom" && !(fuelName in FUEL_GAS_CASES)) return out;
+  if (
+    fuelName === "Custom" &&
+    (!cfg.customCase ||
+      Object.entries(cfg.customCase.fractions).some(
+        ([k, v]) =>
+          !(k in FUEL_COMPONENT_PROPS) || !Number.isFinite(v) || v < 0,
+      ))
+  )
+    return out;
   const comp = resolveFuelComposition(
     r.fuelCaseOverride || cfg.fuelCase,
     cfg.customCase,
   );
+  if (
+    !Number.isFinite(comp.averageMw) ||
+    comp.averageMw <= 0 ||
+    !Number.isFinite(comp.lhvMjKg) ||
+    comp.lhvMjKg <= 0
+  )
+    return out;
   const lhvKjKg = comp.lhvMjKg * 1000.0;
 
+  if (r.stackO2Pct !== null) {
+    const actual = combustionMassFlows(1, r.stackO2Pct, comp).afRatio;
+    const stoich = combustionMassFlows(1, 0, comp).afRatio;
+    if (actual !== null && stoich !== null && stoich > 0)
+      out.excessAirPct = 100 * (actual / stoich - 1);
+  }
   if (r.fuelFlowKgS !== null && r.stackO2Pct !== null) {
     const cm = combustionMassFlows(r.fuelFlowKgS, r.stackO2Pct, comp);
     out.combustionAirKgS = cm.mCaKgS;
@@ -316,9 +371,9 @@ export function calcHeaterRow(
       out.etaProcessPct = (100.0 * out.qProcessKw) / out.qLhvKw;
   }
 
-  if (r.stackO2Pct !== null && r.stackTempC !== null && lhvKjKg > 0) {
+  if (out.excessAirPct !== null && r.stackTempC !== null && lhvKjKg > 0) {
     const eaFrac = (out.excessAirPct !== null ? out.excessAirPct : 0) / 100.0;
-    const airKg = (1 + eaFrac) * stoichAirKgPerKgFuel(comp);
+    const airKg = (1 + eaFrac) * combustionMassFlows(1, 0, comp).afRatio!;
     const mH2o = h2oKgPerKgFuel(comp);
     const tAmb =
       r.combustionAirTempC !== null ? r.combustionAirTempC : cfg.refTempC;
@@ -366,13 +421,13 @@ export function buildHeaterAlerts(
       alerts.push({
         severity: "alarm",
         message: `Efficiency ${row.etaHeatBalancePct.toFixed(2)} % below alarm ${cfg.effAlarmPct.toFixed(0)} %.`,
-        source: "API 560",
+        source: "configured efficiency threshold",
       });
     else if (row.etaHeatBalancePct < cfg.effAdvisoryPct)
       alerts.push({
         severity: "advisory",
         message: `Efficiency ${row.etaHeatBalancePct.toFixed(2)} % below advisory ${cfg.effAdvisoryPct.toFixed(0)} %.`,
-        source: "API 560",
+        source: "configured efficiency threshold",
       });
   }
   if (row.stackTempC !== null) {
@@ -422,13 +477,13 @@ export function buildHeaterAlerts(
       alerts.push({
         severity: "alarm",
         message: `Excess air ${row.excessAirPct.toFixed(1)} % above alarm ${cfg.eaAlarmPct} %.`,
-        source: "ASME PTC 4",
+        source: "configured excess-air threshold",
       });
     else if (row.excessAirPct >= cfg.eaAdvisoryPct)
       alerts.push({
         severity: "advisory",
         message: `Excess air ${row.excessAirPct.toFixed(1)} % above advisory ${cfg.eaAdvisoryPct} %.`,
-        source: "ASME PTC 4",
+        source: "configured excess-air threshold",
       });
   }
   if (row.etaDeltaPp !== null && Math.abs(row.etaDeltaPp) > 3) {

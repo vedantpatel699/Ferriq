@@ -4,8 +4,8 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { stripTypeScriptTypes } from 'node:module';
 import { spawnSync } from 'node:child_process';
-const code = ['data.ts','calculations.ts'].map(file => stripTypeScriptTypes(fs.readFileSync(`src/engineering/crudeToProfit/${file}`, 'utf8'), {mode:'strip'}).replace(/^import[\s\S]*?;\s*/gm,'').replace(/\bexport\s+/g,'')).join('\n');
-const model = vm.runInNewContext(code+';({runModel,runWorkbookModel,DEFAULT_CRUDE_TO_PROFIT_CONFIG,DEFAULT_CRUDE_FLOWS_M3HR,CRUDES,PRODUCTS,cokerYieldWtpct,LC_FINER_YIELD_WTPCT,FCC_YIELD_WTPCT,GRACE_FCC_REFERENCE})');
+const code = ['data.ts','opex.ts','calculations.ts'].map(file => stripTypeScriptTypes(fs.readFileSync(`src/engineering/crudeToProfit/${file}`, 'utf8'), {mode:'strip'}).replace(/^import[\s\S]*?;\s*/gm,'').replace(/\bexport\s+/g,'')).join('\n');
+const model = vm.runInNewContext(code+';({runModel,runWorkbookModel,DEFAULT_CRUDE_TO_PROFIT_CONFIG,DEFAULT_CRUDE_FLOWS_M3HR,CRUDES,PRODUCTS,cokerYieldWtpct,LC_FINER_YIELD_WTPCT,FCC_YIELD_WTPCT,GRACE_FCC_REFERENCE})', {structuredClone});
 const cfg = model.DEFAULT_CRUDE_TO_PROFIT_CONFIG;
 const snapshot = JSON.parse(fs.readFileSync('public/data/crude-market-prices.json','utf8'));
 const cases=[];
@@ -13,6 +13,11 @@ for(const flows of [model.DEFAULT_CRUDE_FLOWS_M3HR, Object.fromEntries(model.CRU
  for(const residue of ['none','lc_finer','delayed_coker']) for(const gas of ['none','hydrocracker','fcc'])
   for(const recovery of [0,0.5,1]) for(const market of [null,snapshot])
    cases.push({flows,config:{...cfg,lpg_fuel_gas_recovered:recovery},residue,gas,market});
+const opex = Object.fromEntries(['electricity','steam','naturalGas','chemicals','maintenance'].map(key => [key,{basis:'annual',consumption:0,rate:0,annualCad:10000}]));
+opex.electricity={basis:'hourly',consumption:500,rate:0.1,annualCad:0};
+opex.chemicals={basis:'throughput',consumption:0.2,rate:3,annualCad:0};
+for(const residue of ['none','lc_finer','delayed_coker']) for(const gas of ['none','hydrocracker','fcc'])
+ cases.push({flows:model.DEFAULT_CRUDE_FLOWS_M3HR,config:{...cfg,opex},residue,gas,market:snapshot});
 const py=spawnSync(process.env.PYTHON || 'python',['-c',`import sys,json
 sys.path.insert(0,'python/crude_to_profit')
 import engine as E

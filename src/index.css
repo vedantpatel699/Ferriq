@@ -661,7 +661,7 @@ h6 {
 }
 .metric-method {
   font-size: 10px;
-  color: color-mix(in srgb, var(--text-secondary) 80%, transparent);
+  color: var(--text-secondary);
   margin-top: 1px;
 }
 

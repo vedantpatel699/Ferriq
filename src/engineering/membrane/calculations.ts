@@ -72,12 +72,33 @@ export interface MembraneRowResult {
  *  signal itself — synthesizeOnlineFeedH2 is a batch-level (whole-series)
  *  concern, applied by the caller before this runs, exactly as in the live
  *  app (only when the dataset has no online feed-H2 tag at all). */
-export function calcMembraneRow(r: MembraneRowInput): MembraneRowResult {
+export function calcMembraneRow(
+  r: MembraneRowInput,
+  cfg: MembraneConfig = DEFAULT_MEMBRANE_CONFIG,
+): MembraneRowResult {
+  r = { ...r };
+  for (const key of Object.keys(r) as (keyof MembraneRowInput)[]) {
+    if (key === "timestamp") continue;
+    const v = r[key];
+    if (
+      typeof v !== "number" ||
+      !Number.isFinite(v) ||
+      v < 0 ||
+      (key.endsWith("Pct") && v > 100)
+    )
+      (r as unknown as Record<string, unknown>)[key] = null;
+  }
+  const balanced =
+    r.feedFlowNm3Hr !== null &&
+    r.permeateFlowNm3Hr !== null &&
+    r.permeateFlowNm3Hr <= r.feedFlowNm3Hr;
   const nonPermeate =
     r.nonPermeateFlowNm3Hr !== null
       ? r.nonPermeateFlowNm3Hr
       : r.feedFlowNm3Hr !== null && r.permeateFlowNm3Hr !== null
-        ? r.feedFlowNm3Hr - r.permeateFlowNm3Hr
+        ? balanced
+          ? r.feedFlowNm3Hr - r.permeateFlowNm3Hr
+          : null
         : null;
 
   const ratio =
@@ -88,8 +109,10 @@ export function calcMembraneRow(r: MembraneRowInput): MembraneRowResult {
   const yFeedForOnline =
     r.feedH2OnlinePct !== null ? r.feedH2OnlinePct : r.feedH2LabPct;
   const recoveryOnlinePct =
-    r.feedFlowNm3Hr &&
-    r.permeateFlowNm3Hr &&
+    balanced &&
+    r.feedFlowNm3Hr !== null &&
+    r.feedFlowNm3Hr > 0 &&
+    r.permeateFlowNm3Hr !== null &&
     r.permeateH2OnlinePct !== null &&
     yFeedForOnline !== null &&
     yFeedForOnline > 0
@@ -99,8 +122,10 @@ export function calcMembraneRow(r: MembraneRowInput): MembraneRowResult {
       : null;
 
   const recoveryLabPct =
-    r.feedFlowNm3Hr &&
-    r.permeateFlowNm3Hr &&
+    balanced &&
+    r.feedFlowNm3Hr !== null &&
+    r.feedFlowNm3Hr > 0 &&
+    r.permeateFlowNm3Hr !== null &&
     r.permeateH2LabPct !== null &&
     r.feedH2LabPct !== null &&
     r.feedH2LabPct > 0
@@ -116,7 +141,11 @@ export function calcMembraneRow(r: MembraneRowInput): MembraneRowResult {
     recoveryOnlinePct,
     recoveryLabPct,
     feedPressureKpag: r.feedPressureKpag,
-    feedPressureDeviationPct: null,
+    feedPressureDeviationPct:
+      r.feedPressureKpag !== null && cfg.designFeedPressureKpag > 0
+        ? (100 * (r.feedPressureKpag - cfg.designFeedPressureKpag)) /
+          cfg.designFeedPressureKpag
+        : null,
     permeateH2OnlinePct: r.permeateH2OnlinePct,
     permeateH2LabPct: r.permeateH2LabPct,
     feedH2OnlinePct: r.feedH2OnlinePct,

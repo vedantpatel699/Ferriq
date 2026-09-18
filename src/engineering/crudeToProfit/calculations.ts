@@ -1,3 +1,4 @@
+import { operatingCosts } from "./opex";
 // Workbook primitives plus the current once-through routing model.
 // runWorkbookModel is retained for historical audit only.
 
@@ -367,6 +368,10 @@ export function finalProductSlate(
 }
 
 export interface EconomicsResult {
+  operating_costs: ReturnType<typeof operatingCosts>;
+  margin_after_opex_low_mcad_yr: number;
+  margin_after_opex_high_mcad_yr: number;
+  margin_after_opex_market_mcad_yr?: number;
   crude_cost_low_cad_hr: number;
   crude_cost_high_cad_hr: number;
   revenue_low_cad_hr: number;
@@ -411,7 +416,14 @@ export function economics(
   const marginHigh = revHigh - costHigh;
   const annual = (HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR) / 1e6;
 
+  const opex = operatingCosts(
+    cfg.opex,
+    CRUDES.reduce((sum, c) => sum + (crudeFlows[c] ?? 0), 0),
+  );
   const out: EconomicsResult = {
+    operating_costs: opex,
+    margin_after_opex_low_mcad_yr: marginLow * annual - opex.annualCad / 1e6,
+    margin_after_opex_high_mcad_yr: marginHigh * annual - opex.annualCad / 1e6,
     crude_cost_low_cad_hr: costLow,
     crude_cost_high_cad_hr: costHigh,
     revenue_low_cad_hr: revLow,
@@ -426,8 +438,12 @@ export function economics(
   const haveAll =
     marketCrude &&
     marketProduct &&
-    CRUDES.every((c) => marketCrude[c] != null) &&
-    PRODUCTS.every((p) => marketProduct[p] != null);
+    CRUDES.every(
+      (c) => Number.isFinite(marketCrude[c]) && marketCrude[c]! >= 0,
+    ) &&
+    PRODUCTS.every(
+      (p) => Number.isFinite(marketProduct[p]) && marketProduct[p]! >= 0,
+    );
   if (haveAll) {
     const costMarket = crudeCost(marketCrude as Record<CrudeCode, number>);
     const revMarket = revenue(marketProduct as Record<ProductCode, number>);
@@ -436,6 +452,8 @@ export function economics(
     out.revenue_market_cad_hr = revMarket;
     out.margin_market_cad_hr = marginMarket;
     out.margin_market_mcad_yr = marginMarket * annual;
+    out.margin_after_opex_market_mcad_yr =
+      marginMarket * annual - opex.annualCad / 1e6;
     out.has_market_case = true;
   }
   return out;

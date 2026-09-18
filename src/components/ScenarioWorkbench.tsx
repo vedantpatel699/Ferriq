@@ -78,8 +78,8 @@ export function ScenarioWorkbench({
         <section className="chart-card">
           <h2>Forecast</h2>
           <p className="quality-marker">
-            POC scenario response is simulated. Baseline is the original
-            forecast engine.
+            POC scenario response is simulated. Baseline is a timestamp-based
+            trend projection.
           </p>
           <FerriqTrendChart
             title="Pass 3 baseline and simulated scenario"
@@ -88,7 +88,7 @@ export function ScenarioWorkbench({
             nowBoundary={last}
             verticalMarkers={[
               {
-                name: "24 h validation ends",
+                name: "24 h model horizon (trend unvalidated)",
                 value: last + 86400000,
               },
               ...(
@@ -112,7 +112,7 @@ export function ScenarioWorkbench({
                 data: measured,
               },
               {
-                name: "Original baseline forecast",
+                name: "Baseline trend projection",
                 kind: "baseline",
                 data: toPoints("value"),
               },
@@ -126,19 +126,22 @@ export function ScenarioWorkbench({
                   ]
                 : []),
             ]}
-            uncertainty={{
-              lower: toPoints("p10", band),
-              upper: toPoints("p90", band),
-            }}
+            uncertainty={
+              scenario
+                ? {
+                    lower: toPoints("p10", band),
+                    upper: toPoints("p90", band),
+                  }
+                : undefined
+            }
             constraints={[
               { name: "Measured advisory", value: 460 },
               { name: "Forecast reference", value: threshold },
             ]}
           />
           <p>
-            Shaded interval uses the original P10–P90 spread plus an explicit
-            illustrative horizon allowance after Run scenario. It is not a
-            calibrated scenario confidence interval.
+            Shading after Run scenario represents an assumed scenario allowance.
+            It is not a calibrated scenario confidence interval.
           </p>
         </section>
         <aside className="scenario-actions" aria-label="Scenario action">

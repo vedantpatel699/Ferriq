@@ -1,3 +1,4 @@
+import type { OperatingCosts } from "./opex";
 // Crude to Profit refinery yield/economics model — constants ported
 // verbatim from the live crude-to-profit.html engine. This is a real,
 // documented refinery model (primary distillation → residue conversion
@@ -161,6 +162,7 @@ export interface FuelPricingMode {
 }
 
 export interface CrudeToProfitConfig {
+  opex?: OperatingCosts;
   primary_yield_volpct: Record<CrudeCode, Record<PrimaryCut, number>>;
   residue_unit: ResidueUnit;
   coker_feed_ccr_wtpct: number;

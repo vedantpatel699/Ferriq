@@ -169,6 +169,10 @@ def _parse_ts(ts):
         return ts
     if ts is None:
         return None
+    try:
+        return datetime.fromisoformat(str(ts).strip().replace("Z", "+00:00"))
+    except ValueError:
+        pass
     for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M",
                 "%m/%d/%Y %H:%M", "%m-%d-%y %H:%M",
                 "%d/%m/%Y %H:%M", "%Y/%m/%d %H:%M:%S"):
@@ -252,7 +256,7 @@ def isentropic_efficiency(t1_k, t2_k, p1_bar, p2_bar, k):
 
     Returns decimal (0.75 = 75 %), or NaN if inputs are infeasible.
     """
-    if not (p2_bar > p1_bar and t2_k > t1_k):
+    if not all(math.isfinite(v) for v in (p1_bar,p2_bar,t1_k,t2_k,k)) or p1_bar <= 0 or t1_k <= 0 or k <= 1 or not (p2_bar > p1_bar and t2_k > t1_k):
         return float("nan")
     exponent = (k - 1.0) / k
     ideal_dt = t1_k * (math.pow(p2_bar / p1_bar, exponent) - 1.0)
@@ -274,7 +278,7 @@ def polytropic_efficiency(t1_k, t2_k, p1_bar, p2_bar, k):
 
     Returns decimal, or NaN if inputs are infeasible.
     """
-    if not (p2_bar > p1_bar and t2_k > t1_k):
+    if not all(math.isfinite(v) for v in (p1_bar,p2_bar,t1_k,t2_k,k)) or p1_bar <= 0 or t1_k <= 0 or k <= 1 or not (p2_bar > p1_bar and t2_k > t1_k):
         return float("nan")
     sigma = math.log(t2_k / t1_k) / math.log(p2_bar / p1_bar)
     if sigma <= 0:
@@ -317,22 +321,22 @@ def build_alerts(vib_max, brg_max, filter_dp, dp_bar, bypass_op,
                  p_discharge_kpag, controller_sp, lim):
     """Return a list of active alerts (unordered; status is rolled up separately)."""
     a = []
-    ISO = "ISO 10816-3, Group 1 (large machines, rigid foundation)"
+    ISO = "configured vibration threshold"
 
     # Vibration (tiered)
     if not math.isnan(vib_max):
         if vib_max >= lim["vib_trip_mms"]:
             a.append(_alert("trip",
                 f"Vibration {vib_max:.2f} mm/s exceeds trip limit "
-                f"{lim['vib_trip_mms']} mm/s (ISO 10816 Zone D).", ISO))
+                f"{lim['vib_trip_mms']} mm/s.", ISO))
         elif vib_max >= lim["vib_alarm_mms"]:
             a.append(_alert("alarm",
                 f"Vibration {vib_max:.2f} mm/s exceeds alarm limit "
-                f"{lim['vib_alarm_mms']} mm/s (ISO 10816 Zone C/D).", ISO))
+                f"{lim['vib_alarm_mms']} mm/s.", ISO))
         elif vib_max >= lim["vib_advisory_mms"]:
             a.append(_alert("advisory",
                 f"Vibration {vib_max:.2f} mm/s above advisory "
-                f"{lim['vib_advisory_mms']} mm/s (ISO 10816 Zone B/C).", ISO))
+                f"{lim['vib_advisory_mms']} mm/s.", ISO))
 
     # Bearing temperature (tiered)
     if not math.isnan(brg_max):
@@ -413,7 +417,7 @@ def process_single_row(row, settings=None, limits=None):
     flow    = _num(_lookup(row, "total_flow"))
     t1_c    = _num(_lookup(row, "suction_temp"))
 
-    if any(math.isnan(x) for x in (p1_kpaa, p2_kpag, flow, current)):
+    if any(not math.isfinite(x) for x in (p1_kpaa, p2_kpag, flow, current)) or p1_kpaa <= 0 or p2_kpag / 100 + s["atm_pressure_bar"] <= 0 or flow < 0 or current < 0:
         return {"drop": True, "reason": "missing critical tag (P1, P2, flow, or current)"}
 
     # Vibrations + bearing temps
@@ -446,8 +450,10 @@ def process_single_row(row, settings=None, limits=None):
     dp_bar = p2_bar - p1_bar
     p_ratio = p2_bar / p1_bar if p1_bar > 0 else float("nan")
 
-    p_fluid = fluid_power_kw(flow, dp_bar)
-    thrust_proxy_pct = thrust_operating_deviation_pct(flow, p_ratio, bypass)
+    shared_flow_ambiguous = not math.isfinite(curr_b if active == "A" else curr_a) or (curr_a > s["active_current_min_a"] and curr_b > s["active_current_min_a"])
+    total_power_kw = sum(shaft_power_kw(s["motor_voltage_v"], amp, motor_power_factor_from_current(amp) if s.get("power_factor_mode", "datasheet") == "datasheet" else s["power_factor"]) for amp in (curr_a,curr_b) if amp > s["active_current_min_a"]) if all(math.isfinite(amp) for amp in (curr_a,curr_b)) else None
+    p_fluid = float("nan") if shared_flow_ambiguous else fluid_power_kw(flow, dp_bar)
+    thrust_proxy_pct = float("nan") if shared_flow_ambiguous else thrust_operating_deviation_pct(flow, p_ratio, bypass)
     eff_fluid = (p_fluid / p_elec * 100.0) if p_elec > 0 else float("nan")
 
     t1_k = t1_c + 273.15 if not math.isnan(t1_c) else float("nan")
@@ -467,19 +473,6 @@ def process_single_row(row, settings=None, limits=None):
 
     alerts = build_alerts(vib_max, brg_max, filt_dp, dp_bar, bypass,
                           p2_kpag, sp_kpag, lim)
-    if math.isfinite(thrust_proxy_pct):
-        if thrust_proxy_pct >= lim["thrust_proxy_alarm_pct"]:
-            alerts.append(_alert(
-                "alarm",
-                f"Thrust operating-deviation proxy {thrust_proxy_pct:.1f}% exceeds the POC investigate threshold {lim['thrust_proxy_alarm_pct']:.0f}%.",
-                "POC operating-envelope heuristic; not a direct thrust measurement",
-            ))
-        elif thrust_proxy_pct >= lim["thrust_proxy_watch_pct"]:
-            alerts.append(_alert(
-                "advisory",
-                f"Thrust operating-deviation proxy {thrust_proxy_pct:.1f}% exceeds the POC watch threshold {lim['thrust_proxy_watch_pct']:.0f}%.",
-                "POC operating-envelope heuristic; not a direct thrust measurement",
-            ))
     status = roll_up_status(alerts)
 
     def _r(v, d=2):
@@ -490,6 +483,8 @@ def process_single_row(row, settings=None, limits=None):
         "drop": False,
         "timestamp": ts.isoformat(),
         "active_blower": active,
+        "shared_flow_ambiguous": shared_flow_ambiguous,
+        "total_power_kw": total_power_kw,
         "power_kw":              _r(p_elec, 2),
         "power_factor_used":     _r(power_factor_used, 4),
         "power_factor_source":   "motor-datasheet interpolation" if s.get("power_factor_mode", "datasheet") == "datasheet" else "fixed",
@@ -529,11 +524,11 @@ def fit_simple_flow_model(points):
     variance = sum((x - mx) ** 2 for x, _ in clean)
     covariance = sum((x - mx) * (y - my) for x, y in clean)
     slope = covariance / variance if variance > 1e-12 else 0.0
-    return {"intercept": my - slope * mx, "slope": slope, "training_rows": len(clean)}
+    return {"intercept": my - slope * mx, "slope": slope, "training_rows": len(clean), "min_current": min(x for x,y in clean), "max_current": max(x for x,y in clean)}
 
 
 def predict_flow_nm3hr(model, current):
-    if model is None or current is None or not math.isfinite(float(current)):
+    if model is None or current is None or not math.isfinite(float(current)) or current < model["min_current"] or current > model["max_current"]:
         return None
     return model["intercept"] + model["slope"] * float(current)
 
@@ -571,6 +566,8 @@ def process_batch(rows, settings=None, limits=None):
         ts = _parse_ts(_lookup(r, "timestamp"))
         if ts is not None:
             sortable.append((ts, r))
+    if len({ts.tzinfo is not None for ts, _ in sortable}) > 1:
+        raise ValueError("Mixed offset-free and timezone-aware timestamps: supply explicit UTC offsets for every observation")
     sortable.sort(key=lambda x: x[0])
 
     last_t1_val, last_t1_ts = None, None
@@ -594,15 +591,14 @@ def process_batch(rows, settings=None, limits=None):
                 last_t1_val = out["t1_c_used"]
                 last_t1_ts = ts
 
-    # Standard, transparent ML baseline: train a separate current->flow
-    # regression for each blower using the first 14 clean-reference rows.
+    def usable(r):
+        return (not r.get("shared_flow_ambiguous", True) and
+                all(isinstance(r.get(k), (int,float)) and math.isfinite(r[k]) for k in ("active_current_amp", "flow_nm3hr", "bypass_op_pct", "filter_dp_bar", "pressure_ratio")) and
+                r["flow_nm3hr"] > 0 and 0 <= r["bypass_op_pct"] < s["performance_bypass_max_pct"] and
+                0 <= r["filter_dp_bar"] <= lim["filter_dp_max_bar"])
     for train in ("A", "B"):
-        eligible = [r for r in processed
-                    if r["active_blower"] == train
-                    and r.get("active_current_amp") is not None
-                    and r.get("flow_nm3hr") is not None
-                    and (r.get("bypass_op_pct") is None or r["bypass_op_pct"] < s["performance_bypass_max_pct"])
-                    and (r.get("filter_dp_bar") is None or r["filter_dp_bar"] <= lim["filter_dp_max_bar"])]
+        eligible = [r for r in processed if r["active_blower"] == train and usable(r)]
+        training_end = float("inf")
         if eligible:
             training_start = datetime.fromisoformat(eligible[0]["timestamp"])
             training_end = training_start.timestamp() + s["baseline_training_days"] * 86400.0
@@ -616,38 +612,40 @@ def process_batch(rows, settings=None, limits=None):
             [(r["active_current_amp"], r["flow_nm3hr"]) for r in training_rows]
         )
         for r in [x for x in processed if x["active_blower"] == train]:
-            expected = predict_flow_nm3hr(model, r.get("active_current_amp"))
-            within_baseline_envelope = (
-                (r.get("bypass_op_pct") is None or r["bypass_op_pct"] < s["performance_bypass_max_pct"])
-                and (r.get("filter_dp_bar") is None or r["filter_dp_bar"] <= lim["filter_dp_max_bar"])
-            )
+            within_baseline_envelope = usable(r) and bool(training_rows) and datetime.fromisoformat(r["timestamp"]).timestamp() > training_end and min(x["pressure_ratio"] for x in training_rows) <= r["pressure_ratio"] <= max(x["pressure_ratio"] for x in training_rows)
+            expected = predict_flow_nm3hr(model, r.get("active_current_amp")) if within_baseline_envelope else None
             residual = ((r["flow_nm3hr"] - expected) / expected * 100.0
                         if within_baseline_envelope and expected is not None and expected > 0 else None)
             r["expected_flow_nm3hr"] = expected
             r["flow_residual_pct"] = residual
             r["performance_degradation_pct"] = None if residual is None else max(0.0, -residual)
             r["performance_model_training_rows"] = 0 if model is None else model["training_rows"]
-            r["performance_model_applicable"] = bool(within_baseline_envelope and model is not None)
+            r["performance_model_applicable"] = bool(within_baseline_envelope and expected is not None)
             if residual is not None and residual <= -lim.get("performance_alarm_pct", 10.0):
                 r["alerts"].append(_alert("alarm",
                     f"Measured flow is {abs(residual):.1f}% below the baseline regression expectation.",
-                    "healthy-baseline linear regression"))
+                    "assumed-healthy reference regression"))
             elif residual is not None and residual <= -lim.get("performance_watch_pct", 5.0):
                 r["alerts"].append(_alert("advisory",
                     f"Measured flow is {abs(residual):.1f}% below the baseline regression expectation.",
-                    "healthy-baseline linear regression"))
+                    "assumed-healthy reference regression"))
             r["status"] = roll_up_status(r["alerts"])
 
     # Trend-only bearing/vibration projections. These are not remaining-life estimates.
-    for i, r in enumerate(processed):
+    histories = {}
+    for r in processed:
         for metric, output in (("max_bearing_temp_c", "bearing_trend_c_per_day"),
                                ("max_vibration_mms", "vibration_trend_mms_per_day")):
-            hist = []
-            for x in processed[max(0, i-6):i+1]:
-                v = x.get(metric)
-                if v is not None and math.isfinite(float(v)):
-                    hist.append((datetime.fromisoformat(x["timestamp"]), float(v)))
-            slope = _trend_per_day(hist)
+            key = (r["active_blower"], metric)
+            now = datetime.fromisoformat(r["timestamp"])
+            hist = [(t,v) for t,v in histories.get(key,[]) if (now-t).total_seconds() <= 7*86400]
+            value = r.get(metric)
+            valid = value is not None and math.isfinite(value)
+            if valid:
+                hist.append((now,value))
+            hist = hist[-7:]
+            histories[key] = hist
+            slope = _trend_per_day(hist) if valid else None
             r[output] = slope
         bearing = r.get("max_bearing_temp_c")
         slope = r.get("bearing_trend_c_per_day")

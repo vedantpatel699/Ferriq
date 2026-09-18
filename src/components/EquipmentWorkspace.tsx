@@ -19,7 +19,6 @@ import { FerriqTrendChart, type ChartSeries } from "./FerriqTrendChart";
 import { TrendRangeSelector } from "./TrendRangeSelector";
 import { CalculationBasisDialog } from "./CalculationBasisDialog";
 import { ReferenceManual } from "./ReferenceManual";
-import { BlowerManual } from "./BlowerManual";
 import { BlowerOverview } from "./BlowerOverview";
 import { BlowerHealthPanel } from "./BlowerHealthPanel";
 import { BlowerConfiguration } from "./BlowerConfiguration";
@@ -189,40 +188,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
         ]
       : []),
   ];
-  const manual =
-    id === "air-blower" ? (
-      <BlowerManual />
-    ) : (
-      <>
-        <h2>Current status & reference configuration</h2>
-        <p>
-          Current state: {latest.state.toUpperCase()}. Advisory maps to WATCH;
-          alarm/trip maps to INVESTIGATE.
-        </p>
-        <DataTable
-          rows={metrics.flatMap((m) => [
-            ...(m.limits ?? []).map((l) => ({
-              metric: m.label,
-              reference: l.name,
-              value: l.value,
-              unit: m.unit,
-            })),
-            ...(m.reference === undefined
-              ? []
-              : [
-                  {
-                    metric: m.label,
-                    reference: m.referenceLabel,
-                    value: m.reference,
-                    unit: m.unit,
-                  },
-                ]),
-          ])}
-          caption="Active metric references"
-        />
-        <ReferenceManual id={id} />
-      </>
-    );
+  const manual = <ReferenceManual id={id} />;
   const local =
     resource.version !== (published.find((p) => p.key === id)?.version ?? 1);
   async function action(fn: () => Promise<void>) {

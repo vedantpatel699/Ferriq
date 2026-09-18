@@ -100,10 +100,12 @@ export function motorPowerFactorFromCurrent(currentA: number): number {
   const pts = MOTOR_POWER_FACTOR_POINTS;
   if (!Number.isFinite(currentA)) return NaN;
   if (currentA <= pts[0].currentA) return pts[0].powerFactor;
-  if (currentA >= pts[pts.length - 1].currentA) return pts[pts.length - 1].powerFactor;
+  if (currentA >= pts[pts.length - 1].currentA)
+    return pts[pts.length - 1].powerFactor;
   for (let i = 1; i < pts.length; i++) {
     if (currentA <= pts[i].currentA) {
-      const lo = pts[i - 1], hi = pts[i];
+      const lo = pts[i - 1],
+        hi = pts[i];
       const frac = (currentA - lo.currentA) / (hi.currentA - lo.currentA);
       return lo.powerFactor + frac * (hi.powerFactor - lo.powerFactor);
     }
@@ -116,8 +118,12 @@ export function thrustOperatingDeviationPct(
   pressureRatio: number,
   bypassPct: number,
 ): number {
-  const designPr = BLOWER_DESIGN_REFERENCE.dischargePressureKpaa / BLOWER_DESIGN_REFERENCE.inletPressureKpaa;
-  const dq = (flowNm3hr - BLOWER_DESIGN_REFERENCE.designFlowNm3hr) / BLOWER_DESIGN_REFERENCE.designFlowNm3hr;
+  const designPr =
+    BLOWER_DESIGN_REFERENCE.dischargePressureKpaa /
+    BLOWER_DESIGN_REFERENCE.inletPressureKpaa;
+  const dq =
+    (flowNm3hr - BLOWER_DESIGN_REFERENCE.designFlowNm3hr) /
+    BLOWER_DESIGN_REFERENCE.designFlowNm3hr;
   const dpr = (pressureRatio - designPr) / designPr;
   const recycle = Math.max(0, bypassPct) / 100;
   return Math.sqrt((dq * dq + dpr * dpr + recycle * recycle) / 3) * 100;
@@ -157,7 +163,14 @@ export function isentropicEfficiency(
   p2Bar: number,
   k: number,
 ): number {
-  if (!(p2Bar > p1Bar && t2K > t1K)) return NaN;
+  if (
+    ![p1Bar, p2Bar, t1K, t2K, k].every(Number.isFinite) ||
+    p1Bar <= 0 ||
+    t1K <= 0 ||
+    k <= 1 ||
+    !(p2Bar > p1Bar && t2K > t1K)
+  )
+    return NaN;
   const exponent = (k - 1) / k;
   return (t1K * (Math.pow(p2Bar / p1Bar, exponent) - 1)) / (t2K - t1K);
 }
@@ -173,7 +186,14 @@ export function polytropicEfficiency(
   p2Bar: number,
   k: number,
 ): number {
-  if (!(p2Bar > p1Bar && t2K > t1K)) return NaN;
+  if (
+    ![p1Bar, p2Bar, t1K, t2K, k].every(Number.isFinite) ||
+    p1Bar <= 0 ||
+    t1K <= 0 ||
+    k <= 1 ||
+    !(p2Bar > p1Bar && t2K > t1K)
+  )
+    return NaN;
   const sigma = Math.log(t2K / t1K) / Math.log(p2Bar / p1Bar);
   if (sigma <= 0) return NaN;
   return (k - 1) / k / sigma;
@@ -206,7 +226,7 @@ export interface AlertInputs {
   thrustProxyPct: number;
 }
 
-const ISO = "ISO 10816-3, Group 1";
+const ISO = "configured vibration threshold";
 
 export function buildAlerts(
   inputs: AlertInputs,
@@ -220,7 +240,6 @@ export function buildAlerts(
     bypassOpPct: byp,
     dischargePressureKpag: p2,
     controllerSpKpag: sp,
-    thrustProxyPct,
   } = inputs;
   const alerts: EngineeringAlert[] = [];
 
@@ -228,19 +247,19 @@ export function buildAlerts(
     if (v >= limits.vibTripMms)
       alerts.push({
         severity: "trip",
-        message: `Vibration ${v.toFixed(2)} mm/s exceeds trip ${limits.vibTripMms} mm/s (Zone D).`,
+        message: `Vibration ${v.toFixed(2)} mm/s exceeds trip ${limits.vibTripMms} mm/s.`,
         source: ISO,
       });
     else if (v >= limits.vibAlarmMms)
       alerts.push({
         severity: "alarm",
-        message: `Vibration ${v.toFixed(2)} mm/s exceeds alarm ${limits.vibAlarmMms} mm/s (Zone C/D).`,
+        message: `Vibration ${v.toFixed(2)} mm/s exceeds alarm ${limits.vibAlarmMms} mm/s.`,
         source: ISO,
       });
     else if (v >= limits.vibAdvisoryMms)
       alerts.push({
         severity: "advisory",
-        message: `Vibration ${v.toFixed(2)} mm/s above advisory ${limits.vibAdvisoryMms} mm/s (Zone B/C).`,
+        message: `Vibration ${v.toFixed(2)} mm/s above advisory ${limits.vibAdvisoryMms} mm/s.`,
         source: ISO,
       });
   }
@@ -290,20 +309,7 @@ export function buildAlerts(
       source: "control narrative",
     });
   }
-  if (!isNaN(thrustProxyPct)) {
-    if (thrustProxyPct >= limits.thrustProxyAlarmPct)
-      alerts.push({
-        severity: "alarm",
-        message: `Thrust operating-deviation proxy ${thrustProxyPct.toFixed(1)}% exceeds the POC investigate threshold ${limits.thrustProxyAlarmPct}%.`,
-        source: "POC operating-envelope heuristic; not a direct thrust measurement",
-      });
-    else if (thrustProxyPct >= limits.thrustProxyWatchPct)
-      alerts.push({
-        severity: "advisory",
-        message: `Thrust operating-deviation proxy ${thrustProxyPct.toFixed(1)}% exceeds the POC watch threshold ${limits.thrustProxyWatchPct}%.`,
-        source: "POC operating-envelope heuristic; not a direct thrust measurement",
-      });
-  }
+  // Operating deviation is informational, not a thrust-condition alarm.
   return alerts;
 }
 
@@ -354,6 +360,8 @@ export interface BlowerRowResult {
 }
 
 export interface BlowerRowSuccess {
+  sharedFlowAmbiguous: boolean;
+  totalPowerKw: number;
   drop: false;
   timestamp: string;
   activeBlower: "A" | "B";
@@ -413,10 +421,13 @@ export function processBlowerRow(
   const bearingTemp = isA ? row.bearingTempA : row.bearingTempB;
 
   if (
-    isNaN(suctionKpaa) ||
-    isNaN(dischargeKpag) ||
-    isNaN(row.totalFlowNm3hr) ||
-    isNaN(current)
+    ![suctionKpaa, dischargeKpag, row.totalFlowNm3hr, current].every(
+      Number.isFinite,
+    ) ||
+    suctionKpaa <= 0 ||
+    dischargeKpag / 100 + settings.atmPressureBar <= 0 ||
+    row.totalFlowNm3hr < 0 ||
+    current < 0
   ) {
     return {
       drop: true,
@@ -437,8 +448,10 @@ export function processBlowerRow(
     t1Source = "unavailable";
   }
 
-  const vibsClean = vibration.filter((x) => !isNaN(x));
-  const brgsClean = bearingTemp.filter((x) => !isNaN(x));
+  const vibsClean = vibration.filter((x) => Number.isFinite(x) && x >= 0);
+  const brgsClean = bearingTemp.filter(
+    (x) => Number.isFinite(x) && x > -273.15,
+  );
   const maxVibrationMms = vibsClean.length ? Math.max(...vibsClean) : NaN;
   const maxBearingTempC = brgsClean.length ? Math.max(...brgsClean) : NaN;
 
@@ -458,12 +471,34 @@ export function processBlowerRow(
   );
   const dpBar = p2BarAbs - p1BarAbs;
   const pressureRatio = p1BarAbs > 0 ? p2BarAbs / p1BarAbs : NaN;
-  const fluidPwr = fluidPowerKw(row.totalFlowNm3hr, dpBar);
-  const thrustProxyPct = thrustOperatingDeviationPct(
-    row.totalFlowNm3hr,
-    pressureRatio,
-    bypassOp,
-  );
+  const sharedFlowAmbiguous =
+    !Number.isFinite(isA ? row.motorCurrentB : row.motorCurrentA) ||
+    (row.motorCurrentA > settings.activeCurrentMinA &&
+      row.motorCurrentB > settings.activeCurrentMinA);
+  const totalPowerKw = [row.motorCurrentA, row.motorCurrentB].every(
+    Number.isFinite,
+  )
+    ? [row.motorCurrentA, row.motorCurrentB].reduce(
+        (sum, amps) =>
+          sum +
+          (amps > settings.activeCurrentMinA
+            ? shaftPowerKw(
+                settings.motorVoltageV,
+                amps,
+                settings.powerFactorMode === "datasheet"
+                  ? motorPowerFactorFromCurrent(amps)
+                  : settings.powerFactor,
+              )
+            : 0),
+        0,
+      )
+    : NaN;
+  const fluidPwr = sharedFlowAmbiguous
+    ? NaN
+    : fluidPowerKw(row.totalFlowNm3hr, dpBar);
+  const thrustProxyPct = sharedFlowAmbiguous
+    ? NaN
+    : thrustOperatingDeviationPct(row.totalFlowNm3hr, pressureRatio, bypassOp);
   const efficiencyFluidPct = powerKw > 0 ? (fluidPwr / powerKw) * 100 : NaN;
 
   const t1K = t1c === null ? NaN : t1c + 273.15;
@@ -509,6 +544,8 @@ export function processBlowerRow(
     drop: false,
     timestamp: row.timestamp,
     activeBlower: active,
+    sharedFlowAmbiguous,
+    totalPowerKw,
     powerKw,
     powerFactorUsed,
     powerFactorSource:
@@ -538,11 +575,12 @@ export function processBlowerRow(
   };
 }
 
-
 export interface SimpleFlowModel {
   intercept: number;
   slope: number;
   trainingRows: number;
+  minCurrent: number;
+  maxCurrent: number;
 }
 
 /** Small, transparent baseline regression used for performance-degradation
@@ -568,6 +606,8 @@ export function fitSimpleFlowModel(
     intercept: my - slope * mx,
     slope,
     trainingRows: clean.length,
+    minCurrent: Math.min(...clean.map((p) => p.currentA)),
+    maxCurrent: Math.max(...clean.map((p) => p.currentA)),
   };
 }
 
@@ -575,6 +615,12 @@ export function predictFlowNm3hr(
   model: SimpleFlowModel | null,
   currentA: number,
 ): number | null {
-  if (!model || !Number.isFinite(currentA)) return null;
+  if (
+    !model ||
+    !Number.isFinite(currentA) ||
+    currentA < model.minCurrent ||
+    currentA > model.maxCurrent
+  )
+    return null;
   return model.intercept + model.slope * currentA;
 }

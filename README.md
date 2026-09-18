@@ -1,5 +1,7 @@
 # Ferriq
 
+See the [engineering manual](ENGINEERING-MANUAL.md) for model inputs, calculations and trends, and the [requirements review](ENGINEERING-REVIEW.md) for coverage and remaining gaps.
+
 Current remediation: see [REMEDIATION.md](REMEDIATION.md), [QUALITY.md](QUALITY.md), [DATABASE.md](DATABASE.md), and [DEMO.md](DEMO.md). Data storage is static GitHub Pages JSON plus browser-local IndexedDB. No external backend is required.
 
 Industrial engineering surveillance for process equipment - proactive
@@ -16,15 +18,15 @@ independently testable:
 ```
 src/
   engineering/        pure, framework-free calculation modules
-    blower/           Air Blower — ASME PTC 10 polytropic/isentropic efficiency,
-                       ISO 10816-3 vibration tiering
+    blower/           Air Blower - ideal-gas efficiency estimates,
+                       configurable vibration thresholds
     heater/           Fired Heater — 17-component fuel-gas combustion model,
-                       direct/PTC4-indirect efficiency
+                       heat-balance and simplified loss efficiency
     exchanger/        Shell & Tube Exchanger — TEMA LMTD correction factor,
                        fouling resistance
     membrane/         Membrane Analyzer — online/lab H2 recovery
-    furnace/          Furnace Skin TI Predictor — XGBoost quantile-tree
-                       forecasting, walks the trained model in public/data/
+    furnace/          Furnace Skin TI Predictor - timestamp-based trend projections
+                       and separate trained-horizon XGBoost predictions
     crudeToProfit/    Crude to Profit — full refinery yield/economics model
     types.ts          shared engineering types (EquipmentState, MetricValue,
                        Condition, TimeRange, ...)

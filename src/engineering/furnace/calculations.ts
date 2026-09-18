@@ -1,3 +1,4 @@
+import { DateTime } from "luxon";
 // Furnace Skin TI Predictor engineering module — ported verbatim from the
 // live predictors/furnace-skin-temp.html engine. This is a genuinely
 // different system from backend-furnace-skin-temp.md's simple
@@ -123,141 +124,102 @@ export interface TcForecastResult {
   tcVelocityCPerDay: number;
   slopePerDay: number;
   forecast: ForecastStep[];
+  modelPrediction: { hours: number; p10: number; p50: number; p90: number };
+  mean7d: number;
 }
 
-/** Forecast one thermocouple with a hybrid trend + quantile-residual
- *  approach: the long-horizon central trajectory is a linear regression on
- *  the last ~30 days of history (tree models can't extrapolate beyond
- *  their training range), decorated by the XGBoost P10/P50/P90 spread
- *  (walked recursively, used only for the uncertainty band width — never
- *  fabricated). Includes the live engine's early-exit once the recursive
- *  spread converges for 14 consecutive steps. */
+/** Linear trend projection and a separate, single trained-horizon prediction.
+ * Missing observations retain their timestamps; tree quantiles are never
+ * recentered on the trend or recursively extended beyond their trained horizon. */
 export function forecastThermocouple(
   model: ThermocoupleModel,
   currentState: Record<string, number>,
   history: number[],
   cadenceHours: number,
   tcAlias: string,
+  epochs?: number[],
+  modelHorizonHours = 24,
 ): TcForecastResult | null {
-  if (!model?.p50) return null;
-  const series = history.filter(
-    (v) => v !== null && v !== undefined && !Number.isNaN(v),
+  if (
+    !model?.p50 ||
+    !Number.isFinite(cadenceHours) ||
+    cadenceHours <= 0 ||
+    !Number.isFinite(modelHorizonHours) ||
+    modelHorizonHours <= 0
+  )
+    return null;
+  const all = history.map((value, i) => ({
+    value,
+    time: epochs?.[i] ?? i * cadenceHours * 3600000,
+  }));
+  const last = all.at(-1);
+  if (
+    !last ||
+    !Number.isFinite(last.time) ||
+    !Number.isFinite(last.value) ||
+    last.value == null
+  )
+    return null;
+  const points = all.filter(
+    (p) =>
+      typeof p.value === "number" &&
+      Number.isFinite(p.value) &&
+      Number.isFinite(p.time) &&
+      p.time <= last.time &&
+      p.time >= last.time - 30 * 86400000,
   );
-  if (series.length < 2) return null;
-  const tcNow = series[series.length - 1];
-
-  const stepsN = Math.max(7, Math.round((30 * 24) / cadenceHours));
-  const recent = series.slice(-stepsN);
-  const nR = recent.length;
-  const xs = recent.map((_, i) => i);
-  const xMean = xs.reduce((a, b) => a + b, 0) / nR;
-  const yMean = recent.reduce((a, b) => a + b, 0) / nR;
-  let num = 0,
-    den = 0;
-  for (let i = 0; i < nR; i++) {
-    num += (xs[i] - xMean) * (recent[i] - yMean);
-    den += (xs[i] - xMean) ** 2;
-  }
-  const slopePerStep = den > 0 ? num / den : 0;
-  const slopePerDay = slopePerStep * (24 / cadenceHours);
-  const oneWeekAgo =
-    series[
-      Math.max(0, series.length - 1 - Math.round((7 * 24) / cadenceHours))
-    ];
-  const tcVelocity0 = (tcNow - oneWeekAgo) / 7.0;
-
-  const tc7dMean0 = recent.reduce((a, b) => a + b, 0) / recent.length;
-  let cur50 = tcNow,
-    cur10 = tcNow,
-    cur90 = tcNow;
-  let mean50 = tc7dMean0,
-    vel50 = tcVelocity0;
-  let mean10 = tc7dMean0,
-    vel10 = tcVelocity0;
-  let mean90 = tc7dMean0,
-    vel90 = tcVelocity0;
-  let convergedSteps = 0,
-    cvSpreadHi: number | null = null,
-    cvSpreadLo: number | null = null;
-
-  const forecast: ForecastStep[] = [];
-  for (let d = 1; d <= INTERNAL_HORIZON_DAYS; d++) {
-    const central = tcNow + slopePerDay * d;
-    let spreadHi: number, spreadLo: number;
-
-    if (convergedSteps >= 14 && cvSpreadHi !== null && cvSpreadLo !== null) {
-      spreadHi = cvSpreadHi;
-      spreadLo = cvSpreadLo;
-    } else {
-      const x50 = buildFeatureVector(
-        model.feature_names,
-        currentState,
-        cur50,
-        mean50,
-        vel50,
-      );
-      const x10 = buildFeatureVector(
-        model.feature_names,
-        currentState,
-        cur10,
-        mean10,
-        vel10,
-      );
-      const x90 = buildFeatureVector(
-        model.feature_names,
-        currentState,
-        cur90,
-        mean90,
-        vel90,
-      );
-      const xb50 = predictTreeModel(model.p50, x50);
-      const xb10 = predictTreeModel(model.p10, x10);
-      const xb90 = predictTreeModel(model.p90, x90);
-      const lo = Math.min(xb10, xb50);
-      const hi = Math.max(xb90, xb50);
-      spreadHi = Math.max(0, hi - xb50);
-      spreadLo = Math.max(0, xb50 - lo);
-
-      if (Math.abs(xb50 - cur50) < 0.05) {
-        convergedSteps += 1;
-        cvSpreadHi = spreadHi;
-        cvSpreadLo = spreadLo;
-      } else {
-        convergedSteps = 0;
-        cvSpreadHi = null;
-        cvSpreadLo = null;
-      }
-
-      vel50 = xb50 - cur50;
-      mean50 = 0.7 * mean50 + 0.3 * xb50;
-      cur50 = xb50;
-      vel10 = lo - cur10;
-      mean10 = 0.7 * mean10 + 0.3 * lo;
-      cur10 = lo;
-      vel90 = hi - cur90;
-      mean90 = 0.7 * mean90 + 0.3 * hi;
-      cur90 = hi;
-    }
-
-    forecast.push({
-      day: d,
-      value: central,
-      p10: central - spreadLo,
-      p50: central,
-      p90: central + spreadHi,
-    });
-  }
-
+  if (points.length < 2) return null;
+  const slope = (ps: typeof points) => {
+    const xs = ps.map((p) => (p.time - last.time) / 86400000);
+    const mx = xs.reduce((a, b) => a + b, 0) / ps.length;
+    const my = ps.reduce((a, p) => a + p.value, 0) / ps.length;
+    const den = xs.reduce((a, x) => a + (x - mx) ** 2, 0);
+    return den > 0
+      ? xs.reduce((a, x, i) => a + (x - mx) * (ps[i].value - my), 0) / den
+      : null;
+  };
+  const slopePerDay = slope(points);
+  if (slopePerDay === null) return null;
+  const week = points.filter((p) => p.time >= last.time - 7 * 86400000);
+  const mean7d = week.reduce((a, p) => a + p.value, 0) / week.length;
+  const velocity = slope(week) ?? slopePerDay;
+  const x = buildFeatureVector(
+    model.feature_names,
+    currentState,
+    last.value,
+    mean7d,
+    velocity,
+  );
+  const median = predictTreeModel(model.p50, x);
+  const low = predictTreeModel(model.p10, x),
+    high = predictTreeModel(model.p90, x);
+  if (![median, low, high].every(Number.isFinite)) return null;
+  const forecast = Array.from({ length: INTERNAL_HORIZON_DAYS }, (_, i) => {
+    const day = i + 1,
+      value = last.value + slopePerDay * day;
+    // Coincident endpoints are placeholders for legacy scenario consumers, not a confidence band.
+    return { day, value, p10: value, p50: value, p90: value };
+  });
   return {
     tcAlias,
-    tcNow,
-    tcVelocityCPerDay: tcVelocity0,
+    tcNow: last.value,
+    tcVelocityCPerDay: velocity,
     slopePerDay,
     forecast,
+    mean7d,
+    modelPrediction: {
+      hours: modelHorizonHours,
+      p10: Math.min(low, median, high),
+      p50: median,
+      p90: Math.max(low, median, high),
+    },
   };
 }
 
 export interface PassForecastResult {
+  observationEpoch: number;
+  dataAgeHours: number;
+  missingThermocouples: string[];
   skinNowC: number;
   skin7dMeanC: number;
   skinVelocityCPerDay: number;
@@ -280,20 +242,48 @@ export function forecastPass(
   currentState: Record<string, number>,
   historyByAlias: Record<string, number[]>,
   alarmThresholdC: number,
+  modelHorizonHours = 24,
 ): PassForecastResult | null {
   const tcAliases = Object.keys(furnace.tc_models || {}).filter(
     (a) => furnace.tc_models[a].pass === passNum,
   );
   if (tcAliases.length === 0) return null;
 
+  const observationIndex = furnace.history.findLastIndex((row) =>
+    tcAliases.some(
+      (a) => typeof row[a] === "number" && Number.isFinite(row[a]),
+    ),
+  );
+  const alignedHistory = furnace.history.slice(0, observationIndex + 1);
+  const epoch = (t: unknown) =>
+    DateTime.fromISO(String(t).replace(" ", "T"), {
+      zone: "America/Edmonton",
+    }).toMillis();
+  const observationEpoch = alignedHistory.length
+    ? epoch(alignedHistory.at(-1)!.t)
+    : 0;
+  if (furnace.history.length && !alignedHistory.length) return null;
+  const state = alignedHistory.length
+    ? (Object.fromEntries(
+        Object.entries(alignedHistory.at(-1)!).filter(
+          ([, v]) => typeof v === "number" && Number.isFinite(v),
+        ),
+      ) as Record<string, number>)
+    : currentState;
   const tcResults = tcAliases
     .map((a) =>
       forecastThermocouple(
         furnace.tc_models[a],
-        currentState,
-        historyByAlias[a] || [],
+        state,
+        alignedHistory.length
+          ? alignedHistory.map((r) => r[a] as number)
+          : historyByAlias[a] || [],
         furnace.cadence_hours,
         a,
+        alignedHistory.length
+          ? alignedHistory.map((r) => epoch(r.t))
+          : undefined,
+        modelHorizonHours,
       ),
     )
     .filter((r): r is TcForecastResult => r !== null);
@@ -331,59 +321,31 @@ export function forecastPass(
   const skinVelocity =
     tcResults.reduce((a, r) => a + r.tcVelocityCPerDay, 0) / tcResults.length;
   const skin7dMean =
-    tcResults.reduce((a, r) => {
-      const series = (historyByAlias[r.tcAlias] || []).filter(
-        (v) => v !== null && v !== undefined,
-      );
-      const recent = series.slice(
-        -Math.max(1, Math.round((7 * 24) / furnace.cadence_hours)),
-      );
-      return a + recent.reduce((p, q) => p + q, 0) / Math.max(1, recent.length);
-    }, 0) / tcResults.length;
+    tcResults.reduce((sum, r) => sum + r.mean7d, 0) / tcResults.length;
 
-  let hoursToAlarm: number | null = null;
-  {
-    let prevVal = skinNow,
-      prevH = 0;
-    for (const f of forecast) {
-      const h = f.day * 24;
-      if (prevVal < alarmThresholdC && f.value >= alarmThresholdC) {
-        const frac = (alarmThresholdC - prevVal) / (f.value - prevVal);
-        hoursToAlarm = prevH + frac * (h - prevH);
-        break;
-      }
-      prevVal = f.value;
-      prevH = h;
-    }
-  }
+  const crossings = tcResults
+    .map((r) =>
+      r.tcNow >= alarmThresholdC
+        ? 0
+        : r.slopePerDay > 0
+          ? (24 * (alarmThresholdC - r.tcNow)) / r.slopePerDay
+          : Infinity,
+    )
+    .filter((h) => Number.isFinite(h) && h <= horizon * 24);
+  const hoursToAlarm = crossings.length ? Math.min(...crossings) : null;
 
-  let hoursToAlarmUpperBand: number | null = null;
-  {
-    let prevUB = skinNow,
-      prevHU = 0;
-    for (const f of forecast) {
-      const h = f.day * 24;
-      if (prevUB < alarmThresholdC && f.p90 >= alarmThresholdC) {
-        const frac = (alarmThresholdC - prevUB) / (f.p90 - prevUB);
-        hoursToAlarmUpperBand = prevHU + frac * (h - prevHU);
-        break;
-      }
-      prevUB = f.p90;
-      prevHU = h;
-    }
-  }
-
-  let extrapolatedDays: number | null = null;
-  if (hoursToAlarm === null) {
-    const last = forecast[forecast.length - 1];
-    const slopePerDay = (last.value - skinNow) / horizon;
-    if (slopePerDay > 0.001 && last.value < alarmThresholdC) {
-      const extra = (alarmThresholdC - last.value) / slopePerDay;
-      if (extra > 0 && isFinite(extra)) extrapolatedDays = horizon + extra;
-    }
-  }
+  // No pass-level calibrated interval is available for the long-range trend.
+  const hoursToAlarmUpperBand = null;
+  const extrapolatedDays = null;
 
   return {
+    observationEpoch,
+    dataAgeHours: furnace.history.length
+      ? (epoch(furnace.history.at(-1)!.t) - observationEpoch) / 3600000
+      : 0,
+    missingThermocouples: tcAliases.filter(
+      (a) => !tcResults.some((r) => r.tcAlias === a),
+    ),
     skinNowC: skinNow,
     skin7dMeanC: skin7dMean,
     skinVelocityCPerDay: skinVelocity,

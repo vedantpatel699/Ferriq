@@ -49,7 +49,15 @@ export function lmtdCorrectionF(
   R: number,
   N: number,
 ): number | null {
-  if (P >= 1.0 || P * R >= 1.0) return null;
+  if (
+    ![P, R, N].every(Number.isFinite) ||
+    P < 0 ||
+    R < 0 ||
+    !Number.isInteger(N) ||
+    P >= 1.0 ||
+    P * R >= 1.0
+  )
+    return null;
   N = Math.round(N);
   if (N <= 0) return null;
 
@@ -162,8 +170,18 @@ export function calcExchangerRow(
   } = r;
   if (
     [thIn, thOut, tcIn, tcOut, mh, cph, mc, cpc].some(
-      (x) => x === null || Number.isNaN(x),
+      (x) => typeof x !== "number" || !Number.isFinite(x),
     )
+  )
+    return out;
+
+  if (
+    [mh, mc, cph, cpc].some((x) => x <= 0) ||
+    [thIn, thOut, tcIn, tcOut].some((x) => x <= -273.15) ||
+    thIn < thOut ||
+    tcOut < tcIn ||
+    !Number.isFinite(cfg.areaM2) ||
+    cfg.areaM2 <= 0
   )
     return out;
 
@@ -189,6 +207,8 @@ export function calcExchangerRow(
   out.approachHotC = thIn - tcOut;
   out.approachColdC = thOut - tcIn;
 
+  if (cfg.designQMw > 0)
+    out.dutyDeviationPct = ((out.qAvgMw - cfg.designQMw) / cfg.designQMw) * 100;
   const dT1 = thIn - tcOut;
   const dT2 = thOut - tcIn;
   if (dT1 <= 0 || dT2 <= 0) {
@@ -232,7 +252,7 @@ export function buildExchangerAlerts(
     alerts.push({
       severity: "alarm",
       message:
-        "Temperature crossover detected (F-factor undefined). Check sensor labels and inlet/outlet swap.",
+        "Temperature crossover or correction factor outside its valid domain. Check temperatures and pass configuration.",
       source: "LMTD / F-factor",
     });
   }

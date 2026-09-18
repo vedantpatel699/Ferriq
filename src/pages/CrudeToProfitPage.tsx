@@ -1,3 +1,4 @@
+import { OpexConfiguration } from "../components/OpexConfiguration";
 import { BuildReport } from "../components/BuildReport";
 import { useMemo, useState } from "react";
 import { useResource, useWorkspace } from "../lib/WorkspaceContext";
@@ -84,16 +85,31 @@ export function CrudeToProfitPage() {
         {
           label: "Low",
           margin: result.economics.margin_low_mcad_yr,
+          afterOpex: result.economics.margin_after_opex_low_mcad_yr,
+          feed:
+            result.economics.crude_cost_low_cad_hr == null
+              ? undefined
+              : result.economics.crude_cost_low_cad_hr * annualFactor,
           sales: result.economics.revenue_low_cad_hr * annualFactor,
         },
         {
           label: "High",
           margin: result.economics.margin_high_mcad_yr,
+          afterOpex: result.economics.margin_after_opex_high_mcad_yr,
+          feed:
+            result.economics.crude_cost_high_cad_hr == null
+              ? undefined
+              : result.economics.crude_cost_high_cad_hr * annualFactor,
           sales: result.economics.revenue_high_cad_hr * annualFactor,
         },
         {
           label: "Live market",
           margin: result.economics.margin_market_mcad_yr,
+          afterOpex: result.economics.margin_after_opex_market_mcad_yr,
+          feed:
+            result.economics.crude_cost_market_cad_hr == null
+              ? undefined
+              : result.economics.crude_cost_market_cad_hr * annualFactor,
           sales:
             result.economics.revenue_market_cad_hr == null
               ? undefined
@@ -132,10 +148,10 @@ export function CrudeToProfitPage() {
               annualCases
                 .map(
                   (c) =>
-                    `${c.label}: annual gross margin ${formatNumber(c.margin, 2)}; annual sales revenue ${formatNumber(c.sales, 2)} million CAD/year`,
+                    `${c.label}: annual gross margin ${formatNumber(c.margin, 2)}; margin after configured OPEX ${formatNumber(c.afterOpex, 2)}; annual sales revenue ${formatNumber(c.sales, 2)} million CAD/year`,
                 )
                 .join(". ") +
-              ". Workbook basis: 24 hours/day × 330 operating days/year. Operating and capital costs are excluded."
+              ". Workbook basis: 24 hours/day × 330 operating days/year. Configured operating costs are deducted once after gross margin. Capital, financing, depreciation, taxes and unconfigured costs are excluded."
             }
             period="Current draft scenario"
             quality={[
@@ -158,9 +174,10 @@ export function CrudeToProfitPage() {
       )}
 
       <p>
-        Refinery yield and gross margin estimate. The saved scenario loads
-        automatically. Expand Adjust scenario to explore alternatives, then save
-        to retain changes. Prices are CAD/m³ and flows are m³/h.
+        Refinery yield, gross margin and margin after configured OPEX. The saved
+        scenario loads automatically. Expand Adjust scenario to explore
+        alternatives, then save to retain changes. Prices are CAD/m³ and flows
+        are m³/h.
       </p>
       <div className="page-tabs" role="group" aria-label="Economics views">
         {["Overview", "Price snapshot", "Engineering manual"].map((t) => (
@@ -256,6 +273,12 @@ export function CrudeToProfitPage() {
               ))}
             </div>
           </details>
+          <OpexConfiguration
+            value={draft.config.opex}
+            onChange={(opex) =>
+              setDraft((d) => ({ ...d, config: { ...d.config, opex } }))
+            }
+          />
           {result && (
             <>
               {draft.config.lpg_fuel_gas_recovered > 0 && (
@@ -291,12 +314,18 @@ export function CrudeToProfitPage() {
                 {HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR} hours/year).
               </p>
               <div className="metrics-grid">
-                {annualCases.map(({ label, margin, sales }) => (
+                {annualCases.map(({ label, margin, sales, afterOpex }) => (
                   <article className="metric-card" key={label}>
                     <h3>{label} case</h3>
-                    <p>Annual gross margin</p>
+                    <p>Margin after configured OPEX</p>
                     <p className="metric-value">
-                      {formatNumber(margin, 2)} <small>million CAD/year</small>
+                      {formatNumber(afterOpex, 2)}{" "}
+                      <small>million CAD/year</small>
+                    </p>
+                    <p>
+                      Annual gross margin:{" "}
+                      <strong>{formatNumber(margin, 2)}</strong> million
+                      CAD/year
                     </p>
                     <p>
                       Annual sales revenue:{" "}
@@ -314,10 +343,40 @@ export function CrudeToProfitPage() {
                 The Excel annual figure (H54/H55) is gross margin: product sales
                 revenue less crude feed cost, multiplied by 24 × 330 ÷
                 1,000,000. Annual sales revenue above is before crude cost.
-                Operating, capital and other costs are not deducted; these are
-                not net-profit estimates. Low/High retain the client’s paired
-                price scenarios.
+                Configured OPEX is deducted separately from gross margin. This
+                is a partial operating margin, not net profit: unconfigured
+                expenses, depreciation, financing, tax and capital expenditure
+                are excluded. Low/High retain the client’s paired price
+                scenarios.
               </p>
+              <DataTable
+                caption="Annual profit reconciliation (million CAD/year)"
+                rows={annualCases.map((c) => ({
+                  case: c.label,
+                  sales: c.sales,
+                  crudePurchases: c.feed,
+                  grossMargin: c.margin,
+                  configuredOpex:
+                    result.economics.operating_costs.annualCad / 1e6,
+                  marginAfterOpex: c.afterOpex,
+                }))}
+              />
+              <DataTable
+                caption="Configured operating costs (CAD)"
+                rows={result.economics.operating_costs.items.map((item) => ({
+                  category: item.category,
+                  annualCad: item.annualCad,
+                  cadPerOperatingHour: item.cadPerOperatingHour,
+                }))}
+              />
+              {result.economics.operating_costs.items.some(
+                (item) => item.annualCad === 0,
+              ) && (
+                <p role="status">
+                  Zero-cost categories are unconfigured or explicitly zero. They
+                  do not establish zero actual expense.
+                </p>
+              )}
               <DataTable
                 rows={PRODUCTS.map((p) => ({
                   product: p.replaceAll("_", " "),
@@ -472,12 +531,12 @@ export function CrudeToProfitPage() {
       {tab === "Engineering manual" && (
         <>
           <p>
-            Nine independent routing combinations are available from the
-            residue and gas-oil unit choices. Current selected units:{" "}
+            Nine independent routing combinations are available from the residue
+            and gas-oil unit choices. Current selected units:{" "}
             {RESIDUE_UNIT_LABELS[draft.residueUnit]} and{" "}
             {GAS_OIL_UNIT_LABELS[draft.gasOilUnit]}. Live prices are refreshed
-            once daily during publication, with dated source observations
-            shown on the Price snapshot tab.
+            once daily during publication, with dated source observations shown
+            on the Price snapshot tab.
           </p>
           <ReferenceManual id="crude-to-profit" />
         </>

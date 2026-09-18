@@ -1,3 +1,4 @@
+import { operatingCosts } from "../engineering/crudeToProfit/opex";
 import { z } from "zod";
 import {
   timestamp,
@@ -95,7 +96,10 @@ export function validateResource(key: string, input: unknown): unknown {
       .strict()
       .parse(input);
     if (key === "air-blower") {
-      const defaults = seedEquipment("air-blower").config as Record<string, unknown>;
+      const defaults = seedEquipment("air-blower").config as Record<
+        string,
+        unknown
+      >;
       const current = v.config as Record<string, unknown>;
       current.settings = {
         ...(defaults.settings as Record<string, unknown>),
@@ -189,6 +193,10 @@ export function validateResource(key: string, input: unknown): unknown {
           checkNumbers(n, path + "." + k);
     };
     checkNumbers(v.config, "Configuration");
+    operatingCosts(
+      v.config.opex,
+      Object.values(v.flows).reduce((a, b) => a + b, 0),
+    );
     if (Number(v.config.lpg_fuel_gas_recovered) > 1)
       throw Error("LPG recovery must be between 0 and 1.");
     if (
@@ -285,6 +293,11 @@ export function validateResource(key: string, input: unknown): unknown {
       for (const row of entry.history)
         if (!Number.isFinite(timestamp(row.t)))
           throw Error("Each model history row needs a valid timestamp.");
+      const epochs = entry.history.map((row) => timestamp(row.t));
+      if (epochs.some((t, i) => i > 0 && t <= epochs[i - 1]))
+        throw Error(
+          "Predictor history must have unique timestamps in chronological order.",
+        );
       if (!Object.keys(entry.tc_models).length)
         throw Error("Model needs thermocouples.");
       for (let p = 1; p <= entry.passes; p++)

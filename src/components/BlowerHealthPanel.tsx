@@ -90,7 +90,7 @@ export function BlowerHealthPanel({ latest }: { latest: Reading }) {
           </strong>
         </span>
         <span>
-          Thrust proxy{" "}
+          Operating deviation{" "}
           <strong>
             {thrust === null ? "N/A" : `${formatNumber(thrust, 1)}%`}
           </strong>

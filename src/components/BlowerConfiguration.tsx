@@ -48,7 +48,6 @@ export function BlowerConfiguration({
           { parameter: "Bypass opening maximum", value: limits.bypassOpenMaxPct, unit: "%", application: "High recycle / bypass advisory" },
           { parameter: "Performance WATCH threshold", value: limits.performanceWatchPct, unit: "%", application: "Measured flow shortfall versus baseline" },
           { parameter: "Performance INVESTIGATE threshold", value: limits.performanceAlarmPct, unit: "%", application: "Measured flow shortfall versus baseline" },
-          { parameter: "Thrust-proxy WATCH / INVESTIGATE", value: `${limits.thrustProxyWatchPct} / ${limits.thrustProxyAlarmPct}`, unit: "%", application: "POC operating-deviation screening only" },
         ]}
       />
       <DataTable

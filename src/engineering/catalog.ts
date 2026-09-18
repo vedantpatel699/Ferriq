@@ -304,8 +304,7 @@ export function seedEquipment(id: EquipmentId): EquipmentData {
       ),
       feedH2OnlinePct: null,
     }));
-  else if (id === "air-blower")
-    rows = BLOWER_DEMO_DATA as unknown as Row[];
+  else if (id === "air-blower") rows = BLOWER_DEMO_DATA as unknown as Row[];
   else rows = reference[id].rows as unknown as Row[];
   const config =
     id === "air-blower"
@@ -325,11 +324,14 @@ export function seedEquipment(id: EquipmentId): EquipmentData {
   };
 }
 export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
-  const rows = data.rows;
+  const rows = [...data.rows].sort(
+    (a, b) => timestamp(a.timestamp) - timestamp(b.timestamp),
+  );
   let lastT1: number | null = null,
     lastT1At = 0;
   const synth =
     id === "membrane-analyzer" &&
+    /^(Bundled reference dataset|POC simulated)/.test(data.source) &&
     !rows.some(
       (r) => r.feedH2OnlinePct !== null && r.feedH2OnlinePct !== undefined,
     )
@@ -375,6 +377,10 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
       } else {
         values = { ...values, ...result };
         alerts = result.alerts;
+        if (result.sharedFlowAmbiguous)
+          quality.push(
+            "Both trains may be running, or the other current is missing. Shared flow is not allocated to a train; flow efficiency and baseline comparison are unavailable.",
+          );
         if (result.t1Source === "measured" && result.t1CUsed !== null) {
           lastT1 = result.t1CUsed;
           lastT1At = epoch;
@@ -423,9 +429,17 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
           ...raw,
           feedH2OnlinePct: synth ? synth[i] : raw.feedH2OnlinePct,
         } as unknown as MembraneRowInput,
-        result = calcMembraneRow(r);
+        result = calcMembraneRow(r, cfg);
       values = { ...values, ...result };
       alerts = buildMembraneAlerts(result, cfg);
+      if (!synth && r.feedH2OnlinePct == null && r.feedH2LabPct != null)
+        quality.push(
+          "Recovery uses the row's lab feed composition; continuous feed composition is unavailable.",
+        );
+      if (result.recoveryOnlinePct !== null && result.recoveryOnlinePct > 100)
+        quality.push(
+          "Calculated hydrogen recovery exceeds 100%; check flow and composition measurements on a common basis.",
+        );
       if (synth)
         quality.push(
           "Recovery uses a synthetic feed-H₂ signal interpolated from periodic lab samples; it is not a continuous feed measurement.",
@@ -501,7 +515,13 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
     }
     const qualityEntries =
       id === "air-blower"
-        ? ["powerKw", "flowNm3hr", "dpBar", "maxVibrationMms", "maxBearingTempC"]
+        ? [
+            "powerKw",
+            "flowNm3hr",
+            "dpBar",
+            "maxVibrationMms",
+            "maxBearingTempC",
+          ]
             .map((key) => qualityByMetric[key])
             .filter(Boolean)
         : Object.values(qualityByMetric);
@@ -531,19 +551,26 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
     limits: BlowerLimits;
   };
   for (const train of ["A", "B"] as const) {
+    const usable = (r: Reading) =>
+      !r.values.sharedFlowAmbiguous &&
+      !r.values.drop &&
+      [
+        r.values.totalFlowNm3hr,
+        r.values[train === "A" ? "motorCurrentA" : "motorCurrentB"],
+        r.values.bypassOpPct,
+        r.values.filterDpBar,
+        r.values.pressureRatio,
+      ].every((v) => typeof v === "number" && Number.isFinite(v)) &&
+      Number(r.values.totalFlowNm3hr) > 0 &&
+      Number(r.values.bypassOpPct) >= 0 &&
+      Number(r.values.bypassOpPct) < cfg.settings.performanceBypassMaxPct &&
+      Number(r.values.filterDpBar) >= 0 &&
+      Number(r.values.filterDpBar) <= cfg.limits.filterDpMaxBar &&
+      !["flowNm3hr", "powerKw", "dpBar"].some((k) =>
+        ["Missing", "Stale"].includes(r.qualityByMetric?.[k]?.state ?? ""),
+      );
     const candidates = calculated.filter(
-      (r) =>
-        r.values.activeBlower === train &&
-        typeof r.values.totalFlowNm3hr === "number" &&
-        Number.isFinite(r.values.totalFlowNm3hr) &&
-        typeof r.values[train === "A" ? "motorCurrentA" : "motorCurrentB"] ===
-          "number" &&
-        Number.isFinite(
-          r.values[train === "A" ? "motorCurrentA" : "motorCurrentB"],
-        ) &&
-        Number(r.values.bypassOpPct ?? 0) <
-          cfg.settings.performanceBypassMaxPct &&
-        Number(r.values.filterDpBar ?? 0) <= cfg.limits.filterDpMaxBar,
+      (r) => r.values.activeBlower === train && usable(r),
     );
     const trainingStart = candidates[0]?.epoch ?? 0;
     const trainingEnd =
@@ -557,15 +584,23 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
         flowNm3hr: Number(r.values.totalFlowNm3hr),
       }));
     const model = fitSimpleFlowModel(training);
+    const ratios = candidates
+      .filter((r) => r.epoch <= trainingEnd)
+      .map((r) => Number(r.values.pressureRatio));
+    const minRatio = Math.min(...ratios),
+      maxRatio = Math.max(...ratios);
     for (const r of calculated.filter((x) => x.values.activeBlower === train)) {
       const current = Number(
         r.values[train === "A" ? "motorCurrentA" : "motorCurrentB"],
       );
-      const expected = predictFlowNm3hr(model, current);
       const withinBaselineEnvelope =
-        Number(r.values.bypassOpPct ?? 0) <
-          cfg.settings.performanceBypassMaxPct &&
-        Number(r.values.filterDpBar ?? 0) <= cfg.limits.filterDpMaxBar;
+        usable(r) &&
+        r.epoch > trainingEnd &&
+        Number(r.values.pressureRatio) >= minRatio &&
+        Number(r.values.pressureRatio) <= maxRatio;
+      const expected = withinBaselineEnvelope
+        ? predictFlowNm3hr(model, current)
+        : null;
       const residual =
         withinBaselineEnvelope && expected !== null && expected > 0
           ? ((Number(r.values.totalFlowNm3hr) - expected) / expected) * 100
@@ -577,14 +612,15 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
       r.values.performanceModelTrainingRows = model?.trainingRows ?? 0;
       r.values.performanceModelIntercept = model?.intercept ?? null;
       r.values.performanceModelSlope = model?.slope ?? null;
-      r.values.performanceModelApplicable = withinBaselineEnvelope && model !== null;
-      if (!withinBaselineEnvelope) {
+      r.values.performanceModelApplicable =
+        withinBaselineEnvelope && expected !== null;
+      if (expected === null) {
         r.qualityByMetric = {
           ...(r.qualityByMetric ?? {}),
           performanceDegradationPct: {
             state: "Missing",
             reason:
-              `Baseline comparison is not applied while bypass is ${cfg.settings.performanceBypassMaxPct}% or greater or filter differential pressure exceeds its limit.`,
+              "Baseline unavailable: requires complete fresh inputs, one running train, a completed assumed-healthy reference period, and current/pressure ratio inside its observed range. Constant speed is assumed.",
           },
         };
       }
@@ -592,7 +628,7 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
         r.alerts.push({
           severity: "alarm",
           message: `Measured flow is ${Math.abs(residual).toFixed(1)}% below the baseline regression expectation.`,
-          source: "healthy-baseline linear regression",
+          source: "assumed-healthy reference regression",
         });
       } else if (
         residual !== null &&
@@ -601,7 +637,7 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
         r.alerts.push({
           severity: "advisory",
           message: `Measured flow is ${Math.abs(residual).toFixed(1)}% below the baseline regression expectation.`,
-          source: "healthy-baseline linear regression",
+          source: "assumed-healthy reference regression",
         });
       }
       r.state = stateFromAlerts(r.alerts, r.state === "data-issue");
@@ -619,21 +655,30 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
     const my = ys.reduce((a, b) => a + b, 0) / ys.length;
     const denom = xs.reduce((a, x) => a + (x - mx) ** 2, 0);
     if (denom <= 0) return null;
-    return (
-      xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0) / denom
-    );
+    return xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0) / denom;
   };
 
-  calculated.forEach((r, i) => {
+  const trendHistory = new Map<string, { epoch: number; value: number }[]>();
+  calculated.forEach((r) => {
     for (const [metric, output] of [
       ["maxBearingTempC", "bearingTrendCPerDay"],
       ["maxVibrationMms", "vibrationTrendMmsPerDay"],
     ] as const) {
-      const history = calculated
-        .slice(Math.max(0, i - 6), i + 1)
-        .map((x) => ({ epoch: x.epoch, value: Number(x.values[metric]) }))
-        .filter((x) => Number.isFinite(x.value));
-      r.values[output] = slopePerDay(history);
+      const key = `${r.values.activeBlower}:${metric}`;
+      const history = (trendHistory.get(key) ?? []).filter(
+        (p) => p.epoch >= r.epoch - 7 * 86400000,
+      );
+      const value = r.values[metric];
+      const valid =
+        typeof value === "number" &&
+        Number.isFinite(value) &&
+        !["Missing", "Stale"].includes(
+          r.qualityByMetric?.[metric]?.state ?? "",
+        );
+      if (valid) history.push({ epoch: r.epoch, value });
+      if (history.length > 7) history.shift();
+      trendHistory.set(key, history);
+      r.values[output] = valid ? slopePerDay(history) : null;
     }
     const bearing = Number(r.values.maxBearingTempC);
     const slope = Number(r.values.bearingTrendCPerDay);
@@ -674,21 +719,32 @@ export function metricsFor(
       ),
       metric("efficiencyPolytropicPct", "Polytropic efficiency", "%"),
       metric("efficiencyIsentropicPct", "Isentropic efficiency", "%"),
+      metric("totalPowerKw", "Total electrical input", "kW"),
       metric("powerKw", "Motor input power", "kW"),
       metric("powerFactorUsed", "Motor power factor used", ""),
       metric("flowNm3hr", "Measured flow", "Nm³/hr"),
       metric("expectedFlowNm3hr", "Expected flow (baseline model)", "Nm³/hr"),
       metric("flowResidualPct", "Flow residual vs model", "%"),
-      metric("performanceDegradationPct", "Performance degradation", "%", 0, "Healthy baseline"),
+      metric(
+        "performanceDegradationPct",
+        "Performance degradation",
+        "%",
+        0,
+        "Healthy baseline",
+      ),
       metric("bearingTrendCPerDay", "Bearing temperature trend", "°C/day"),
-      metric("bearingAdvisoryEtaDays", "Trend projection to bearing advisory", "days"),
+      metric(
+        "bearingAdvisoryEtaDays",
+        "Trend projection to bearing advisory",
+        "days",
+      ),
       metric("maxVibrationMms", "Maximum vibration", "mm/s"),
       metric("maxBearingTempC", "Maximum bearing temperature", "°C"),
       metric("dpBar", "Blower pressure rise", "bar"),
       metric("filterDpBar", "Filter pressure drop", "bar"),
       metric("bypassOpPct", "Bypass opening", "%"),
       metric("pressureRatio", "Pressure ratio", ""),
-      metric("thrustProxyPct", "Thrust operating-deviation proxy", "%"),
+      metric("thrustProxyPct", "Operating-deviation index", "%"),
       metric("t1CUsed", "Suction temperature used", "°C"),
     ].map((m) => {
       const lim = c.limits as unknown as BlowerLimits;
@@ -716,14 +772,12 @@ export function metricsFor(
                     : m.key === "performanceDegradationPct"
                       ? [
                           { name: "Watch", value: lim.performanceWatchPct },
-                          { name: "Investigate", value: lim.performanceAlarmPct },
+                          {
+                            name: "Investigate",
+                            value: lim.performanceAlarmPct,
+                          },
                         ]
-                      : m.key === "thrustProxyPct"
-                        ? [
-                            { name: "POC watch", value: lim.thrustProxyWatchPct },
-                            { name: "POC investigate", value: lim.thrustProxyAlarmPct },
-                          ]
-                        : undefined,
+                      : undefined,
       };
     });
   if (id === "fired-heater") {
@@ -735,7 +789,7 @@ export function metricsFor(
         "%",
         cfg.designEffPct,
       ),
-      metric("etaPtc4Pct", "PTC4 indirect efficiency", "%", cfg.designEffPct),
+      metric("etaPtc4Pct", "Simplified loss efficiency", "%", cfg.designEffPct),
       metric("etaProcessPct", "Process-side efficiency", "%"),
       metric("etaDeltaPp", "Heat-balance minus process-side efficiency", "pp"),
       metric("closurePct", "Energy closure discrepancy", "%", undefined, "", [
@@ -821,7 +875,7 @@ export function metricsFor(
         { name: "Alarm", value: cfg.purityAlarmPct },
       ],
     ),
-    metric("recoveryLabPct", "Lab-verified recovery", "%"),
+    metric("recoveryLabPct", "Lab-composition recovery", "%"),
     metric(
       "ratio",
       "Total / non-permeate ratio",
