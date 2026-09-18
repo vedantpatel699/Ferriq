@@ -66,3 +66,8 @@ npm run test:e2e        # playwright — navigation, interactions, a11y (axe-cor
 ## Fonts
 
 IBM Plex Sans and IBM Plex Mono are bundled locally through `@fontsource`. Initial site loading requires access to the published assets. Calculations and local saves continue if the network is interrupted after loading.
+
+
+### Reproducible verification runtime
+
+Use Node 24.15.0 from `.node-version` for builds and submission fixture generation. CI uses that same version. JavaScript runtime versions can differ in the final binary digits of transcendental calculations; the exact fixture-freshness assertion is retained. Standalone submission calculations require only the Python setup in `submission/sudhakar/README.md`.

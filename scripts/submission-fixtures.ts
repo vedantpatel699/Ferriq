@@ -495,6 +495,23 @@ for (const c of cases) {
     };
   }
 }
+function firstDifference(a: any, b: any, path = "cases"): string | null {
+  if (a === b) return null;
+  if (
+    typeof a !== "object" ||
+    typeof b !== "object" ||
+    a === null ||
+    b === null
+  )
+    return `${path}: ${JSON.stringify(a)} versus ${JSON.stringify(b)}`;
+  if (JSON.stringify(Object.keys(a)) !== JSON.stringify(Object.keys(b)))
+    return path + ": different keys";
+  for (const key of Object.keys(a)) {
+    const d = firstDifference(a[key], b[key], path + "." + key);
+    if (d) return d;
+  }
+  return null;
+}
 const fixture = gzipSync(JSON.stringify(cases), { level: 9 });
 if (process.argv.includes("--check")) {
   if (
@@ -503,7 +520,15 @@ if (process.argv.includes("--check")) {
     )
   )
     throw Error(
-      "Submission fixtures differ from production TypeScript. Regenerate and rerun parity.",
+      "Submission fixtures differ: " +
+        firstDifference(
+          JSON.parse(
+            gunzipSync(
+              readFileSync(root + "tests/website-cases.json.gz"),
+            ).toString(),
+          ),
+          cases,
+        ),
     );
 } else writeFileSync(root + "tests/website-cases.json.gz", fixture);
 for (const model of Object.keys(defaults)) {

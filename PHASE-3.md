@@ -33,3 +33,6 @@ Phase 1 email mapping remains the source record; no new client engineering requi
 ## Publication checkpoint
 
 Remote main was fetched and still matched e99ca6880cffc65bb991b4789404eaf1df15c2de. Local checks passed. Commit/push, exact-commit workflow outcome and post-deployment live browser checks will be reported separately after publication; this checklist does not claim deployment success in advance.
+
+
+Publication follow-up: 8a9afe5 pushed successfully. Run 35299025187 passed the original timeout test and all existing checks, then rejected new fixture freshness because Node 22 and Node 24 generate slightly different floating-point demo inputs (first difference: discharge temperature 67.07131529415886 versus 67.07131529415892 degC). Reproduced locally using Node 22.23.2. Keep the exact fixture-content check and all tests unchanged; pin development/CI to Node 24.15.0 via .node-version, with package engine metadata. The Python engine tolerance is unchanged. The next commit's deployment and live checks must still pass.
