@@ -55,3 +55,8 @@ Follow-up validation: 154/154 desktop/tablet workflows passed, including recover
 Remote main checked before commit: 2ff15a1beef2958b05445d4febd5dd22ef9601ec, unchanged from the reviewed base. Public website download links were not added after automatic approval review rejected that extra publishing destination. The explicitly authorized GitHub submission folder contains the six engines and six PDFs. Exact-commit workflow and live-site checks follow the push.
 
 Standalone follow-up: the blower's no-argument example now includes the full YTD sample, so its 14-day baseline and latest degradation are available. The isolated-file test asserts these outputs. All nine Python test methods and 141 parity cases passed again. Website workflow 35301986710 for b873b23 succeeded before this delivery-only correction.
+
+## Sidebar correction
+
+User screenshot confirmed Workspace menus remained on the deployed site. Earlier pushes succeeded; the omission was in Sidebar.tsx, not deployment. Removed the Workspace heading and Watchlist, Database & change log, Settings, and Help & manuals links from rendered navigation. Overview and six models remain. Existing saved data, supporting routes, and model Configuration/Engineering manual tabs are retained. Added reload regression requiring exactly seven navigation links and absence of the removed entries.
+Validation: build passed; 134 unit tests and 34 desktop/tablet navigation checks passed. Lint has only the eight existing warnings. Remote main matched HEAD before push.

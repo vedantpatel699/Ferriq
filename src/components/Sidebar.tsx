@@ -32,15 +32,6 @@ export function Sidebar({ onNavigate }: { onNavigate: () => void }) {
       )}
       {!items.some(e => e.id === "furnace-skin-temp") && link("/predictors/furnace-skin-temp", "Furnace Skin TI Predictor", "UNAVAILABLE")}
       {link("/crude-to-profit", "Crude to Profit")}
-      <div className="nav-label">Workspace</div>
-      {link(
-        "/watchlist",
-        "Watchlist",
-        String(items.filter((e) => e.priority > 0).length),
-      )}
-      {link("/data-export", "Database & change log")}
-      {link("/settings", "Settings")}
-      {link("/help", "Help & manuals")}
       <div className="sidebar-spacer" />
       <p className="source-note">
         Published reference data
