@@ -3,19 +3,12 @@ import AxeBuilder from "@axe-core/playwright";
 
 const ROUTES = [
   "/",
-  "/watchlist",
-  "/dashboards",
-  "/predictors",
   "/equipment/air-blower",
   "/equipment/fired-heater",
   "/equipment/shell-tube-exchanger",
   "/equipment/membrane-analyzer",
   "/predictors/furnace-skin-temp",
   "/crude-to-profit",
-  "/settings",
-  "/data-export",
-  "/activity-log",
-  "/help",
 ];
 
 test.describe("No critical/serious axe-core violations (WCAG 2 A/AA)", () => {

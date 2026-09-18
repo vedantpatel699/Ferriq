@@ -97,8 +97,7 @@
 
   /* --- Typography ---------------------------------------------------------
      Barlow Condensed / Barlow per the approved Industry-derived direction.
-     Equipment tags (C-101A/B, E-201, ...) keep a monospace face so codes
-     stay visually distinct from prose. Numeric values use tabular-nums on
+     Numeric values use tabular-nums on
      the body face rather than a monospace face (matches approved design). */
   --font-heading: "Barlow Condensed", system-ui, sans-serif;
   --font-body: "Barlow", system-ui, sans-serif;
@@ -227,13 +226,6 @@ h6 {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.navlink .watch-tag {
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--sidebar-text);
-  flex-shrink: 0;
-} /* was --copper-dark: 4.08:1 on the tinted .current background, failed WCAG AA at this small size */
 .navlink .count-badge {
   font-size: 10px;
   font-weight: 700;
@@ -991,85 +983,6 @@ h6 {
 }
 
 /* ----------------------------------------------------------------------------
- * Watchlist grid (Home + Watchlist page)
- * -------------------------------------------------------------------------- */
-.watchlist {
-  margin-bottom: 36px;
-}
-.watch-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 1.3fr 1.3fr 1fr 1fr;
-  gap: 16px;
-  align-items: center;
-}
-.watch-head {
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-card);
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-.watch-item {
-  padding: 15px 0;
-  border-bottom: 1px solid var(--border-card);
-  text-decoration: none;
-  color: inherit;
-  border-radius: 4px;
-  display: grid;
-}
-.watch-item:hover {
-  background: var(--surface-card);
-}
-.watch-item:last-of-type {
-  border-bottom: none;
-}
-.watch-asset-name {
-  font-family: var(--font-heading);
-  font-weight: 600;
-  font-size: 14px;
-}
-.watch-asset-tag {
-  font-family: var(--font-tag);
-  font-size: 10.5px;
-  color: var(--text-secondary);
-}
-.watch-condition {
-  font-size: 13px;
-  color: var(--text-primary);
-}
-.watch-current {
-  font-size: 14px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.watch-ref {
-  font-size: 11px;
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
-}
-.watch-delta {
-  font-size: 13px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-.watch-semantic {
-  font-size: 11px;
-  color: var(--text-secondary);
-}
-.watch-duration {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-.watch-new {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--state-watch-text);
-}
-
-/* ----------------------------------------------------------------------------
  * Equipment grid (Home)
  * -------------------------------------------------------------------------- */
 .equipment-grid {
@@ -1441,12 +1354,6 @@ table.data td.num {
   .equipment-grid {
     grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   }
-  .watch-grid {
-    grid-template-columns: 1.3fr 1.4fr 1.3fr 1fr;
-  }
-  .watch-duration {
-    display: none;
-  }
 }
 @media (max-width: 900px) {
   .sidebar {
@@ -1462,7 +1369,6 @@ table.data td.num {
   .nav-label,
   .navtext,
   .count-badge,
-  .watch-tag,
   .user-meta {
     display: none;
   }
@@ -1707,8 +1613,7 @@ summary {
   .brand-name,
   .nav-label,
   .navtext,
-  .count-badge,
-  .watch-tag {
+  .count-badge {
     display: block;
   }
   .navlink {
@@ -2582,3 +2487,5 @@ table.data caption {
     grid-template-columns: 1fr;
   }
 }
+
+.model-tile { display: flex; align-items: center; min-height: 100px; font-size: 18px; font-weight: 600; text-decoration: none; }

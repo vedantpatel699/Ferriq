@@ -1,9 +1,7 @@
 import { NavLink } from "react-router-dom";
-import { useSummaries } from "../lib/summaries";
-import { stateLabel } from "../lib/equipmentRegistry";
+import { EQUIPMENT_REGISTRY } from "../lib/equipmentRegistry";
 export function Sidebar({ onNavigate }: { onNavigate: () => void }) {
-  const items = useSummaries();
-  const link = (to: string, label: string, badge?: string) => (
+  const link = (to: string, label: string) => (
     <NavLink
       key={to}
       end={to === "/"}
@@ -12,7 +10,6 @@ export function Sidebar({ onNavigate }: { onNavigate: () => void }) {
       to={to}
     >
       <span className="navtext">{label}</span>
-      {badge && <span className="watch-tag">{badge}</span>}
     </NavLink>
   );
   return (
@@ -23,15 +20,7 @@ export function Sidebar({ onNavigate }: { onNavigate: () => void }) {
       </NavLink>
       {link("/", "Overview")}
       <div className="nav-label">Equipment</div>
-      {items.map((e) =>
-        link(
-          e.path,
-          e.name,
-          e.state === "normal" ? undefined : stateLabel(e.state),
-        ),
-      )}
-      {!items.some(e => e.id === "furnace-skin-temp") && link("/predictors/furnace-skin-temp", "Furnace Skin TI Predictor", "UNAVAILABLE")}
-      {link("/crude-to-profit", "Crude to Profit")}
+      {EQUIPMENT_REGISTRY.map((e) => link(e.path, e.name))}
       <div className="sidebar-spacer" />
       <p className="source-note">
         Published reference data

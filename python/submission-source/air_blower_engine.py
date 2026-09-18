@@ -84,7 +84,7 @@ MOTOR_POWER_FACTOR_POINTS = [
 # should produce the same dict shape at the historian boundary. Example:
 #
 #   def fetch_historian(tag_map, start, end, interval_s):
-#       # tag_map: {"motor_current_a": "1645-IT-A01.PV", ...}
+#       # tag_map: {"motor_current_a": "motor_current_a", ...}
 #       import requests
 #       resp = requests.get(PI_WEB_API + "/streamsets/recorded", params={...})
 #       # Transpose the response into one dict per timestamp, keyed by the

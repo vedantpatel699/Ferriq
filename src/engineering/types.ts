@@ -5,7 +5,7 @@
 /** Ferriq's own page-level engineering-state vocabulary. Distinct from the
  * raw physical severity tiers (advisory/alarm/trip) that come from
  * underlying standards like ISO 10816 or API 530 — those are reported as
- * plain facts (see Condition.rawSeverity / health-bar zone labels), never
+ * plain facts (engineering alerts and health-bar zone labels), never
  * as this top-level state. Ferriq sits upstream of DCS-style alarming and
  * does not implement alarm acknowledgement, shelving, or notification
  * workflows. */
@@ -48,24 +48,6 @@ export interface TrendState {
   changeByRange: Record<TimeRangeId, number>;
   changeUnit: string;
   semantic: TrendSemantic;
-}
-
-export interface Condition {
-  id: string;
-  equipmentId: string;
-  equipmentName: string;
-  equipmentTag: string;
-  href: string;
-  description: string;
-  current: MetricValue;
-  reference: EngineeringReference;
-  trend: TrendState;
-  rawSeverity: RawSeverity;
-  /** Wall-clock duration the condition has been active, e.g. "6 h". Kept
-   * as a plain temporal fact, independent of the priority ranking (which
-   * ordering in the Watchlist conveys). */
-  durationLabel: string;
-  isNewSinceLastReview: boolean;
 }
 
 export interface Prediction {

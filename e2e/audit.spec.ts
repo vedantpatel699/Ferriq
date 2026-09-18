@@ -4,7 +4,7 @@ test("mobile keyboard navigation closes the menu and focuses the destination", a
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await page.getByRole("button", { name: "Menu", exact: true }).click();
-  const link = page.getByRole("link", { name: "Crude to Profit", exact: true });
+  const link = page.getByRole("navigation").getByRole("link", { name: "Crude to Profit", exact: true });
   await link.focus();
   await page.keyboard.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();

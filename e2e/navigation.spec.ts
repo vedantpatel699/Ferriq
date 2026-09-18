@@ -2,19 +2,12 @@ import { test, expect } from "@playwright/test";
 
 const ROUTES = [
   "/",
-  "/watchlist",
-  "/dashboards",
-  "/predictors",
   "/equipment/air-blower",
   "/equipment/fired-heater",
   "/equipment/shell-tube-exchanger",
   "/equipment/membrane-analyzer",
   "/predictors/furnace-skin-temp",
   "/crude-to-profit",
-  "/settings",
-  "/data-export",
-  "/activity-log",
-  "/help",
 ];
 
 test.describe("Every route renders with no console errors", () => {

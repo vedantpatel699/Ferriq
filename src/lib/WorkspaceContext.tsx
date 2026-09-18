@@ -12,13 +12,7 @@ import {
   type Resource,
   type WorkspaceSnapshot,
 } from "../shared/workspace";
-import {
-  readLocal,
-  saveLocal,
-  saveLocalBatch,
-  resetLocal,
-  localHistory,
-} from "./localDatabase";
+import { readLocal, saveLocal, resetLocal } from "./localDatabase";
 import {
   readPublished,
   readPublishedModel,
@@ -57,10 +51,8 @@ type WorkspaceContextValue = {
     action?: string,
     expectedVersion?: number,
   ) => Promise<void>;
-  importResources: (resources: Resource[]) => Promise<void>;
   refresh: () => Promise<void>;
   reset: (key: string) => Promise<void>;
-  history: typeof localHistory;
 };
 export function useWorkspace() {
   const ctx = useContext(Context);
@@ -207,21 +199,6 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           await refresh();
           notifyTabs();
         },
-        importResources: async (resources) => {
-          requireStorage();
-          const entries = resources.map((r) => {
-            const current = snapshot.resources.find((v) => v.key === r.key);
-            if (!current) throw Error("Unknown resource: " + r.key);
-            return {
-              resource: { ...current, data: validateResource(r.key, r.data) },
-              expected: current.version,
-            };
-          });
-          await saveLocalBatch(entries, "backup import");
-          notifyTabs();
-          await refresh();
-        },
-        history: localHistory,
       }}
     >
       {children}

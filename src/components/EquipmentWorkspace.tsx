@@ -213,7 +213,7 @@ export function EquipmentWorkspace({ id }: { id: EquipmentId }) {
     <>
       <EquipmentHeader
         name={identities[id].name}
-        meta={id === "air-blower" ? "Train A / Train B" : identities[id].tag}
+        meta=""
         freshness={`${data.source} · Last observation ${DateTime.fromMillis(latest.epoch, { zone: "America/Edmonton" }).toFormat("LLL d, yyyy HH:mm")} Edmonton · ${local ? "Local changes" : "Published data"}`}
         state={latest.state}
         rangeControl={

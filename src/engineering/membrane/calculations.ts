@@ -1,4 +1,4 @@
-// Membrane Analyzer (M-301 H2-recovery module) engineering module — ported
+// Membrane Analyzer (Membrane Analyzer H2-recovery module) engineering module — ported
 // verbatim from the live membrane-analyzer.html engine. Supersedes
 // backend-membrane-analyzer.md, which documents a stage-cut/selectivity/
 // permeance/log-mean-driving-pressure model the live app does not run at

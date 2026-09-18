@@ -22,17 +22,20 @@ test("overview defers chart code and a failed page download leaves navigation us
   await expect(
     page.getByRole("heading", { name: "This page could not be displayed" }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("link", { name: "Overview", exact: true }).click();
   await expect(
-    page.getByRole("heading", { name: "Settings", exact: true }),
+    page.getByRole("heading", { name: "Engineering overview", exact: true }),
   ).toBeVisible();
 });
 
 test("malformed stored settings are retained but not applied", async ({
   page,
 }) => {
-  await page.goto("/settings");
-  await expect(page.locator("input").first()).toHaveValue("7");
+  await page.goto("/crude-to-profit");
+  await page.getByText("Adjust scenario", { exact: true }).click();
+  await expect(page.getByLabel("OSH (m³/h)", { exact: true })).toHaveValue(
+    "100",
+  );
   await page.evaluate(
     () =>
       new Promise<void>((resolve, reject) => {
@@ -59,10 +62,13 @@ test("malformed stored settings are retained but not applied", async ({
       }),
   );
   await page.reload();
+  await page.getByText("Adjust scenario", { exact: true }).click();
   await expect(page.getByText(/Read-only mode: browser storage/)).toBeVisible();
-  await expect(page.locator("input").first()).toHaveValue("7");
+  await expect(page.getByLabel("OSH (m³/h)", { exact: true })).toHaveValue(
+    "100",
+  );
   await expect(
-    page.getByRole("button", { name: "Save Changes", exact: true }),
+    page.getByRole("button", { name: "Save scenario", exact: true }),
   ).toBeDisabled();
   const stored = await page.evaluate(
     () =>
@@ -140,13 +146,14 @@ test("unavailable storage keeps published data readable and can recover", async 
       return open.apply(this, args);
     };
   });
-  await page.goto("/settings");
+  await page.goto("/crude-to-profit");
+  await page.getByText("Adjust scenario", { exact: true }).click();
   await expect(page.getByText(/Read-only mode: browser storage/)).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Save Changes", exact: true }),
+    page.getByRole("button", { name: "Save scenario", exact: true }),
   ).toBeDisabled();
   await expect(
-    page.getByRole("button", { name: "Reset to Defaults" }),
+    page.getByRole("button", { name: "Restore published scenario" }),
   ).toBeDisabled();
   await page
     .getByRole("link", { name: "Crude to Profit", exact: true })
@@ -157,16 +164,6 @@ test("unavailable storage keeps published data readable and can recover", async 
   await expect(
     page.getByRole("button", { name: "Restore published scenario" }),
   ).toBeDisabled();
-  await page
-    .getByRole("link", { name: "Database & change log", exact: true })
-    .click();
-  await expect(
-    page.getByLabel("Import workspace backup", { exact: true }),
-  ).toBeDisabled();
-  await expect(
-    page.getByRole("button", { name: "Export workspace backup" }),
-  ).toBeEnabled();
-  await page.getByRole("link", { name: "Settings", exact: true }).click();
   // Finish the independent model refresh before specifically testing manual storage recovery.
   await expect(
     page.getByText(
@@ -180,20 +177,25 @@ test("unavailable storage keeps published data readable and can recover", async 
   });
   await page.getByRole("button", { name: "Retry browser storage" }).click();
   await expect(
-    page.getByRole("button", { name: "Save Changes", exact: true }),
+    page.getByRole("button", { name: "Save scenario", exact: true }),
   ).toBeEnabled();
-  await page.locator("input").first().fill("6");
-  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("saved");
+  await page.getByLabel("OSH (m³/h)", { exact: true }).fill("101");
+  await page
+    .getByRole("button", { name: "Save scenario", exact: true })
+    .click();
+  await expect(page.getByRole("status").filter({ hasText: "Scenario saved in this browser." })).toBeVisible();
 });
 
 test("storage failure after a save preserves the loaded local data", async ({
   page,
 }) => {
-  await page.goto("/settings");
-  await page.locator("input").first().fill("6");
-  await page.getByRole("button", { name: "Save Changes", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("saved");
+  await page.goto("/crude-to-profit");
+  await page.getByText("Adjust scenario", { exact: true }).click();
+  await page.getByLabel("OSH (m³/h)", { exact: true }).fill("101");
+  await page
+    .getByRole("button", { name: "Save scenario", exact: true })
+    .click();
+  await expect(page.getByRole("status").filter({ hasText: "Scenario saved in this browser." })).toBeVisible();
   await page.evaluate(() => {
     IDBFactory.prototype.open = function () {
       throw Error("Storage went away");
@@ -204,10 +206,16 @@ test("storage failure after a save preserves the loaded local data", async ({
   });
   await expect(page.getByText(/Read-only mode: browser storage/)).toBeVisible();
   await page.getByRole("link", { name: "Overview", exact: true }).click();
-  await page.getByRole("link", { name: "Settings", exact: true }).click();
-  await expect(page.locator("input").first()).toHaveValue("6");
+  await page
+    .getByRole("navigation")
+    .getByRole("link", { name: "Crude to Profit", exact: true })
+    .click();
+  await page.getByText("Adjust scenario", { exact: true }).click();
+  await expect(page.getByLabel("OSH (m³/h)", { exact: true })).toHaveValue(
+    "101",
+  );
   await expect(
-    page.getByRole("button", { name: "Save Changes", exact: true }),
+    page.getByRole("button", { name: "Save scenario", exact: true }),
   ).toBeDisabled();
 });
 

@@ -29,7 +29,7 @@ export function EquipmentHeader({
             <h1 className="asset-name">{name}</h1>
             <StatusBadge state={state} />
           </div>
-          <div className="asset-meta">{meta}</div>
+          {meta && <div className="asset-meta">{meta}</div>}
           <div className="asset-fresh">{freshness}</div>
         </div>
         {rangeControl}

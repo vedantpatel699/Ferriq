@@ -134,18 +134,3 @@ export async function resetLocal(key: string) {
     db.close();
   }
 }
-export async function localHistory(
-  key: string,
-): Promise<(Resource & { id: string })[]> {
-  const db = await open();
-  try {
-    const all = await result(
-      db.transaction("history", "readonly").objectStore("history").getAll(),
-    );
-    return all
-      .filter((r) => r.key === key)
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  } finally {
-    db.close();
-  }
-}

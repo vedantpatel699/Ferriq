@@ -23,4 +23,4 @@ Run the cross-language parity check with:
 npm run test:python
 ```
 
-The 200-row POC Air Blower input dataset is stored at `reference/blower-demo.csv`. Its source mapping, simulated fields and units are documented in `reference/blower-tag-map.md`.
+The 200-row POC Air Blower input dataset is stored at `reference/blower-demo.csv`. It uses descriptive input names; plant-specific identifiers are not included.

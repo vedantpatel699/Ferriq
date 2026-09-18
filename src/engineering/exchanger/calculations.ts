@@ -1,4 +1,4 @@
-// Shell & Tube Exchanger (E-101 crude preheater) engineering module.
+// Shell & Tube Exchanger (Shell & Tube Exchanger crude preheater) engineering module.
 // Ported verbatim from the live shell-tube-exchanger.html engine (a code
 // comment there reads "ports Rev9.py / Rev9.html verbatim"). This is
 // materially different from — and supersedes — backend-shell-tube-

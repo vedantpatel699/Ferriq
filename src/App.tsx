@@ -1,14 +1,10 @@
 import { WorkspaceProvider } from "./lib/WorkspaceContext";
 import { lazy, Suspense } from "react";
 import { PageBoundary } from "./components/PageBoundary";
-import { DatabasePage } from "./pages/DatabasePage";
 import { Link } from "react-router-dom";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppShell } from "./components/AppShell";
 import { HomePage } from "./pages/HomePage";
-import { WatchlistPage } from "./pages/WatchlistPage";
-import { DashboardsPage } from "./pages/DashboardsPage";
-import { PredictorsPage } from "./pages/PredictorsPage";
 const AirBlowerPage = lazy(() =>
   import("./pages/AirBlowerPage").then((m) => ({ default: m.AirBlowerPage })),
 );
@@ -37,8 +33,6 @@ const CrudeToProfitPage = lazy(() =>
     default: m.CrudeToProfitPage,
   })),
 );
-import { SettingsPage } from "./pages/SettingsPage";
-import { HelpPage } from "./pages/HelpPage";
 
 function App() {
   return (
@@ -49,9 +43,6 @@ function App() {
             <Suspense fallback={<p role="status">Loading page…</p>}>
               <Routes>
                 <Route path="/" element={<HomePage />} />
-                <Route path="/watchlist" element={<WatchlistPage />} />
-                <Route path="/dashboards" element={<DashboardsPage />} />
-                <Route path="/predictors" element={<PredictorsPage />} />
                 <Route
                   path="/equipment/air-blower"
                   element={<AirBlowerPage />}
@@ -76,9 +67,6 @@ function App() {
                   path="/crude-to-profit"
                   element={<CrudeToProfitPage />}
                 />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/data-export" element={<DatabasePage />} />
-                <Route path="/activity-log" element={<DatabasePage />} />
                 <Route
                   path="*"
                   element={
@@ -88,7 +76,6 @@ function App() {
                     </>
                   }
                 />
-                <Route path="/help" element={<HelpPage />} />
               </Routes>
             </Suspense>
           </PageBoundary>

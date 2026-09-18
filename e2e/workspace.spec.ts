@@ -59,7 +59,7 @@ test("all furnace passes, holdout data and manuals work", async ({
   await expect(page.locator(".reference-manual")).toBeVisible();
   expect(errors).toEqual([]);
 });
-test("CSV import, local persistence and backup export", async ({ page }) => {
+test("CSV import and local persistence", async ({ page }) => {
   await page.goto("/equipment/fired-heater");
   await page.getByRole("button", { name: "Data & Log", exact: true }).click();
   await page.getByText("Replace input data", { exact: true }).click();
@@ -74,10 +74,6 @@ test("CSV import, local persistence and backup export", async ({ page }) => {
   await expect(page.getByRole("status")).toContainText("Saved");
   await page.reload();
   await expect(page.locator(".asset-fresh")).toContainText("heater.csv");
-  await page.goto("/data-export");
-  const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export workspace backup" }).click();
-  expect((await download).suggestedFilename()).toBe("ferriq-workspace.json");
 });
 test("invalid economics inputs block results and snapshots require deliberate apply", async ({
   page,
