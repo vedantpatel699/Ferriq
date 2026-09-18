@@ -34,3 +34,6 @@ secrets.local.py
 
 # Local source-review PDF and renders
 /tmp/grace/
+
+# Isolated submission/PDF verification environment
+/tmp/phase3/

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "1.0",
+  "model": "fired-heater",
+  "source": "simulated verification fixture",
+  "timezone": "America/Edmonton",
+  "config": {
+    "fuelCase": "Sheet Reference Case (83.64%)",
+    "radiationLossPct": 1.5,
+    "unaccountedLossPct": 0.5,
+    "refTempC": 15,
+    "designDutyKw": 42140,
+    "designEffPct": 83.3,
+    "designStackC": 294,
+    "designO2Pct": 4.27,
+    "designFuelKgS": 0.849,
+    "designBwC": 778,
+    "effAdvisoryPct": 82,
+    "effAlarmPct": 78,
+    "stackAdvisoryC": 320,
+    "stackAlarmC": 360,
+    "bwAdvisoryC": 830,
+    "bwAlarmC": 870,
+    "eaAdvisoryPct": 30,
+    "eaAlarmPct": 45,
+    "o2LowPct": 2,
+    "o2HighPct": 6
+  },
+  "parameters": {},
+  "measurements": [
+    {
+      "timestamp": "2026-09-17T17:00:00-06:00",
+      "values": {
+        "fuelFlowKgS": 0.8171903491718403,
+        "combustionAirTempC": 4.897426510180788,
+        "stackTempC": 304.5098039215686,
+        "fuelTempC": 30,
+        "processFlowKgS": 136.67965792980132,
+        "processInC": 256,
+        "processOutC": 339.18297139941023,
+        "processCpKjKgK": 2.978,
+        "stackO2Pct": 4.375098039215686,
+        "bridgewallAC": 785.8823529411765,
+        "bridgewallBC": 787.8823529411765,
+        "fuelPressureKpa": null
+      }
+    }
+  ],
+  "window": {
+    "start": "2026-09-10T23:00:00.000Z",
+    "end": "2026-09-17T23:00:00.000Z"
+  }
+}

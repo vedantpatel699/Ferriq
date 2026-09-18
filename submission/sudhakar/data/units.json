@@ -1,0 +1,126 @@
+{
+  "air-blower": {
+    "inputs": {
+      "motorCurrentA/B": "A",
+      "suctionPressureA/B": "kPaa",
+      "dischargePressureA/B": "kPag",
+      "controllerSpA/B": "kPag",
+      "bypassOpA/B": "%",
+      "filterDpA/B": "bar",
+      "totalFlowNm3hr": "Nm3/h",
+      "suctionTempC": "degC",
+      "dischargeTempA/B": "degC",
+      "vibrationA/B": "mm/s RMS",
+      "bearingTempA/B": "degC"
+    },
+    "outputs": {
+      "powerKw,totalPowerKw,fluidPowerKw": "kW",
+      "p1BarAbs,p2BarAbs": "bar absolute",
+      "dpBar,filterDpBar": "bar",
+      "flowNm3hr,expectedFlowNm3hr": "Nm3/h",
+      "efficiency*Pct,flowResidualPct,performanceDegradationPct,thrustProxyPct,bypassOpPct": "%",
+      "t1CUsed,maxBearingTempC": "degC",
+      "maxVibrationMms": "mm/s RMS",
+      "bearingTrendCPerDay": "degC/day",
+      "vibrationTrendMmsPerDay": "mm/s/day",
+      "bearingAdvisoryEtaDays": "day",
+      "pressureRatio,powerFactorUsed": "dimensionless",
+      "performanceModelTrainingRows": "count",
+      "performanceModelIntercept": "Nm3/h",
+      "performanceModelSlope": "(Nm3/h)/A"
+    },
+    "timestamp": "ISO-8601 with offset",
+    "status": "text/boolean/count as named; no physical unit"
+  },
+  "fired-heater": {
+    "inputs": {
+      "fuelFlowKgS,processFlowKgS": "kg/s",
+      "*TempC,processInC,processOutC,bridgewallAC,bridgewallBC": "degC",
+      "stackO2Pct": "wet vol%",
+      "processCpKjKgK": "kJ/(kg K)"
+    },
+    "outputs": {
+      "q*Kw": "kW",
+      "*Pct": "%",
+      "etaDeltaPp": "percentage points",
+      "combustionAirKgS,stackMassKgS": "kg/s",
+      "airFuelRatio": "kg air/kg fuel",
+      "stackTempC,bridgewallAvgC": "degC"
+    },
+    "timestamp": "ISO-8601 with offset",
+    "status": "text/boolean/count as named; no physical unit"
+  },
+  "shell-tube-exchanger": {
+    "inputs": {
+      "*InC,*OutC": "degC",
+      "*FlowKgHr": "kg/h",
+      "*CpKjKgK": "kJ/(kg K)",
+      "shellDpBar,tubeDpBar": "bar"
+    },
+    "outputs": {
+      "q*Kw": "kW",
+      "qAvgMw": "MW",
+      "lmtdC,lmtdEffC,approachHotC,approachColdC": "K temperature difference",
+      "uDirtyWm2k": "W/(m2 K)",
+      "rfE4": "1e-4 m2 K/W",
+      "*Pct": "%",
+      "pRatio,rRatio,fFactor": "dimensionless",
+      "shellDpBar,tubeDpBar": "bar"
+    },
+    "timestamp": "ISO-8601 with offset",
+    "status": "text/boolean/count as named; no physical unit"
+  },
+  "membrane-analyzer": {
+    "inputs": {
+      "*FlowNm3Hr": "Nm3/h",
+      "*H2*Pct": "vol%",
+      "feedPressureKpag": "kPag"
+    },
+    "outputs": {
+      "*FlowNm3Hr": "Nm3/h",
+      "*H2*Pct": "vol%",
+      "recovery*Pct,feedPressureDeviationPct": "%",
+      "feedPressureKpag": "kPag",
+      "ratio": "dimensionless"
+    },
+    "timestamp": "ISO-8601 with offset",
+    "status": "text/boolean/count as named; no physical unit"
+  },
+  "furnace-skin-temp": {
+    "inputs": {
+      "thermocouple aliases,box_t_c,outlet_avg_t_c": "degC",
+      "flow_pN": "original source flow units; scenario uses ratios only",
+      "other trained features": "original model feature units; supply only after site mapping is verified"
+    },
+    "outputs": {
+      "tcNow,skinNowC,skin7dMeanC,mean7d,forecast.value,forecast.p10,forecast.p50,forecast.p90,modelPrediction.p10,modelPrediction.p50,modelPrediction.p90": "degC",
+      "slopePerDay,tcVelocityCPerDay,skinVelocityCPerDay": "degC/day",
+      "observationEpoch": "UTC milliseconds",
+      "hoursToAlarm,dataAgeHours,modelPrediction.hours": "hour",
+      "forecast.day,horizonDays": "day",
+      "scenario.split,scenario.delta": "percentage points of total pass flow"
+    },
+    "timestamp": "ISO-8601 with offset",
+    "status": "text/boolean/count as named; no physical unit"
+  },
+  "crude-to-profit": {
+    "inputs": {
+      "flows.*": "m3/h",
+      "market.crude.*,market.product.*": "CAD/m3",
+      "intervalEnd": "ISO-8601"
+    },
+    "outputs": {
+      "*_m3hr": "m3/h",
+      "*_kghr": "kg/h",
+      "*_cad_hr": "CAD/operating hour",
+      "*_million_cad_year": "million CAD/year",
+      "annualCad": "CAD/year",
+      "cadPerOperatingHour": "CAD/operating hour",
+      "period.*Cad": "CAD",
+      "period.operatingHours": "hour",
+      "*_wtpct,*_volpct": "%"
+    },
+    "timestamp": "ISO-8601 with offset",
+    "status": "text/boolean/count as named; no physical unit"
+  }
+}

@@ -1,0 +1,237 @@
+{
+  "schemaVersion": "1.0",
+  "model": "crude-to-profit",
+  "source": "simulated verification fixture",
+  "timezone": "America/Edmonton",
+  "config": {
+    "primary_yield_volpct": {
+      "OSH": {
+        "naphtha": 9.8,
+        "ago": 18.7,
+        "vgo": 63.4,
+        "vr": 8.3,
+        "lvgo": 11,
+        "mvgo": 30.9,
+        "hvgo": 21.5
+      },
+      "SHD": {
+        "naphtha": 25.8,
+        "ago": 12,
+        "vgo": 22.4,
+        "vr": 39.1,
+        "lvgo": 4,
+        "mvgo": 9.5,
+        "hvgo": 8.9
+      },
+      "AWB": {
+        "naphtha": 24,
+        "ago": 10.1,
+        "vgo": 22.9,
+        "vr": 42,
+        "lvgo": 3.6,
+        "mvgo": 9.5,
+        "hvgo": 9.8
+      },
+      "SCO": {
+        "naphtha": 16.2,
+        "ago": 35.11,
+        "vgo": 40.54,
+        "vr": 5.29,
+        "lvgo": 10.18,
+        "mvgo": 18.31,
+        "hvgo": 12.05
+      },
+      "FRB": {
+        "naphtha": 22,
+        "ago": 12.2,
+        "vgo": 25.1,
+        "vr": 40.4,
+        "lvgo": 4.1,
+        "mvgo": 10.6,
+        "hvgo": 10.4
+      }
+    },
+    "residue_unit": "lc_finer",
+    "coker_feed_ccr_wtpct": 15,
+    "lpg_fuel_gas_recovered": 0,
+    "hcht_yield_volpct": {
+      "c3": 1.55,
+      "ic4": 2.96,
+      "nc4": 1.49,
+      "naphtha": 18.94,
+      "swing_naphtha": 5.41,
+      "kerosene": 43.85,
+      "diesel": 20.36,
+      "swing_diesel": 9.29,
+      "uco": 7.58
+    },
+    "simdist_split_volpct": {
+      "srvr": {
+        "lpg": 0,
+        "naphtha": 0,
+        "swing_naphtha": 0,
+        "kerosene": 0,
+        "diesel": 0,
+        "swing_diesel": 0,
+        "uco": 100
+      },
+      "diesel": {
+        "lpg": 0,
+        "naphtha": 0,
+        "swing_naphtha": 0,
+        "kerosene": 45,
+        "diesel": 40,
+        "swing_diesel": 14,
+        "uco": 1
+      },
+      "naphtha": {
+        "lpg": 0,
+        "naphtha": 37,
+        "swing_naphtha": 15,
+        "kerosene": 0,
+        "diesel": 48,
+        "swing_diesel": 0,
+        "uco": 0
+      },
+      "lvgo": {
+        "lpg": 0,
+        "naphtha": 0,
+        "swing_naphtha": 0,
+        "kerosene": 2,
+        "diesel": 23,
+        "swing_diesel": 30,
+        "uco": 45
+      },
+      "mvgo": {
+        "lpg": 0,
+        "naphtha": 0,
+        "swing_naphtha": 0,
+        "kerosene": 0,
+        "diesel": 3,
+        "swing_diesel": 15,
+        "uco": 82
+      },
+      "hvgo": {
+        "lpg": 0,
+        "naphtha": 0,
+        "swing_naphtha": 0,
+        "kerosene": 0,
+        "diesel": 0,
+        "swing_diesel": 0,
+        "uco": 100
+      },
+      "crvr": {
+        "lpg": 0,
+        "naphtha": 0,
+        "swing_naphtha": 0,
+        "kerosene": 0,
+        "diesel": 0,
+        "swing_diesel": 0,
+        "uco": 100
+      }
+    },
+    "crude_price_low_cad_m3": {
+      "OSH": 580,
+      "SHD": 500,
+      "AWB": 500,
+      "SCO": 610,
+      "FRB": 500
+    },
+    "crude_price_high_cad_m3": {
+      "OSH": 640,
+      "SHD": 570,
+      "AWB": 580,
+      "SCO": 680,
+      "FRB": 570
+    },
+    "product_price_low_cad_m3": {
+      "lpg": 650,
+      "naphtha": 720,
+      "swing_naphtha": 760,
+      "kerosene": 1150,
+      "diesel": 1100,
+      "swing_diesel": 1000,
+      "uco": 520
+    },
+    "product_price_high_cad_m3": {
+      "lpg": 780,
+      "naphtha": 810,
+      "swing_naphtha": 850,
+      "kerosene": 1300,
+      "diesel": 1280,
+      "swing_diesel": 1150,
+      "uco": 650
+    },
+    "crude_grade_differential_usd_bbl": {
+      "OSH": 11.85,
+      "SHD": 11.45,
+      "AWB": 11.45,
+      "SCO": 8.85,
+      "FRB": 11.45
+    },
+    "product_pricing": {
+      "lpg": {
+        "mode": "regional_anchor",
+        "benchmark": "propane_usd_gal",
+        "label": "Alberta NGL price, moved daily"
+      },
+      "naphtha": {
+        "mode": "regional_anchor",
+        "benchmark": "gasoline_usd_gal",
+        "label": "Alberta NGL price, moved daily"
+      },
+      "kerosene": {
+        "mode": "direct_market_benchmark",
+        "benchmark": "jetfuel_usd_gal",
+        "label": "EIA jet-fuel benchmark"
+      },
+      "diesel": {
+        "mode": "direct_market_benchmark",
+        "benchmark": "ulsd_gc_usd_gal",
+        "label": "EIA ULSD benchmark"
+      },
+      "swing_naphtha": {
+        "mode": "opportunity_value",
+        "low": "naphtha",
+        "high": "kerosene",
+        "label": "Model-derived opportunity value"
+      },
+      "swing_diesel": {
+        "mode": "opportunity_value",
+        "low": "uco",
+        "high": "diesel",
+        "label": "Model-derived opportunity value"
+      },
+      "uco": {
+        "mode": "opportunity_value_proxy",
+        "anchor": "WCS",
+        "factor": 0.825,
+        "label": "Heavy-product opportunity-value proxy"
+      }
+    },
+    "swing_naphtha_to_kerosene": 0.5,
+    "swing_diesel_to_diesel": 0.5,
+    "lpg_c3_fraction": 0.258,
+    "lpg_c4_fraction": 0.742,
+    "gas_oil_unit": "hydrocracker",
+    "opexRevenuePercent": 8
+  },
+  "parameters": {
+    "residueUnit": "none",
+    "gasOilUnit": "none"
+  },
+  "measurements": [
+    {
+      "timestamp": "2026-09-17T17:00:00-06:00",
+      "values": {
+        "flows": {
+          "OSH": 100,
+          "SHD": 87,
+          "AWB": 150,
+          "SCO": 15,
+          "FRB": 249.66666666666666
+        }
+      }
+    }
+  ]
+}

@@ -5,6 +5,7 @@ import {
   equipmentIds,
   normalizeRows,
   seedEquipment,
+  defaultEquipmentConfig,
   type EquipmentData,
   type EquipmentId,
 } from "../engineering/catalog";
@@ -96,7 +97,7 @@ export function validateResource(key: string, input: unknown): unknown {
       .strict()
       .parse(input);
     if (key === "air-blower") {
-      const defaults = seedEquipment("air-blower").config as Record<
+      const defaults = defaultEquipmentConfig("air-blower") as Record<
         string,
         unknown
       >;
@@ -110,7 +111,7 @@ export function validateResource(key: string, input: unknown): unknown {
         ...((current.limits as Record<string, unknown>) ?? {}),
       };
     }
-    validateShape(v.config, seedEquipment(key as EquipmentId).config);
+    validateShape(v.config, defaultEquipmentConfig(key as EquipmentId));
     const config = v.config as Record<string, unknown>;
     if (key === "air-blower") {
       const s = config.settings as Record<string, unknown>;

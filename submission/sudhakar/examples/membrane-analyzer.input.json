@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0",
+  "model": "membrane-analyzer",
+  "source": "simulated verification fixture",
+  "timezone": "America/Edmonton",
+  "config": {
+    "designFeedH2Pct": 87.32,
+    "designPermeateH2Pct": 95.53,
+    "designRecoveryPct": 90,
+    "designFlowNm3Hr": 96277,
+    "designRatio": 5.6,
+    "designFeedPressureKpag": 15890,
+    "patmKpa": 93,
+    "recoveryFloorPct": 75,
+    "purityAdvisoryPct": 93,
+    "purityAlarmPct": 90,
+    "ratioAlarm": 6.4,
+    "feedPressureDeviationPct": 5
+  },
+  "parameters": {},
+  "measurements": [
+    {
+      "timestamp": "2026-09-17T17:00:00-06:00",
+      "values": {
+        "feedFlowNm3Hr": 91440.61622064174,
+        "nonPermeateFlowNm3Hr": 18381.178978569704,
+        "permeateFlowNm3Hr": 73059.43724207203,
+        "permeateH2OnlinePct": 97.84235294117647,
+        "permeateH2LabPct": 97.84235294117647,
+        "feedH2LabPct": 88.6724323249353,
+        "feedH2OnlinePct": 88.6724323249353,
+        "feedPressureKpag": 15902.253280232255
+      }
+    }
+  ],
+  "window": {
+    "start": "2026-09-10T23:00:00.000Z",
+    "end": "2026-09-17T23:00:00.000Z"
+  }
+}

@@ -14,7 +14,9 @@
     "data:import": "tsx scripts/import-workspace.ts",
     "test:parity": "node scripts/engine-parity.mjs",
     "format": "prettier --write src e2e scripts/*.*ts",
-    "test:python": "node scripts/blower-python-parity.mjs && node scripts/crude-python-parity.mjs && python -m unittest discover -s python/tests"
+    "test:python": "node scripts/blower-python-parity.mjs && node scripts/crude-python-parity.mjs && python -m unittest discover -s python/tests",
+    "submission:fixtures": "tsx scripts/submission-data.ts && tsx scripts/submission-fixtures.ts",
+    "test:submission": "tsx scripts/submission-data.ts --check && tsx scripts/submission-fixtures.ts --check && python -m unittest discover -s submission/sudhakar/tests"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",

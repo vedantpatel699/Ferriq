@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.0",
+  "model": "shell-tube-exchanger",
+  "source": "simulated verification fixture",
+  "timezone": "America/Edmonton",
+  "config": {
+    "nShell": 2,
+    "areaM2": 124.8,
+    "uCleanWm2k": 500,
+    "designQMw": 3.5,
+    "rfAdvisoryE4": 5,
+    "rfAlarmE4": 10,
+    "effAdvisoryPct": 50,
+    "imbalanceAdvisoryPct": 8,
+    "approachMinC": 10,
+    "dutyAdvisoryPct": 5,
+    "dutyAlarmPct": 10
+  },
+  "parameters": {},
+  "measurements": [
+    {
+      "timestamp": "2026-09-17T17:00:00-06:00",
+      "values": {
+        "hotInC": 274,
+        "hotOutC": 177.6792403800669,
+        "hotFlowKgHr": 48126.64011612723,
+        "hotCpKjKgK": 2.4646,
+        "coldInC": 123,
+        "coldOutC": 201.98102734933707,
+        "coldFlowKgHr": 73275.69717521068,
+        "coldCpKjKgK": 1.9741,
+        "shellDpBar": 0.20101960784313727,
+        "tubeDpBar": 0.24627450980392157
+      }
+    }
+  ],
+  "window": {
+    "start": "2026-09-10T23:00:00.000Z",
+    "end": "2026-09-17T23:00:00.000Z"
+  }
+}

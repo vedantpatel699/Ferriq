@@ -1,22 +1,13 @@
-"""
-Air Blower — Performance & Health Calculation Engine
-Version: 1.0
-Date: 2026-04-04
+"""Air Blower: electrical power, ideal-gas efficiency and condition screening.
 
-Engineering calculation engine for a dual-train centrifugal air blower
-(Blowers A / B, one active at a time). The same calculation methods are
-implemented by the Ferriq TypeScript site model.
-
-Usage:
-    from engine import process_single_row, process_batch, load_csv
-    result = process_batch(load_csv("reference/blower-demo.csv"))
-
-Contract:
-    - Row dicts accept both snake_case engine names and the original human-
-      readable CSV headers (e.g. "Motor Current A").
-    - Missing critical tags cause the row to be dropped (reason recorded).
-    - Efficiency results are NOT clamped. A computed 140 % is a data-quality
-      signal, not something to hide.
+Inputs use A, V, kPaa suction, kPag discharge, Nm3/h, degC and mm/s RMS.
+Common camelCase fields are mapped to the reused snake_case core below.
+Missing critical measurements reject an observation. Missing optional values
+remain unavailable; thermodynamic efficiencies are never clamped to 100%.
+The initial reference period is assumed healthy. Flow regression is gated by
+its current/pressure envelope. Thrust is an operating proxy, not force or life.
+Outputs include kW, efficiency %, elapsed-time trends and configured alerts.
+Run: python engines/air_blower_engine.py examples/air-blower.input.json
 """
 
 import math
@@ -623,6 +614,8 @@ def process_batch(rows, settings=None, limits=None):
             r["flow_residual_pct"] = residual
             r["performance_degradation_pct"] = None if residual is None else max(0.0, -residual)
             r["performance_model_training_rows"] = 0 if model is None else model["training_rows"]
+            r["performance_model_intercept"] = None if model is None else model["intercept"]
+            r["performance_model_slope"] = None if model is None else model["slope"]
             r["performance_model_applicable"] = bool(within_baseline_envelope and expected is not None)
             if residual is not None and residual <= -lim.get("performance_alarm_pct", 10.0):
                 r["alerts"].append(_alert("alarm",
@@ -683,25 +676,50 @@ def load_csv(path):
 # 10. CLI RUNNER
 # =============================================================================
 
-if __name__ == "__main__":
-    import sys
-    path = sys.argv[1] if len(sys.argv) > 1 else "reference/blower-demo.csv"
-    batch = process_batch(load_csv(path))
-    print(f"Processed: {batch['rows_processed']}  Dropped: {batch['rows_dropped']}")
-    if batch["drop_reasons"]:
-        print("Drop reasons:")
-        for r, c in batch["drop_reasons"].items():
-            print(f"  - {r}: {c}")
-    if batch["results"]:
-        latest = batch["results"][-1]
-        print(f"\nLatest row: {latest['timestamp']}  Blower {latest['active_blower']}")
-        print(f"  Power:            {latest['power_kw']} kW")
-        print(f"  Pressure ratio:   {latest['pressure_ratio']}")
-        print(f"  eta fluid:        {latest['efficiency_fluid_pct']} %")
-        print(f"  eta isentropic:   {latest['efficiency_isentropic_pct']} %")
-        print(f"  eta polytropic:   {latest['efficiency_polytropic_pct']} %")
-        print(f"  Max vibration:    {latest['max_vibration_mms']} mm/s")
-        print(f"  Max bearing T:    {latest['max_bearing_temp_c']} C")
-        print(f"  Status:           {latest['status'].upper()}")
-        for a in latest["alerts"]:
-            print(f"    [{a['severity'].upper()}] {a['message']}")
+
+# Common submission adapter. Inputs/configuration retain website field names.
+import re
+from common import execute, cli
+
+def _snake(key):
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", key).lower()
+
+INPUT_MAP = {"totalFlowNm3hr":"total_flow", "suctionTempC":"suction_temp"}
+OUTPUT_MAP = {"flow_nm3hr":"flowNm3hr", "expected_flow_nm3hr":"expectedFlowNm3hr", "status":"severity", "efficiency_method_used":"efficiencyMethodUsed",
+ "active_current_amp":"activeCurrentA", "t1_c_used":"t1CUsed", "p1_bar_abs":"p1BarAbs", "p2_bar_abs":"p2BarAbs"}
+def _camel(key):
+    return key.split('_')[0]+''.join(x.title() for x in key.split('_')[1:])
+
+def calculate(rows,config,parameters):
+    """Batch regression and elapsed-time trends before selected-window averaging.
+
+    Inputs: A, V, kPaa/kPag, Nm3/h, degC, mm/s; outputs retain full precision.
+    Bad quality has already been mapped to missing by common.prepare.
+    """
+    converted=[]
+    for row in rows:
+        r={INPUT_MAP.get(k,_snake(k)):v for k,v in row.items() if not isinstance(v,list)}
+        for train in ('A','B'):
+            for kind in ('vibration','bearingTemp'):
+                for i,v in enumerate(row.get(kind+train) or [],1):
+                    r[f"{'bearing_temp' if kind=='bearingTemp' else kind}_{train.lower()}_{i}"]=v
+        converted.append(r)
+    settings={_snake(k):v for k,v in config['settings'].items()}
+    limits={_snake(k):v for k,v in config['limits'].items()}
+    batch=process_batch(converted,settings,limits)
+    output=[]
+    valid={r['timestamp']:r for r in batch['results']}
+    for raw in converted:
+        stamp=_parse_ts(raw['timestamp']).isoformat()
+        r=valid.get(stamp)
+        if r is None:
+            dropped=process_single_row(raw,settings,limits)
+            output.append({'timestamp':stamp,'drop':True,'reason':dropped['reason'].replace('currents < min','currents below min')})
+            continue
+        out={OUTPUT_MAP.get(k,_camel(k)):v for k,v in r.items() if k not in ('alerts','efficiency_method','active_current_amp','power_factor_source')}
+        out['alerts']=[{'severity':a['severity'],'source':a['source']} for a in r['alerts']]
+        output.append(out)
+    return output
+
+def run(payload): return execute(payload,'air-blower',calculate)
+if __name__=='__main__': cli(run)

@@ -270,8 +270,7 @@ export function normalizeRows(id: EquipmentId, raw: Row[]): Row[] {
     })
     .sort((a, b) => timestamp(a.timestamp) - timestamp(b.timestamp));
 }
-export function seedEquipment(id: EquipmentId): EquipmentData {
-  const rows = simulatedEquipment(id);
+export function defaultEquipmentConfig(id: EquipmentId): Row {
   const config =
     id === "air-blower"
       ? { settings: DEFAULT_BLOWER_SETTINGS, limits: DEFAULT_BLOWER_LIMITS }
@@ -280,9 +279,12 @@ export function seedEquipment(id: EquipmentId): EquipmentData {
         : id === "shell-tube-exchanger"
           ? DEFAULT_EXCHANGER_CONFIG
           : DEFAULT_MEMBRANE_CONFIG;
+  return structuredClone(config) as unknown as Row;
+}
+export function seedEquipment(id: EquipmentId): EquipmentData {
   return {
-    rows: normalizeRows(id, rows),
-    config: structuredClone(config) as unknown as Row,
+    rows: normalizeRows(id, simulatedEquipment(id)),
+    config: defaultEquipmentConfig(id),
     source: DEMO_SOURCE,
   };
 }
@@ -326,6 +328,12 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
         "dischargePressureA",
         "dischargePressureB",
         "totalFlowNm3hr",
+        "bypassOpA",
+        "bypassOpB",
+        "filterDpA",
+        "filterDpB",
+        "controllerSpA",
+        "controllerSpB",
       ] as const)
         if (row[key] === null) row[key] = NaN;
       const ff =
@@ -336,7 +344,7 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
       const result = processBlowerRow(row, cfg.settings, cfg.limits, ff);
       if (result.drop) {
         quality.push(result.reason);
-        values = { ...values, efficiencyHeadlinePct: null };
+        values = { ...values, ...result, efficiencyHeadlinePct: null };
       } else {
         values = { ...values, ...result };
         alerts = result.alerts;
@@ -614,11 +622,15 @@ export function calculate(id: EquipmentId, data: EquipmentData): Reading[] {
     const t0 = history[0].epoch;
     const xs = history.map((p) => (p.epoch - t0) / 86400000);
     const ys = history.map((p) => p.value);
+    if (ys.every((y) => y === ys[0])) return 0;
     const mx = xs.reduce((a, b) => a + b, 0) / xs.length;
     const my = ys.reduce((a, b) => a + b, 0) / ys.length;
     const denom = xs.reduce((a, x) => a + (x - mx) ** 2, 0);
     if (denom <= 0) return null;
-    return xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0) / denom;
+    const slope =
+      xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0) / denom;
+    // Suppress floating-point cancellation, far below sensor resolution.
+    return Math.abs(slope) < 1e-12 ? 0 : slope;
   };
 
   const trendHistory = new Map<string, { epoch: number; value: number }[]>();

@@ -1,0 +1,85 @@
+{
+  "schemaVersion": "1.0",
+  "model": "air-blower",
+  "source": "simulated verification fixture",
+  "timezone": "America/Edmonton",
+  "config": {
+    "settings": {
+      "motorVoltageV": 4000,
+      "powerFactor": 0.85,
+      "powerFactorMode": "datasheet",
+      "gammaK": 1.4,
+      "atmPressureBar": 0.93,
+      "activeCurrentMinA": 10,
+      "suctionTempFallbackC": 4,
+      "suctionTempFfMaxHours": 4,
+      "baselineTrainingDays": 14,
+      "performanceBypassMaxPct": 5,
+      "blowerMode": "auto",
+      "efficiencyMethod": "polytropic"
+    },
+    "limits": {
+      "vibAdvisoryMms": 4.5,
+      "vibAlarmMms": 7.1,
+      "vibTripMms": 11,
+      "brgAdvisoryC": 70,
+      "brgAlarmC": 85,
+      "brgTripC": 95,
+      "filterDpMaxBar": 0.1,
+      "blowerDpMaxBar": 1,
+      "bypassOpenMaxPct": 60,
+      "performanceWatchPct": 5,
+      "performanceAlarmPct": 10,
+      "thrustProxyWatchPct": 15,
+      "thrustProxyAlarmPct": 25
+    }
+  },
+  "parameters": {},
+  "measurements": [
+    {
+      "timestamp": "2026-09-17T17:00:00-06:00",
+      "values": {
+        "motorCurrentA": 116.81660029031808,
+        "motorCurrentB": 0,
+        "suctionPressureA": 92.59326335692421,
+        "suctionPressureB": 93,
+        "dischargePressureA": 84.65797985667433,
+        "dischargePressureB": 0,
+        "controllerSpA": 85,
+        "controllerSpB": 85,
+        "bypassOpA": 0,
+        "bypassOpB": 70,
+        "filterDpA": 0.004678431372549021,
+        "filterDpB": 0,
+        "totalFlowNm3hr": 19987.65150343324,
+        "suctionTempC": 4.897426510180788,
+        "dischargeTempA": 83.6158728711784,
+        "dischargeTempB": 4.897426510180788,
+        "vibrationA": [
+          1.7203921568627454,
+          1.8203921568627452,
+          1.6203921568627453,
+          1.9203921568627453
+        ],
+        "bearingTempA": [
+          62.268415155263725,
+          66.26841515526372
+        ],
+        "vibrationB": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "bearingTempB": [
+          4.897426510180788,
+          4.897426510180788
+        ]
+      }
+    }
+  ],
+  "window": {
+    "start": "2026-09-10T23:00:00.000Z",
+    "end": "2026-09-17T23:00:00.000Z"
+  }
+}
