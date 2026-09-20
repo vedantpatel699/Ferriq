@@ -420,7 +420,7 @@ export function economics(
 
   const feed = CRUDES.reduce((sum, c) => sum + (crudeFlows[c] ?? 0), 0);
   const costForRevenue = (r: number) =>
-    revenueOpex(cfg.opexRevenuePercent, cfg.opex, feed, r);
+    revenueOpex(cfg.opexRevenuePercent, cfg.opex, feed, r, cfg.opexRevenueComponents);
   const opex = costForRevenue(revLow);
   const opexHigh = costForRevenue(revHigh);
   const out: EconomicsResult = {

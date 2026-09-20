@@ -79,6 +79,18 @@ class Contract(unittest.TestCase):
         self.assertAlmostEqual(e['margin_low_cad_hr'],e['revenue_low_cad_hr']-e['crude_cost_low_cad_hr'])
         p['measurements'][0]['values']['flows']['OSH']=-1;self.assertFalse(run(p)['ok'])
 
+    def test_variable_cost_components(self):
+        p=sample('crude-to-profit')
+        split={'steam':1,'electricity':2,'naturalGas':3,'chemicalsCatalyst':4}
+        p['config']['opexRevenuePercent']=80
+        p['config']['opexRevenueComponents']=split
+        e=run(p)['result'][0]['economics']
+        self.assertEqual(len(e['operating_costs']['items']),4)
+        self.assertAlmostEqual(e['operating_costs']['cadPerOperatingHour'],e['revenue_low_cad_hr']*.10)
+        for invalid in [None,{},dict(split,steam=-1),dict(split,steam=95),dict(split,steam=True),dict(split,steam='2'),dict(split,steam=float('nan'))]:
+            p['config']['opexRevenueComponents']=invalid
+            self.assertFalse(run(p)['ok'])
+
     def test_overlapping_financial_intervals_rejected(self):
         p=sample('crude-to-profit');a=p['measurements'][0]
         a['values']['intervalEnd']='2026-09-18T17:00:00-06:00'

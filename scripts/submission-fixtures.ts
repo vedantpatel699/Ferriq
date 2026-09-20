@@ -244,6 +244,7 @@ for (const variant of [
   "incomplete market",
   "itemized",
   "percentage replaces items",
+  "components replace items",
 ]) {
   const cfg: any = structuredClone(DEFAULT_CRUDE_TO_PROFIT_CONFIG);
   if (variant.includes("item") || variant === "itemized") {
@@ -272,6 +273,10 @@ for (const variant of [
     variant === "zero feed"
       ? Object.fromEntries(Object.keys(flows).map((k) => [k, 0]))
       : flows;
+  if (variant === "components replace items") {
+    cfg.opexRevenuePercent = 80;
+    cfg.opexRevenueComponents = {steam:1,electricity:2,naturalGas:3,chemicalsCatalyst:4};
+  }
   const market: any = {
     crude: { ...cfg.crude_price_high_cad_m3 },
     product: { ...cfg.product_price_low_cad_m3 },

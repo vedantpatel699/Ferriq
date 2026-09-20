@@ -1,59 +1,76 @@
-import { DEFAULT_OPEX_REVENUE_PERCENT } from "../engineering/crudeToProfit/opex";
+import {
+  REVENUE_OPEX_LABELS,
+  revenueOpexComponents,
+  type RevenueOpexComponents,
+} from "../engineering/crudeToProfit/opex";
 export function OpexConfiguration({
   value,
+  components,
   legacy,
   onChange,
 }: {
   value?: number;
+  components?: RevenueOpexComponents;
   legacy: boolean;
-  onChange: (value: number) => void;
+  onChange: (value: RevenueOpexComponents) => void;
 }) {
+  const allocation = components ?? revenueOpexComponents(value);
+  const total = Object.values(allocation).reduce((a, b) => a + b, 0);
   return (
     <section className="advanced-panel" aria-label="Operating costs">
-      <h2>Operating costs</h2>
-      {legacy && value === undefined ? (
+      <h2>Variable operating costs</h2>
+      {legacy && value === undefined && components === undefined ? (
         <>
           <p>Your saved itemized costs remain active.</p>
-          <button onClick={() => onChange(DEFAULT_OPEX_REVENUE_PERCENT)}>
-            Use 8% of revenue instead
+          <button onClick={() => onChange(revenueOpexComponents(undefined))}>
+            Replace itemized costs with provisional 8% split
           </button>
         </>
       ) : (
-        <label className="editor-field">
-          OPEX (% of sales revenue)
-          <input
-            type="number"
-            min="0"
-            max="100"
-            step="0.1"
-            required
-            value={
-              value === undefined
-                ? DEFAULT_OPEX_REVENUE_PERCENT
-                : Number.isFinite(value)
-                  ? value
-                  : ""
-            }
-            onChange={(e) => onChange(e.target.valueAsNumber)}
-          />
-        </label>
+        <>
+          {Object.entries(REVENUE_OPEX_LABELS).map(([key, label]) => (
+            <label className="editor-field" key={key}>
+              {label} (% of sales revenue)
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                required
+                value={
+                  Number.isFinite(
+                    allocation[key as keyof RevenueOpexComponents],
+                  )
+                    ? allocation[key as keyof RevenueOpexComponents]
+                    : ""
+                }
+                onChange={(e) =>
+                  onChange({ ...allocation, [key]: e.target.valueAsNumber })
+                }
+              />
+            </label>
+          ))}
+          <p>
+            Total variable-cost allowance:{" "}
+            {Number.isFinite(total) ? total : "—"}% of sales revenue.
+          </p>
+        </>
       )}
       <p>
-        Default: 8% of sales revenue, applied separately to Low, High and Live.
-        One total allowance for operating costs, including utilities, chemicals,
-        maintenance and overhead. Crude purchases are deducted separately.
+        Provisional default: 2% each, 8% total. The equal split is a planning
+        placeholder, not measured plant costs. Adjust each component separately;
+        Low, High and Live use their own sales revenue.
       </p>
       <p>
-        Planning assumption based on{" "}
-        <a
-          href="https://www.sec.gov/Archives/edgar/data/311337/000110465926020411/su-20251231xex99d3.htm"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Suncor’s 2025 refining and marketing results
-        </a>
-        . Actual costs depend on the site and do not necessarily move with
-        selling prices.
+        Saved single-percentage allowances are split equally without changing
+        their total. Component costs replace the combined allowance, so they are
+        deducted only once. Crude purchases remain separate.
+      </p>
+      <p>
+        The original 8% benchmark included maintenance and overhead. This
+        four-component allocation is unverified and excludes separate
+        maintenance, overhead and other costs. Count natural gas used to
+        generate steam or power in only one component.
       </p>
     </section>
   );

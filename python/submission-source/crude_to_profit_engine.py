@@ -755,20 +755,25 @@ def operating_costs(value, feed_m3hr):
     return {"items":items,"annualCad":annual,"cadPerOperatingHour":annual/hours,"hoursPerYear":hours}
 
 
-def revenue_opex(percent, legacy, feed, revenue):
-    if percent is None and legacy is not None:
+_OPEX_UNSET = object()
+def revenue_opex(percent, legacy, feed, revenue, components=_OPEX_UNSET):
+    if components is _OPEX_UNSET and percent is None and legacy is not None:
         return operating_costs(legacy, feed)
-    rate = 8 if percent is None else percent
-    if isinstance(rate, bool) or not isinstance(rate, (int,float)) or not math.isfinite(rate) or not 0 <= rate <= 100:
-        raise ValueError("OPEX must be between 0 and 100% of sales revenue")
+    labels = {"steam":"Steam", "electricity":"Power", "naturalGas":"Natural gas", "chemicalsCatalyst":"Chemicals + catalyst"}
+    if components is _OPEX_UNSET:
+        rate = 8 if percent is None else percent
+        if isinstance(rate, bool) or not isinstance(rate,(int,float)) or not math.isfinite(rate) or not 0 <= rate <= 100:
+            raise ValueError("OPEX must be between 0 and 100% of sales revenue")
+        components = {key:rate/4 for key in labels}
+    if not isinstance(components,dict) or set(components)!=set(labels) or any(isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) or v<0 for v in components.values()) or sum(components.values())>100:
+        raise ValueError("Variable-cost percentages must be finite, nonnegative and total no more than 100%")
     if not math.isfinite(revenue) or revenue < 0:
         raise ValueError("Sales revenue must be finite and nonnegative")
     hours = HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR
-    cost = revenue * rate / 100
-    annual = cost * hours
-    if not math.isfinite(annual):
-        raise ValueError("Operating cost exceeds numeric range")
-    return {"items":[{"key":"revenue","category":"Operating allowance","annualCad":annual,"cadPerOperatingHour":cost}],"annualCad":annual,"cadPerOperatingHour":cost,"hoursPerYear":hours}
+    items = [{"key":key,"category":labels[key],"annualCad":revenue*components[key]/100*hours,"cadPerOperatingHour":revenue*components[key]/100} for key in labels]
+    annual = sum(item["annualCad"] for item in items)
+    if not math.isfinite(annual):raise ValueError("Operating cost exceeds numeric range")
+    return {"items":items,"annualCad":annual,"cadPerOperatingHour":sum(item["cadPerOperatingHour"] for item in items),"hoursPerYear":hours}
 
 
 def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
@@ -804,7 +809,11 @@ def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
         return sum(crude_flows_m3hr.get(c, 0.0) * prices[c] for c in CRUDES)
 
     def _revenue(prices):
-        return sum(product_slate_m3hr.get(p, 0.0) * prices[p] for p in PRODUCTS)
+        # Match the website's left-to-right addition, including display rounding.
+        total = 0.0
+        for p in PRODUCTS:
+            total += product_slate_m3hr.get(p, 0.0) * prices[p]
+        return total
 
     cost_low = _crude_cost(cfg["crude_price_low_cad_m3"])
     cost_high = _crude_cost(cfg["crude_price_high_cad_m3"])
@@ -815,7 +824,7 @@ def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
     annual = HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR / 1e6
 
     def cost_for_revenue(r):
-        return revenue_opex(cfg.get("opexRevenuePercent"), cfg.get("opex"), sum(crude_flows_m3hr.get(c,0) for c in CRUDES), r)
+        return revenue_opex(cfg.get("opexRevenuePercent"), cfg.get("opex"), sum(crude_flows_m3hr.get(c,0) for c in CRUDES), r, cfg.get("opexRevenueComponents", _OPEX_UNSET))
     opex = cost_for_revenue(rev_low)
     opex_high = cost_for_revenue(rev_high)
     out = {

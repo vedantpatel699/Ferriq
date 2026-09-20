@@ -30,6 +30,10 @@ for module,model in models.items():
  elif model!='furnace-skin-temp':sample['measurements']=sample['measurements'][-48:]
  parameters=sample.get('parameters',{})
  parameters.pop('model',None)
+ defaults=read('data/defaults.json')[model]
+ settings=json.loads(json.dumps(defaults))
+ if model=='crude-to-profit':
+  settings['opexRevenueComponents']={'steam':2,'electricity':2,'naturalGas':2,'chemicalsCatalyst':2}
  header=f'''"""{model}: standalone calculation file.
 Run with Python 3.10 or newer (IDLE: Run > Run Module, or python {module}_engine.py).
 No installation packages, network connection or other files are required.
@@ -51,8 +55,8 @@ def _unpack(text):
     return json.loads(gzip.decompress(base64.b64decode(text)))
 
 # USER SETTINGS: defaults are the same as the website. Edit these values.
-SETTINGS = {pprint.pformat(read('data/defaults.json')[model], width=90, sort_dicts=False)}
-DEFAULTS = {{{model!r}: SETTINGS}}
+SETTINGS = {pprint.pformat(settings, width=90, sort_dicts=False)}
+DEFAULTS = {{{model!r}: {f'_unpack({packed(defaults)})' if model=='crude-to-profit' else 'SETTINGS'}}}
 UNITS = {repr(read('data/units.json')[model])}
 # Embedded sample data, kept compressed to keep the calculation blocks readable.
 SAMPLE = _unpack({packed(sample)})

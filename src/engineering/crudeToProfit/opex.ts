@@ -85,38 +85,87 @@ export function operatingCosts(value: unknown, feedM3Hr: number) {
 // Suncor 2025 R&M OS&G / operating revenues: 2,439 / 30,671 = 7.95%.
 // Rounded planning allowance; includes selling/general costs, not just utilities.
 export const DEFAULT_OPEX_REVENUE_PERCENT = 8;
+export const REVENUE_OPEX_LABELS = {
+  steam: "Steam",
+  electricity: "Power",
+  naturalGas: "Natural gas",
+  chemicalsCatalyst: "Chemicals + catalyst",
+} as const;
+export type RevenueOpexComponents = Record<
+  keyof typeof REVENUE_OPEX_LABELS,
+  number
+>;
+export function revenueOpexComponents(
+  percent: unknown,
+  components?: unknown,
+): RevenueOpexComponents {
+  if (components !== undefined) {
+    if (
+      !components ||
+      typeof components !== "object" ||
+      Array.isArray(components)
+    )
+      throw Error("Enter all four variable-cost percentages.");
+    const values = components as RevenueOpexComponents;
+    if (
+      Object.keys(values).length !== 4 ||
+      Object.keys(values).some((k) => !(k in REVENUE_OPEX_LABELS)) ||
+      Object.keys(REVENUE_OPEX_LABELS).some(
+        (k) =>
+          typeof values[k as keyof RevenueOpexComponents] !== "number" ||
+          !Number.isFinite(values[k as keyof RevenueOpexComponents]) ||
+          values[k as keyof RevenueOpexComponents] < 0,
+      ) ||
+      Object.values(values).reduce((a, b) => a + b, 0) > 100
+    )
+      throw Error(
+        "Variable-cost percentages must be finite, nonnegative and total no more than 100%.",
+      );
+    return values;
+  }
+  const total = percent === undefined ? DEFAULT_OPEX_REVENUE_PERCENT : percent;
+  if (
+    typeof total !== "number" ||
+    !Number.isFinite(total) ||
+    total < 0 ||
+    total > 100
+  )
+    throw Error("OPEX must be between 0 and 100% of sales revenue.");
+  return {
+    steam: total / 4,
+    electricity: total / 4,
+    naturalGas: total / 4,
+    chemicalsCatalyst: total / 4,
+  };
+}
 export function revenueOpex(
   percent: unknown,
   legacy: unknown,
   feed: number,
   revenueCadHr: number,
+  components?: unknown,
 ) {
-  if (percent === undefined && legacy !== undefined)
+  if (components === undefined && percent === undefined && legacy !== undefined)
     return operatingCosts(legacy, feed);
-  const rate = percent === undefined ? DEFAULT_OPEX_REVENUE_PERCENT : percent;
-  if (
-    typeof rate !== "number" ||
-    !Number.isFinite(rate) ||
-    rate < 0 ||
-    rate > 100
-  )
-    throw Error("OPEX must be between 0 and 100% of sales revenue.");
+  const allocation = revenueOpexComponents(percent, components);
   if (!Number.isFinite(revenueCadHr) || revenueCadHr < 0)
     throw Error("Sales revenue must be finite and nonnegative.");
   const hours = HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR;
-  const cost = (revenueCadHr * rate) / 100;
-  const annualCad = cost * hours;
+  const items = Object.entries(REVENUE_OPEX_LABELS).map(([key, category]) => {
+    const percent = allocation[key as keyof RevenueOpexComponents];
+    return {
+      key,
+      category,
+      annualCad: ((revenueCadHr * percent) / 100) * hours,
+      cadPerOperatingHour: (revenueCadHr * percent) / 100,
+    };
+  });
+  const cost = items.reduce((sum, item) => sum + item.cadPerOperatingHour, 0);
+  const annualCad = items.reduce((sum, item) => sum + item.annualCad, 0);
   if (!Number.isFinite(annualCad))
     throw Error("Operating cost exceeds the supported numeric range.");
   return {
-    items: [
-      {
-        key: "revenue",
-        category: "Operating allowance",
-        annualCad,
-        cadPerOperatingHour: cost,
-      },
-    ],
+    items,
     annualCad,
     cadPerOperatingHour: cost,
     hoursPerYear: hours,

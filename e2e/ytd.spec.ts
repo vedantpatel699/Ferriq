@@ -112,8 +112,8 @@ test("financial YTD totals reconcile and recalculate from OPEX", async ({
   const before = await read();
   expect(before[3]).toBeCloseTo(before[0] - before[1] - before[2], 2);
   await page
-    .getByLabel("OPEX (% of sales revenue)", { exact: true })
-    .fill("10");
+    .getByLabel("Steam (% of sales revenue)", { exact: true })
+    .fill("4");
   const after = await read();
   expect(after[0]).toBe(before[0]);
   expect(after[2]).toBeCloseTo(after[0] * 0.1, 2);

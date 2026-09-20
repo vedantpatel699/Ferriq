@@ -164,8 +164,12 @@ SETTINGS = {'primary_yield_volpct': {'OSH': {'naphtha': 9.8,
  'swing_diesel_to_diesel': 0.5,
  'lpg_c3_fraction': 0.258,
  'lpg_c4_fraction': 0.742,
- 'gas_oil_unit': 'hydrocracker'}
-DEFAULTS = {'crude-to-profit': SETTINGS}
+ 'gas_oil_unit': 'hydrocracker',
+ 'opexRevenueComponents': {'steam': 2,
+                           'electricity': 2,
+                           'naturalGas': 2,
+                           'chemicalsCatalyst': 2}}
+DEFAULTS = {'crude-to-profit': _unpack('H4sIAAAAAAAC/72W2Y7bNhSGX0XQdYYgJVFL76ZJkwmQNEAHRS4JmaJtNrQkaPHUGPjde0jaIiVrgmQK5MbmpvP95+f6HLadPJTdiZ2kUBU7NqrlQ/hb8Bx+eXww/3XZ7od9CeUC5W+CsNw1UCY5yqByNJU0RomudFDOUQxFZTsIgfLBlmOMCqjtbS0iiJ6h+vjwbkGJqI+JJkgUOUhcIOIoiYMUiDpGjgqNuP/6+xKROAA2kSZEcUUkkQPEKH0BAZaYLN5+WSBIiqIJElNEHCXBiE6ZUBQVnl+gJncoMDkmDkYihI1p7/+6ySjyLEOeadSm11lu4pmGvLkBbupxYOBZczrRy2oUbKylXhOh4mwra9GF0Mebb6JjWyEqxnnHnga7bog2R7U7th2FYruyZ53gzVF0ooJerCF8P9yuNh7rjxHVn0ueaOmo0JpqUyEo0TZ5/sLk6mz6J1nvmGunKNF5gbamF7XQicYo11ErKXqhdGCM4nT6dGou7EyMXFuQIWomtpeHSvYD61slB19v3xlPn3Wul8ScCLwiDM9VYV8RvlWDJykE47M/+NXIZOZCsgIliaOeZ+HXoXG2QjUr4KVMk/x7qZpEL+vz1WlGs7mOb3mxAyZmOx3+J3GW4QrQOGKBeXR2++zXLR7+S1erJY6VYHC5cMFU88R4WbFD7F0sNMfT8U8xns5pW7YHakrwdNrRayYu7l7u9reB08QLnHmBcy9w7gXOTOC2a6qRD+uSrW0pnRuXRWvWZenCPELozD9C8Nrew9i5SKMVTct0ragsn4vKyZqonC5FxXguKsrXRFnpVhSk72Zg15XwW8ntFo72epClYmNfsc1GeVNBiD167WRAzRxBdjquNTshuR1oZ8R0LfMHXV7Wz+GhqXQecEftZFMDvqz5vjFX00ZAER4133Q/xGjLWhh1u1LpflVuTHbhvdqIbiiDPz98CozHb4ID3FVVUJVSncLlEfijSLj1GiVfz/SmyUErCRfpwDRDDMzxlvB/xGCu3jX2Hx/vA+i/0wMC99XievlZ4qg0ir9I/PvT47sFbbk8HbRp26Yb9IPjxI6lGoUJ1zzpvut4fYLCXtBNk1U+9DPEUneV6KT21YsY2Ijn24X+YwL0PvDgl69/Fm1303eIsN6bf0867mWBwaCvbx91w7bkg2nAKI+oT34Q5fF0d9kxPvnOxAxszPON+2xomH/Sm9et744e4A56dH3f8ZhtO1ADO8G0RzS/9iTznsw8pfVTsJFqekvuT1XXcBgH8PD8H3X0rEGIDAAA')}
 UNITS = {'inputs': {'flows.*': 'm3/h', 'market.crude.*,market.product.*': 'CAD/m3', 'intervalEnd': 'ISO-8601'}, 'outputs': {'*_m3hr': 'm3/h', '*_kghr': 'kg/h', '*_cad_hr': 'CAD/operating hour', '*_million_cad_year': 'million CAD/year', 'annualCad': 'CAD/year', 'cadPerOperatingHour': 'CAD/operating hour', 'period.*Cad': 'CAD', 'period.operatingHours': 'hour', '*_wtpct,*_volpct': '%'}, 'timestamp': 'ISO-8601 with offset', 'status': 'text/boolean/count as named; no physical unit'}
 # Embedded sample data, kept compressed to keep the calculation blocks readable.
 SAMPLE = _unpack('H4sIAAAAAAAC/72XbW/bNhCA/4rgzzVH6s1yv2VttwzolqFZ1w/DQDAUZXPRGyQqqRf4v+9I2iIlK0WbAQ2CRNSR99wdybvT06rne1GxP0XXy6ZevQ5WBOHVq2BVNbko9Zh3Qy7Wqlm3XVNIpWV9M3RcaGEvq6FkSuTBg+hkITlToCYo5Gc1dELPVbIS/za1mX1VwSTOfniXV02tAAdy3tSF3IH0adV2smLdgR6kKHP60JQtV0Zwc3tt/tes3as9g+ctymAt2zXwTDK0gcGDGaQRivWgg+cMRfBYWgEh2in7HGG0hdHejkKCkiMMb6/fzihh4mPCERKGDhJtEXGU2EG2KHGMDG014urTj3NE7ADYaBoR2zMiDh0gQukzCAiJ8eLNzQxBUhSOkChBxFFijJLRkwSFWy9eYE3mUBDkiDgYCRE2Qfvpw4VHoRcy5AUtse51lht7QUPe3gA39Tgw8ag5nehlPgg61FKfiVXJaSFr0dkjdC86WgiRU847+qjsuSE6OGW7o8UgSrpjPe0Eb+CcihykWEP4Xl2eNh7pxSjRyyWPteloq22qzYCgWIfJiy9srvamf5T1jrr3CYq1X2Bb0wtzAeIIZVprLkVvLleIUZSOS8fXW7sTA9ch2KDEbCxctVz2ivZtKZVvb9+ZmD5pX0+OOSPwgmF4ahX2LcKX1uDRFILx0Z/8YmQ8iUK8ACWxox4n6peh0WaBak7Ac57G2ZdcNY6ezueL3Qwnex1d8iIHjM11qv4nceLhAtBExAKz8Oju2fc7PPy7nlZLhAJGobhwQcvmkXKW0yryCkuS4TH9JxiPedo+24SaEjxmu+TsidO7l7v9peI09hRvPMWZpzjzFG+MYii0+cDVssk2bGkyDdwmXArdJp0Fj5BkEj9C8NLdw9hFMQkXbJq7a43aZFOjMrJkVJbMjYrw1KgwWzLKmm6NAvfdDuw6Bn9zWRSQ2mslWUmHPqd3d6W3FYTY1Gs3A0YmBdntOI/shmR2ot0RI5r7D3Z5Xj+ZVknXpE7soPkBPKv5vjGl6U7AIzQ191oOOlpWC2PdjpVaXrI722VdlXeiUyz47ef3gYnxq6CCWpUHOZPlYTVPgV+LhKrXlPLlTG+bHDSXUEgV1QyhqOPN4f8IZUrvEvvdL1cByNd6QuBWzcrLtxKHUqP4s8SP72/fzmjz4+mgTds2ndINx4E+sHIw7SzcRi07z9cZFO6CfjWGyof+qrvodQ5tr46rpzGwGo+XB/3rDND3wIOfVn8r2t6mLxDhvDefD1rv6YDBpE9vbvWLgnFlXmCUhYlPvhbs4bA+3RifvDY6A6vzeBF9qhrqZ3rT3frR0RNcokfn/o5HtOjAGvsBg1GYZGdJPJVsTCutW8FGlmMvuT/kXcNh3r3tJ5tWfP4gHkQ9iN8FfOjUepbpwVrWsUoo+FgyYTs1pR9PeurG7j7ov5Hl5K2p7YL18FFUgT69/K8n823UK1a1el6Iw3SNt2uy+YNsXmMMv2ucwl+t0gTOQgs4Ab2f2bArMtnGJbXE1RjiEloYb1E6+Tkej38f/wNDkZZ/CA4AAA==')
@@ -1108,20 +1112,25 @@ def operating_costs(value, feed_m3hr):
     return {"items":items,"annualCad":annual,"cadPerOperatingHour":annual/hours,"hoursPerYear":hours}
 
 
-def revenue_opex(percent, legacy, feed, revenue):
-    if percent is None and legacy is not None:
+_OPEX_UNSET = object()
+def revenue_opex(percent, legacy, feed, revenue, components=_OPEX_UNSET):
+    if components is _OPEX_UNSET and percent is None and legacy is not None:
         return operating_costs(legacy, feed)
-    rate = 8 if percent is None else percent
-    if isinstance(rate, bool) or not isinstance(rate, (int,float)) or not math.isfinite(rate) or not 0 <= rate <= 100:
-        raise ValueError("OPEX must be between 0 and 100% of sales revenue")
+    labels = {"steam":"Steam", "electricity":"Power", "naturalGas":"Natural gas", "chemicalsCatalyst":"Chemicals + catalyst"}
+    if components is _OPEX_UNSET:
+        rate = 8 if percent is None else percent
+        if isinstance(rate, bool) or not isinstance(rate,(int,float)) or not math.isfinite(rate) or not 0 <= rate <= 100:
+            raise ValueError("OPEX must be between 0 and 100% of sales revenue")
+        components = {key:rate/4 for key in labels}
+    if not isinstance(components,dict) or set(components)!=set(labels) or any(isinstance(v,bool) or not isinstance(v,(int,float)) or not math.isfinite(v) or v<0 for v in components.values()) or sum(components.values())>100:
+        raise ValueError("Variable-cost percentages must be finite, nonnegative and total no more than 100%")
     if not math.isfinite(revenue) or revenue < 0:
         raise ValueError("Sales revenue must be finite and nonnegative")
     hours = HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR
-    cost = revenue * rate / 100
-    annual = cost * hours
-    if not math.isfinite(annual):
-        raise ValueError("Operating cost exceeds numeric range")
-    return {"items":[{"key":"revenue","category":"Operating allowance","annualCad":annual,"cadPerOperatingHour":cost}],"annualCad":annual,"cadPerOperatingHour":cost,"hoursPerYear":hours}
+    items = [{"key":key,"category":labels[key],"annualCad":revenue*components[key]/100*hours,"cadPerOperatingHour":revenue*components[key]/100} for key in labels]
+    annual = sum(item["annualCad"] for item in items)
+    if not math.isfinite(annual):raise ValueError("Operating cost exceeds numeric range")
+    return {"items":items,"annualCad":annual,"cadPerOperatingHour":sum(item["cadPerOperatingHour"] for item in items),"hoursPerYear":hours}
 
 
 def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
@@ -1157,7 +1166,11 @@ def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
         return sum(crude_flows_m3hr.get(c, 0.0) * prices[c] for c in CRUDES)
 
     def _revenue(prices):
-        return sum(product_slate_m3hr.get(p, 0.0) * prices[p] for p in PRODUCTS)
+        # Match the website's left-to-right addition, including display rounding.
+        total = 0.0
+        for p in PRODUCTS:
+            total += product_slate_m3hr.get(p, 0.0) * prices[p]
+        return total
 
     cost_low = _crude_cost(cfg["crude_price_low_cad_m3"])
     cost_high = _crude_cost(cfg["crude_price_high_cad_m3"])
@@ -1168,7 +1181,7 @@ def economics(crude_flows_m3hr, product_slate_m3hr, config=None,
     annual = HOURS_PER_DAY * OPERATING_DAYS_PER_YEAR / 1e6
 
     def cost_for_revenue(r):
-        return revenue_opex(cfg.get("opexRevenuePercent"), cfg.get("opex"), sum(crude_flows_m3hr.get(c,0) for c in CRUDES), r)
+        return revenue_opex(cfg.get("opexRevenuePercent"), cfg.get("opex"), sum(crude_flows_m3hr.get(c,0) for c in CRUDES), r, cfg.get("opexRevenueComponents", _OPEX_UNSET))
     opex = cost_for_revenue(rev_low)
     opex_high = cost_for_revenue(rev_high)
     out = {

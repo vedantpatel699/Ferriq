@@ -73,3 +73,14 @@ Source: September 17 user request following the direct Watchlist URL screenshot.
 - Updated the device-folder blower file and its ZIP entry, verifying all other archive entries were preserved. Six PDF manuals contain no plant identifiers; their website content is unchanged.
 - Final local validation: build, all 135 unit tests, all 122 desktop/tablet browser tests, Python/TypeScript parity (175 economics cases / 59,584 comparisons and blower parity), all nine submission test methods / 141 cases, and standalone-generator freshness pass. Six PDF identifier scans pass. Lint retains eight existing warnings. Overview screenshot visually reviewed. Remote main matches the reviewed base before commit. After the authorized push, verify the exact-commit Pages workflow, deployed artifact contents, six live workflows/manuals and seven removed routes; record the outcome in the final handoff.
 - Scope: current tracked files, delivered files and deployed application. Existing Git history is not rewritten. Earlier engineering source uncertainties and provisional AVEVA status are unchanged.
+
+## Variable-cost component split
+
+Source: user-provided Sudhakar request for steam, power, natural gas, and chemicals plus catalyst. User approved retaining the 8% total with a clearly provisional split. Default allocation is 2% of sales revenue per component, individually configurable; these shares are not client-confirmed operating estimates.
+
+- Added four component costs and annual breakdown for each price case. Explicit component configuration replaces, rather than adds to, prior scalar or itemized costs. Saved scalar totals retain their total through equal allocation; legacy itemized costs remain until explicitly replaced.
+- Profit and simulated period costs use the same calculation path. Maintenance/overhead are not separately included; natural gas must not duplicate purchased steam/power costs.
+- Updated both Python paths, the standalone crude engine and its matching website/PDF manual. Python revenue accumulation now follows JavaScript left-to-right order, resolving an exact display-rounding discrepancy without weakening parity checks.
+- Updated only the crude engine and manual in the device folder/ZIP; verified other archive entries unchanged.
+- Validation: build; 138 unit tests; 178 Python economics cases / 67,105 comparisons; blower parity; six reference Python tests; ten submission test methods / 142 production cases; 12 targeted desktop/tablet workflows, followed by two final OPEX save/export/reconciliation checks. Manual text/formulas match the website; all three PDF pages visually checked. Lint retains eight existing warnings. Final generator and fixture freshness checks included.
+- Remaining uncertainty: equal shares are placeholders for client review, not measured utility consumption. Prior engineering-source and provisional AVEVA limitations remain. Exact-commit deployment and live verification follow the authorized push.

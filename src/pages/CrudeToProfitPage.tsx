@@ -239,12 +239,15 @@ export function CrudeToProfitPage() {
           </details>
           <OpexConfiguration
             value={draft.config.opexRevenuePercent}
+            components={draft.config.opexRevenueComponents}
             legacy={draft.config.opex !== undefined}
-            onChange={(opexRevenuePercent) =>
-              setDraft((d) => ({
-                ...d,
-                config: { ...d.config, opexRevenuePercent },
-              }))
+            onChange={(opexRevenueComponents) =>
+              setDraft((d) => {
+                const config = { ...d.config, opexRevenueComponents };
+                delete config.opexRevenuePercent;
+                delete config.opex;
+                return { ...d, config };
+              })
             }
           />
           {result && (
@@ -324,6 +327,16 @@ export function CrudeToProfitPage() {
                   configuredOpex: c.opex ? c.opex.annualCad / 1e6 : undefined,
                   marginAfterOpex: c.afterOpex,
                 }))}
+              />
+              <DataTable
+                caption="Operating cost breakdown (million CAD/year)"
+                rows={annualCases.flatMap((c) =>
+                  (c.opex?.items ?? []).map((item) => ({
+                    case: c.label,
+                    component: item.category,
+                    annualCost: item.annualCad / 1e6,
+                  })),
+                )}
               />
               <EconomicsHistory
                 flows={draft.flows}

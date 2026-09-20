@@ -449,6 +449,7 @@ export const engineeringManuals: Record<string, EngineeringManual> = {
         "Stored assumptions",
         "Convert feeds into product volumes; assumptions are not live plant measurements.",
       ],
+      ["Steam, power, natural gas, chemicals + catalyst", "% of sales revenue", "Four editable cost allowances; default 2% each, 8% total. Provisional allocation awaiting site cost data."],
     ],
     calculations: [
       [
@@ -478,17 +479,17 @@ export const engineeringManuals: Record<string, EngineeringManual> = {
       ],
       [
         "Operating costs",
-        "Annual OPEX = annual sales revenue × OPEX percentage / 100",
-        "Editable default: 8% for each price case. A single allowance covers operating costs including utilities, chemicals, maintenance and overhead. Earlier saved itemized costs remain active until replaced with the percentage.",
+        "Annual component cost = annual sales revenue × component percentage / 100; total OPEX = steam + power + natural gas + chemicals and catalyst",
+        "Four editable percentages: steam, power, natural gas, and chemicals + catalyst. Provisional default: 2% each, 8% total, applied to each price case. The equal split is not measured or client-confirmed. A saved single percentage is divided equally without changing its total. Earlier itemized costs remain active until explicitly replaced.",
       ],
       [
         "Margin after configured OPEX",
         "Annual margin after OPEX = annual sales − annual crude purchases − annual configured OPEX",
-        "Operating margin before depreciation, financing, tax and capital expenditure. The percentage replaces itemized OPEX rather than adding to it. Crude purchases remain separate.",
+        "Margin after configured costs, before unconfigured maintenance, overhead, depreciation, financing, tax and capital expenditure. Component percentages replace the combined allowance and any earlier itemized costs. Crude purchases remain separate. Count fuel for onsite steam or power in only one component.",
       ],
     ],
     trends: [
-      "Reconcile sales minus crude purchases minus configured OPEX for each price case.",
+      "Reconcile sales minus crude purchases minus the four configured cost components for each price case.",
       "Compare Low, High and Live market annual estimates for the same feed and routing.",
       "Compare product volumes and sales contribution across technology choices.",
       "Review price observation dates, cached sources and pricing proxies before comparing scenarios. The page is a scenario calculator, not a historical revenue forecast.",

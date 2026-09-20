@@ -199,6 +199,7 @@ export function validateResource(key: string, input: unknown): unknown {
       v.config.opex,
       Object.values(v.flows).reduce((a, b) => a + b, 0),
       0,
+      v.config.opexRevenueComponents,
     );
     if (Number(v.config.lpg_fuel_gas_recovered) > 1)
       throw Error("LPG recovery must be between 0 and 1.");

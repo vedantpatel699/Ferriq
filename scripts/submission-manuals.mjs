@@ -1,17 +1,21 @@
 import { chromium } from 'playwright';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile } from 'node:fs/promises';
 const browser=await chromium.launch({channel:'chrome'});
 const page=await browser.newPage({viewport:{width:1100,height:900}});
 await mkdir('submission/sudhakar/manuals',{recursive:true});
-const records=[];
+const only=process.argv[2];
+const records=only?JSON.parse(await readFile('submission/sudhakar/tests/manual-content.json','utf8')):[];
 for(const [id,route] of [
  ['air-blower','equipment/air-blower'],['fired-heater','equipment/fired-heater'],
  ['shell-tube-exchanger','equipment/shell-tube-exchanger'],['membrane-analyzer','equipment/membrane-analyzer'],
  ['furnace-skin-temp','predictors/furnace-skin-temp'],['crude-to-profit','crude-to-profit']]){
+ if(only && id!==only) continue;
  await page.goto('http://localhost:4173/'+route);
  await page.getByRole('button',{name:'Engineering manual',exact:true}).click();
  const manual=page.locator('.reference-manual').first();await manual.waitFor();
- records.push({id,text:await manual.innerText(),formulas:await manual.locator('.formula-expression').allTextContents()});
+ const record={id,text:await manual.innerText(),formulas:await manual.locator('.formula-expression').allTextContents()};
+ const existing=records.findIndex(r=>r.id===id);
+ if(existing<0)records.push(record);else records[existing]=record;
  const html=await manual.evaluate(el=>el.outerHTML);
  await page.evaluate(html=>{document.body.innerHTML=html},html);
  await page.addStyleTag({content:`

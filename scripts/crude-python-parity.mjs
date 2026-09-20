@@ -19,6 +19,7 @@ opex.chemicals={basis:'throughput',consumption:0.2,rate:3,annualCad:0};
 for(const residue of ['none','lc_finer','delayed_coker']) for(const gas of ['none','hydrocracker','fcc'])
  cases.push({flows:model.DEFAULT_CRUDE_FLOWS_M3HR,config:{...cfg,opex},residue,gas,market:snapshot});
 for (const percent of [0,8,12.5,100]) cases.push({flows:model.DEFAULT_CRUDE_FLOWS_M3HR,config:{...cfg,opex,opexRevenuePercent:percent},residue:'lc_finer',gas:'fcc',market:snapshot});
+for (const components of [{steam:2,electricity:2,naturalGas:2,chemicalsCatalyst:2},{steam:1.5,electricity:3,naturalGas:4,chemicalsCatalyst:0.5},{steam:0,electricity:0,naturalGas:0,chemicalsCatalyst:0}]) cases.push({flows:model.DEFAULT_CRUDE_FLOWS_M3HR,config:{...cfg,opex,opexRevenuePercent:80,opexRevenueComponents:components},residue:'lc_finer',gas:'fcc',market:snapshot});
 const py=spawnSync(process.env.PYTHON || 'python',['-c',`import sys,json
 sys.path.insert(0,'python/crude_to_profit')
 import engine as E
