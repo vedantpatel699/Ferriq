@@ -56,22 +56,6 @@ export function OpexConfiguration({
           </p>
         </>
       )}
-      <p>
-        Provisional default: 2% each, 8% total. The equal split is a planning
-        placeholder, not measured plant costs. Adjust each component separately;
-        Low, High and Live use their own sales revenue.
-      </p>
-      <p>
-        Saved single-percentage allowances are split equally without changing
-        their total. Component costs replace the combined allowance, so they are
-        deducted only once. Crude purchases remain separate.
-      </p>
-      <p>
-        The original 8% benchmark included maintenance and overhead. This
-        four-component allocation is unverified and excludes separate
-        maintenance, overhead and other costs. Count natural gas used to
-        generate steam or power in only one component.
-      </p>
     </section>
   );
 }
