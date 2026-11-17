@@ -7,7 +7,7 @@ import {
   MOLAR_VOLUME,
 } from "../src/engineering/hydrogen";
 
-test("six combinations, editing, recalculation, restore and saved scenario", async ({
+test("six combinations, automatic recalculation, editing, restore and saved scenario", async ({
   page,
 }) => {
   await page.goto("/hydrogen-production");
@@ -29,10 +29,6 @@ test("six combinations, editing, recalculation, restore and saved scenario", asy
       await expect(
         page.getByLabel("Natural gas flow (Sm³/h)", { exact: true }),
       ).toHaveValue(String(feedPreset(feedCase)[1].flow));
-      await expect(card).toContainText("—");
-      await page
-        .getByRole("button", { name: "Recalculate", exact: true })
-        .click();
       const t = calculateHydrogen({
         feedCase,
         profile,
@@ -59,7 +55,6 @@ test("six combinations, editing, recalculation, restore and saved scenario", asy
     page.getByLabel("Shift CO conversion (%)", { exact: true }),
   ).toHaveValue("74.797917");
   await page.getByLabel("PSA hydrogen recovery (%)", { exact: true }).fill("0");
-  await page.getByRole("button", { name: "Recalculate", exact: true }).click();
   await expect(card.locator(".hydrogen-value")).toHaveText("0 Sm³/h");
   await page
     .getByRole("button", { name: "Restore profile", exact: true })
@@ -67,7 +62,6 @@ test("six combinations, editing, recalculation, restore and saved scenario", asy
   await page
     .getByLabel("Natural gas flow (Sm³/h)", { exact: true })
     .fill("60000");
-  await page.getByRole("button", { name: "Recalculate", exact: true }).click();
   await page
     .getByRole("button", { name: "Save scenario", exact: true })
     .click();
@@ -105,7 +99,7 @@ test("invalid inputs hide results; settings omit gas conditions; manual explains
     .getByLabel("Chemical feed gas H2 (mol%)", { exact: true })
     .fill("");
   await expect(
-    page.getByRole("button", { name: "Recalculate", exact: true }),
+    page.getByRole("button", { name: "Save scenario", exact: true }),
   ).toBeDisabled();
   await expect(page.getByRole("alert")).toContainText("composition");
   await expect(page.locator(".hydrogen-value").first()).toContainText("—");
@@ -131,12 +125,59 @@ test("invalid inputs hide results; settings omit gas conditions; manual explains
   await expect(page.locator(".reference-manual")).toContainText(
     "101.325 kPa absolute",
   );
-  await expect(page.locator(".reference-manual")).toContainText(
-    "Dataset 2 shift correction",
-  );
+  await expect(page.locator(".reference-manual")).toContainText("Dataset 2");
   await expect(
     page.getByText("Run the Python model", { exact: true }),
+  ).toBeVisible();
+});
+
+test("composition and each conversion setting immediately update results", async ({
+  page,
+}) => {
+  await page.goto("/hydrogen-production");
+  await expect(
+    page.getByRole("button", { name: "Recalculate", exact: true }),
   ).toHaveCount(0);
+  await page.getByLabel("Feed scenario", { exact: true }).selectOption("B");
+  const scenario = {
+    feedCase: "B" as const,
+    profile: 0,
+    feeds: feedPreset("B"),
+    settings: { ...PROFILES[0] },
+  };
+  const card = page.locator(".hydrogen-value").first();
+  const check = async () => {
+    const expected =
+      calculateHydrogen(scenario).totals.productH2 * MOLAR_VOLUME;
+    await expect(card).toContainText(
+      expected.toLocaleString("en-CA", { maximumFractionDigits: 2 }),
+    );
+  };
+  await check();
+  await page
+    .getByLabel("Hydrogenation gas H2 (mol%)", { exact: true })
+    .fill("95");
+  await expect(card).toContainText("—");
+  await page
+    .getByLabel("Hydrogenation gas CH4 (mol%)", { exact: true })
+    .fill("5");
+  scenario.feeds[2].composition[0] = 95;
+  scenario.feeds[2].composition[4] = 5;
+  await check();
+  await page.getByText("Calculation settings", { exact: true }).click();
+  for (const [key, label, value] of [
+    ["toCO", "Reformer carbon converted to CO (%)", 30],
+    ["toCO2", "Reformer carbon converted to CO₂ (%)", 20],
+    ["shift", "Shift CO conversion (%)", 50],
+    ["recovery", "PSA hydrogen recovery (%)", 85],
+  ] as const) {
+    await page.getByLabel(label, { exact: true }).fill(String(value));
+    scenario.settings[key] = value / 100;
+    await check();
+  }
+  await expect(
+    page.getByRole("button", { name: "Save scenario", exact: true }),
+  ).toBeEnabled();
 });
 
 test("storage failures, accessibility and narrow-screen layout", async ({
@@ -172,4 +213,12 @@ test("storage failures, accessibility and narrow-screen layout", async ({
   await expect(
     page.getByLabel("Natural gas C6H14 (mol%)", { exact: true }),
   ).toHaveCount(1);
+  await page
+    .getByRole("button", { name: "Engineering manual", exact: true })
+    .click();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
 });

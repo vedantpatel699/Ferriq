@@ -46,34 +46,19 @@ const settingLabels: Record<keyof Settings, string> = {
 export function HydrogenProductionPage() {
   const [initial] = useState(load);
   const [scenario, setScenario] = useState(initial.scenario);
-  const [result, setResult] = useState(() =>
-    calculateHydrogen(initial.scenario),
-  );
-  const [dirty, setDirty] = useState(false);
   const [notice, setNotice] = useState(initial.notice);
   const [tab, setTab] = useState("Overview");
   const [allComponents, setAllComponents] = useState(false);
   let error = "";
+  let result: ReturnType<typeof calculateHydrogen> | undefined;
   try {
-    validateScenario(scenario);
+    result = calculateHydrogen(scenario);
   } catch (e) {
     error = (e as Error).message;
   }
   const edit = (next: Scenario) => {
     setScenario(next);
-    setDirty(true);
     setNotice("");
-  };
-  const run = () => {
-    try {
-      const next = calculateHydrogen(scenario);
-      setResult(next);
-      setDirty(false);
-      setNotice("Scenario recalculated.");
-    } catch (e) {
-      setDirty(true);
-      setNotice((e as Error).message);
-    }
   };
   const save = () => {
     try {
@@ -91,8 +76,7 @@ export function HydrogenProductionPage() {
   const customProfile =
     JSON.stringify(PROFILES[scenario.profile]) !==
     JSON.stringify(scenario.settings);
-  const visible = !dirty && !error;
-  const total = result.totals;
+  const total = result?.totals;
   const metrics = [
     { label: "H₂ entering with feed (kmol/h)", key: "inletH2", factor: 1 },
     {
@@ -168,11 +152,12 @@ export function HydrogenProductionPage() {
             >
               Restore feed preset
             </button>
-            <button onClick={save} disabled={!!error || dirty}>
+            <button
+              className="primary-action"
+              onClick={save}
+              disabled={!!error}
+            >
               Save scenario
-            </button>
-            <button className="primary-action" onClick={run} disabled={!!error}>
-              Recalculate
             </button>
           </div>
           <p className="hydrogen-state">
@@ -183,34 +168,33 @@ export function HydrogenProductionPage() {
           </p>
           {error && <p role="alert">{error}</p>}
           <p role="status" aria-live="polite">
-            {dirty ? "Inputs changed. Recalculate to update results." : notice}
+            {notice}
           </p>
-          {dirty && notice && <p role="alert">{notice}</p>}
           <div className="hydrogen-results" aria-label="Scenario results">
             <article className="card card-body">
               <h2>Hydrogen product after PSA</h2>
               <div className="hydrogen-value">
-                {visible ? fmt(total.productH2 * MOLAR_VOLUME) : "—"}{" "}
+                {total ? fmt(total.productH2 * MOLAR_VOLUME) : "—"}{" "}
                 <small>Sm³/h</small>
               </div>
-              <p>{visible ? fmt(total.productH2) : "—"} kmol/h</p>
+              <p>{total ? fmt(total.productH2) : "—"} kmol/h</p>
             </article>
             <article className="card card-body">
               <h2>CO₂ generated</h2>
               <div className="hydrogen-value">
-                {visible ? fmt(total.generatedCO2 * 0.044) : "—"}{" "}
+                {total ? fmt(total.generatedCO2 * 0.044) : "—"}{" "}
                 <small>t/h</small>
               </div>
-              <p>{visible ? fmt(total.generatedCO2) : "—"} kmol/h</p>
+              <p>{total ? fmt(total.generatedCO2) : "—"} kmol/h</p>
               <p>
-                Total process CO₂: {visible ? fmt(total.totalCO2 * 0.044) : "—"}{" "}
+                Total process CO₂: {total ? fmt(total.totalCO2 * 0.044) : "—"}{" "}
                 t/h
               </p>
             </article>
             <article className="card card-body">
               <h2>Reaction water consumption</h2>
               <div className="hydrogen-value">
-                {visible ? fmt(total.water * 0.018) : "—"} <small>t/h</small>
+                {total ? fmt(total.water * 0.018) : "—"} <small>t/h</small>
               </div>
               <p>Water consumed by reforming and shift.</p>
             </article>
@@ -375,7 +359,7 @@ export function HydrogenProductionPage() {
           </details>
           <details className="card card-body">
             <summary>Results by feed</summary>
-            {visible ? (
+            {result ? (
               <>
                 <DataTable
                   caption="Calculated feed contributions"
@@ -388,7 +372,7 @@ export function HydrogenProductionPage() {
                         f[m.key] * m.factor,
                       ]),
                     ),
-                    Total: total[m.key] * m.factor,
+                    Total: result.totals[m.key] * m.factor,
                   }))}
                 />
                 <p className="hydrogen-note">
@@ -397,7 +381,7 @@ export function HydrogenProductionPage() {
                 </p>
               </>
             ) : (
-              <p>Recalculate valid inputs to view results.</p>
+              <p>Enter valid inputs to view results.</p>
             )}
           </details>
         </>
