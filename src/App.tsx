@@ -34,6 +34,12 @@ const CrudeToProfitPage = lazy(() =>
   })),
 );
 
+const HydrogenProductionPage = lazy(() =>
+  import("./pages/HydrogenProductionPage").then((m) => ({
+    default: m.HydrogenProductionPage,
+  })),
+);
+
 function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
@@ -43,6 +49,10 @@ function App() {
             <Suspense fallback={<p role="status">Loading page…</p>}>
               <Routes>
                 <Route path="/" element={<HomePage />} />
+                <Route
+                  path="/hydrogen-production"
+                  element={<HydrogenProductionPage />}
+                />
                 <Route
                   path="/equipment/air-blower"
                   element={<AirBlowerPage />}

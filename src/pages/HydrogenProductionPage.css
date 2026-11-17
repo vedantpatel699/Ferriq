@@ -1,0 +1,128 @@
+.hydrogen-page {
+  max-width: 1500px;
+  margin: 0 auto;
+}
+.hydrogen-mode {
+  display: inline-block;
+  padding: 4px 9px;
+  background: #e7e6e2;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.hydrogen-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0 8px;
+}
+.hydrogen-controls label {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 190px;
+}
+.hydrogen-controls select {
+  width: 100%;
+}
+.hydrogen-state,
+.hydrogen-note {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.hydrogen-results {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.hydrogen-results h2 {
+  font-size: 12px;
+  font-weight: 400;
+  margin: 0 0 16px;
+}
+.hydrogen-value {
+  font-family: var(--font-data);
+  font-size: 22px;
+  font-weight: 700;
+}
+.hydrogen-value small {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 400;
+}
+.hydrogen-results p {
+  font-size: 12px;
+  margin: 10px 0 0;
+}
+.hydrogen-process {
+  display: flex;
+  list-style: none;
+  padding: 0;
+  gap: 24px;
+  margin: 24px 0;
+}
+.hydrogen-process li {
+  flex: 1;
+  border: 1px solid var(--border-card);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+  position: relative;
+}
+.hydrogen-process li:not(:last-child)::after {
+  content: "→";
+  position: absolute;
+  right: -20px;
+}
+.hydrogen-page .card {
+  border-radius: 8px;
+  box-shadow: none;
+}
+.hydrogen-page > section,
+.hydrogen-page > details {
+  margin-bottom: 16px;
+}
+.hydrogen-page summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.hydrogen-page .formula-expression {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.hydrogen-inputs {
+  width: 100%;
+  min-width: 620px;
+  table-layout: fixed;
+}
+.hydrogen-inputs input {
+  width: 100%;
+  min-width: 0;
+  text-align: right;
+  font-family: var(--font-data);
+}
+.hydrogen-inputs th {
+  white-space: normal;
+}
+.hydrogen-settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+@media (max-width: 700px) {
+  .hydrogen-results,
+  .hydrogen-settings {
+    grid-template-columns: 1fr;
+  }
+  .hydrogen-process {
+    gap: 16px;
+    font-size: 11px;
+  }
+  .hydrogen-process li {
+    padding: 8px 2px;
+  }
+  .hydrogen-process li:not(:last-child)::after {
+    right: -14px;
+  }
+}

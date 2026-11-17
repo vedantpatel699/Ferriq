@@ -34,6 +34,11 @@ export const EQUIPMENT_REGISTRY: EquipmentRegistryEntry[] = [
     path: "/predictors/furnace-skin-temp",
   },
   { id: "crude-to-profit", name: "Crude to Profit", path: "/crude-to-profit" },
+  {
+    id: "hydrogen-production",
+    name: "Hydrogen Production",
+    path: "/hydrogen-production",
+  },
 ];
 
 export function stateLabel(state: EquipmentState): string {

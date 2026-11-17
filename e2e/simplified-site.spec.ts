@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 
-test("overview contains only six model tiles", async ({ page }) => {
+test("overview contains only seven model tiles", async ({ page }) => {
   await page.goto("/");
   const main = page.locator("#main-content");
-  await expect(main.locator(".model-tile")).toHaveCount(6);
+  await expect(main.locator(".model-tile")).toHaveCount(7);
   const names = [
     "Air Blower",
     "Fired Heater",
@@ -11,6 +11,7 @@ test("overview contains only six model tiles", async ({ page }) => {
     "Membrane Analyzer",
     "Furnace Skin TI Predictor",
     "Crude to Profit",
+    "Hydrogen Production",
   ];
   expect(await main.locator(".model-tile").allTextContents()).toEqual(names);
   await expect(
@@ -51,6 +52,6 @@ test("removed pages are unavailable at their direct URLs", async ({ page }) => {
       ),
     ).toHaveCount(0);
     await page.getByRole("link", { name: "Return to overview" }).click();
-    await expect(page.locator(".model-tile")).toHaveCount(6);
+    await expect(page.locator(".model-tile")).toHaveCount(7);
   }
 });
